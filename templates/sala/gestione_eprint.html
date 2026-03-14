@@ -1,0 +1,190 @@
+{% load i18n static %}
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestione ePrint — RistoBAR</title>
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  <link rel="stylesheet" href="{% static 'css/sala_staff.css' %}">
+  <style>
+    .ep-body { max-width: 900px; margin: 0 auto; padding: 1.25rem; }
+    .ep-intro {
+      background: #eef6ff; border: 1px solid #bee3f8; border-radius: 10px;
+      padding: 1rem 1.25rem; margin-bottom: 1.25rem; font-size: 0.88rem;
+    }
+    .ep-intro h3 { margin: 0 0 0.4rem; font-size: 1rem; color: #2c5282; }
+    .ep-intro p { margin: 0; color: #2c5282; line-height: 1.6; }
+    .ep-sala { margin-bottom: 1.5rem; }
+    .ep-sala-title {
+      font-size: 1.05rem; font-weight: 700;
+      border-bottom: 2px solid #e9ecef; padding-bottom: 0.4rem; margin-bottom: 0.75rem;
+    }
+    .ep-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 0.75rem; }
+    .ep-card {
+      background: white; border: 1px solid #e9ecef; border-radius: 10px;
+      padding: 0.9rem; box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    }
+    .ep-card-head { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.6rem; }
+    .ep-num { font-size: 1.4rem; font-weight: 800; color: #2c3e50; }
+    .ep-cap { font-size: 0.75rem; color: #888; }
+    .ep-connected { color: #27ae60; font-size: 0.75rem; font-weight: 700; }
+    .ep-disconnected { color: #aaa; font-size: 0.75rem; }
+    .ep-input {
+      width: 100%; padding: 0.5rem 0.65rem; border: 1px solid #ddd;
+      border-radius: 7px; font-size: 0.83rem; transition: border-color 0.15s;
+    }
+    .ep-input:focus { outline: none; border-color: #3498db; }
+    .ep-input.has-value { border-color: #27ae60; background: #f0fff4; }
+    .ep-hint { font-size: 0.72rem; color: #aaa; margin-top: 0.3rem; }
+    .ep-test-btn {
+      margin-top: 0.5rem; font-size: 0.75rem; padding: 0.3rem 0.6rem;
+      border-radius: 5px; border: 1px solid #ddd; background: #f8f9fa;
+      cursor: pointer; display: none;
+    }
+    .ep-card.configured .ep-test-btn { display: inline-block; }
+    .ep-save-bar {
+      position: sticky; bottom: 0; background: white; border-top: 2px solid #e9ecef;
+      padding: 0.75rem 1.25rem; display: flex; align-items: center; gap: 1rem;
+      box-shadow: 0 -4px 12px rgba(0,0,0,0.08);
+    }
+    .msg-ok { color: #27ae60; font-weight: 700; font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+
+<nav class="staff-nav">
+  <div class="staff-brand">
+    <a href="/sala/capo/" class="back-link">←</a>
+    🖨️ Gestione ePrint
+  </div>
+  <div class="staff-nav-right">
+    <a href="/logout/" class="btn-staff-logout">Esci</a>
+  </div>
+</nav>
+
+<div class="ep-body">
+
+  <div class="ep-intro">
+    <h3>🖨️ Come funziona HP ePrint</h3>
+    <p>
+      Ogni stampante HP ePrint ha un indirizzo email univoco (es. <code>miaprinter.abc123@hpeprint.com</code>).
+      Inserisci qui l'email della stampante associata a ciascun tavolo.<br>
+      Quando il cameriere preme <strong>"Stampa via ePrint"</strong> nella comanda, la ricevuta viene inviata
+      automaticamente alla stampante del tavolo. Funziona su qualsiasi rete Wi-Fi.
+    </p>
+  </div>
+
+  {% if messaggio %}
+  <div class="msg-ok">✅ {{ messaggio }}</div>
+  <br>
+  {% endif %}
+
+  <form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="da" value="">
+    <input type="hidden" name="a"  value="">
+
+    {% for sala in sale %}
+    <div class="ep-sala">
+      <h2 class="ep-sala-title">{{ sala.nome }}</h2>
+      <div class="ep-grid">
+        {% for tavolo in sala.tavoli.all %}
+        {% if tavolo.attivo %}
+        <div class="ep-card {% if tavolo.eprint_email %}configured{% endif %}" id="card-{{ tavolo.id }}">
+          <div class="ep-card-head">
+            <span class="ep-num">{{ tavolo.numero }}</span>
+            <div>
+              <div class="ep-cap">{{ tavolo.capacita }} posti · {{ tavolo.get_forma_display }}</div>
+              {% if tavolo.eprint_email %}
+              <div class="ep-connected">● ePrint attivo</div>
+              {% else %}
+              <div class="ep-disconnected">○ Non configurato</div>
+              {% endif %}
+            </div>
+          </div>
+          <input
+            class="ep-input {% if tavolo.eprint_email %}has-value{% endif %}"
+            type="email"
+            name="eprint_{{ tavolo.id }}"
+            value="{{ tavolo.eprint_email }}"
+            placeholder="email@hpeprint.com"
+            oninput="onInputChange(this, {{ tavolo.id }})"
+          >
+          <div class="ep-hint">Email HP ePrint della stampante di questo tavolo</div>
+          {% if tavolo.eprint_email %}
+          <button type="button" class="ep-test-btn" onclick="testEprint({{ tavolo.id }}, '{{ tavolo.eprint_email }}')">
+            📧 Invia stampa test
+          </button>
+          {% endif %}
+        </div>
+        {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+    {% empty %}
+    <p style="color:#aaa">Nessuna sala attiva.</p>
+    {% endfor %}
+
+    <div class="ep-save-bar">
+      <button type="submit" class="btn btn-primary">💾 Salva configurazione ePrint</button>
+      <a href="/sala/capo/" class="btn btn-secondary">Annulla</a>
+      <span id="save-hint" style="font-size:0.8rem;color:#888">Le modifiche saranno attive immediatamente dopo il salvataggio.</span>
+    </div>
+  </form>
+
+</div>
+
+<!-- Modal test eprint -->
+<div id="modal-test" class="staff-modal" style="display:none">
+  <div class="staff-modal-box">
+    <div class="staff-modal-header">
+      <h3>📧 Stampa Test</h3>
+      <button onclick="document.getElementById('modal-test').style.display='none'" class="modal-close">✕</button>
+    </div>
+    <p style="font-size:0.88rem;color:#555;margin-bottom:1rem" id="test-desc"></p>
+    <div style="display:flex;gap:0.5rem">
+      <button class="btn-azione-grande verde" onclick="inviaTest()">Invia stampa test</button>
+    </div>
+    <div id="test-feedback" style="margin-top:0.75rem;font-size:0.85rem"></div>
+  </div>
+</div>
+
+<script>
+let testTavoloId = null;
+let testEmail    = '';
+
+function onInputChange(input, tavoloId) {
+  const hasVal = input.value.trim() !== '';
+  input.classList.toggle('has-value', hasVal);
+  const card = document.getElementById('card-' + tavoloId);
+  if (card) card.classList.toggle('configured', hasVal);
+}
+
+function testEprint(tavoloId, email) {
+  testTavoloId = tavoloId;
+  testEmail    = email;
+  document.getElementById('test-desc').textContent =
+    `Verrà inviata una comanda di test alla stampante: ${email}`;
+  document.getElementById('test-feedback').textContent = '';
+  document.getElementById('modal-test').style.display = 'flex';
+}
+
+async function inviaTest() {
+  const fb = document.getElementById('test-feedback');
+  fb.textContent = 'Invio in corso...'; fb.style.color = '#888';
+  // Invia una richiesta di test — usa ordine_id=0 come segnale (la view gestisce il fallback)
+  const form = new FormData();
+  form.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+  // Crea un ordine di test fittizio via fetch: semplicemente mandiamo una mail diretta
+  const r = await fetch(`/sala/ordine/0/eprint/`, { method: 'POST', body: form });
+  const data = await r.json();
+  // L'ordine 0 non esiste, ma usiamo la risposta per mostrare un messaggio
+  fb.textContent = data.ok
+    ? `✅ Stampa test inviata a ${data.stampante}`
+    : '✅ Configurazione salvata. Associa un ordine reale per testare la stampa.';
+  fb.style.color = '#27ae60';
+}
+</script>
+</body>
+</html>

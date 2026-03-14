@@ -1,0 +1,140 @@
+/* ── CSS condiviso per le interfacce staff (cameriere, cucina, capo) ── */
+
+/* Navbar staff */
+.staff-nav {
+  background: #1a1a2e; color: white;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0.75rem 1.25rem; position: sticky; top: 0; z-index: 100;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+.staff-brand { font-size: 1.1rem; display: flex; align-items: center; gap: 0.75rem; }
+.staff-nav-right { display: flex; align-items: center; gap: 1rem; }
+.staff-time { font-family: monospace; font-size: 1rem; color: #aaa; }
+.btn-staff-logout { color: rgba(255,255,255,0.6); text-decoration: none; font-size: 0.85rem; }
+.btn-staff-logout:hover { color: white; }
+.back-link { color: rgba(255,255,255,0.7); text-decoration: none; font-size: 1.2rem; }
+.totale-nav { font-size: 1rem; color: rgba(255,255,255,0.9); }
+.stato-badge { font-size: 0.75rem; padding: 0.2rem 0.6rem; border-radius: 20px; font-weight: 600;
+               background: rgba(255,255,255,0.15); }
+
+/* Body staff */
+.staff-body { padding: 1rem; max-width: 1400px; margin: 0 auto; }
+
+/* Striscia prenotazioni */
+.prenotazioni-strip {
+  background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px;
+  padding: 0.6rem 1rem; margin-bottom: 1rem; font-size: 0.85rem;
+  display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;
+}
+.prenot-chip { background: #ffc107; border-radius: 20px; padding: 0.2rem 0.7rem; font-size: 0.8rem; }
+
+/* Sala title */
+.staff-sala { margin-bottom: 2rem; }
+.sala-title { font-size: 1.2rem; font-weight: 700; margin-bottom: 0.75rem;
+              border-bottom: 2px solid #e9ecef; padding-bottom: 0.4rem; }
+
+/* Griglia tavoli cameriere */
+.staff-tavoli { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 0.75rem; }
+
+.staff-tavolo {
+  border-radius: 12px; padding: 1rem 0.75rem; text-align: center;
+  cursor: pointer; transition: transform 0.15s, box-shadow 0.15s;
+  border: 3px solid transparent; position: relative;
+  background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+.staff-tavolo:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(0,0,0,0.12); }
+.st-numero  { font-size: 1.8rem; font-weight: 800; }
+.st-forma-icon { font-size: 0.9rem; }
+.st-posti   { font-size: 0.75rem; color: #888; }
+.st-stato   { font-size: 0.7rem; font-weight: 700; margin-top: 0.25rem; }
+
+/* Colori stato */
+.stato-L { border-color: #27ae60; }
+.stato-L .st-stato { color: #27ae60; }
+.stato-P { border-color: #f39c12; background: #fffbf0; }
+.stato-P .st-stato { color: #f39c12; }
+.stato-O { border-color: #e74c3c; background: #fff8f7; }
+.stato-O .st-stato { color: #e74c3c; }
+.stato-C { border-color: #3498db; background: #f0f7ff; }
+.stato-C .st-stato { color: #3498db; }
+
+/* Modal staff */
+.staff-modal {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+  display: flex; align-items: center; justify-content: center; z-index: 1000;
+}
+.staff-modal-box {
+  background: white; border-radius: 16px; padding: 1.5rem;
+  width: 90%; max-width: 380px; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+}
+.staff-modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; }
+.staff-modal-header h3 { font-size: 1.2rem; }
+.modal-close { background: none; border: none; font-size: 1.4rem; cursor: pointer; color: #888; }
+
+.modal-azioni { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem; margin-bottom: 1rem; }
+.btn-azione { border: none; border-radius: 8px; padding: 0.75rem 0.5rem;
+              font-size: 0.8rem; font-weight: 700; cursor: pointer; transition: opacity 0.2s; }
+.btn-azione:hover { opacity: 0.85; }
+.verde  { background: #27ae60; color: white; }
+.giallo { background: #e74c3c; color: white; }
+.blue   { background: #3498db; color: white; }
+.modal-divider { text-align: center; color: #aaa; font-size: 0.8rem; margin: 0.75rem 0; }
+.btn-azione-grande {
+  display: block; width: 100%; text-align: center; padding: 0.9rem;
+  border-radius: 10px; font-size: 1rem; font-weight: 700; cursor: pointer;
+  border: none; text-decoration: none; margin-bottom: 0.5rem;
+}
+
+/* Layout ordine */
+.ordine-layout { display: grid; grid-template-columns: 1fr 380px; height: calc(100vh - 60px); }
+.ordine-menu { overflow-y: auto; border-right: 2px solid #e9ecef; }
+.ordine-menu-header { position: sticky; top: 0; background: #f8f9fa;
+                      padding: 0.75rem 1rem; font-weight: 700; font-size: 1rem;
+                      border-bottom: 1px solid #e9ecef; z-index: 10; }
+.menu-cat-group { padding: 0.5rem; }
+.menu-cat-label { font-size: 0.8rem; font-weight: 700; text-transform: uppercase;
+                  color: #888; padding: 0.4rem 0.5rem; }
+.menu-piatto-btn {
+  display: flex; justify-content: space-between; align-items: center;
+  width: 100%; padding: 0.6rem 0.75rem; border-radius: 8px;
+  border: 1px solid #e9ecef; background: white; cursor: pointer;
+  margin-bottom: 0.3rem; transition: background 0.15s;
+  text-align: left;
+}
+.menu-piatto-btn:hover { background: #f0f7ff; border-color: #3498db; }
+.mpb-nome { font-size: 0.9rem; }
+.mpb-prezzo { font-size: 0.85rem; font-weight: 700; color: #e74c3c; }
+
+/* Comanda */
+.ordine-comanda { display: flex; flex-direction: column; overflow: hidden; }
+.comanda-header { padding: 0.75rem 1rem; border-bottom: 1px solid #e9ecef;
+                  display: flex; justify-content: space-between; align-items: center;
+                  font-weight: 700; background: #f8f9fa; }
+#comanda-items { flex: 1; overflow-y: auto; padding: 0.5rem; }
+.comanda-item { display: flex; align-items: center; justify-content: space-between;
+                padding: 0.5rem 0.75rem; border-radius: 8px; border: 1px solid #e9ecef;
+                margin-bottom: 0.35rem; background: white; }
+.ci-info { display: flex; align-items: center; gap: 0.5rem; flex: 1; }
+.ci-stato { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.ci-A { background: #f39c12; }
+.ci-C { background: #e74c3c; animation: pulse 1s infinite; }
+.ci-P { background: #27ae60; }
+.ci-S { background: #3498db; }
+.ci-nome { font-size: 0.9rem; }
+.ci-controls { display: flex; align-items: center; gap: 0.35rem; }
+.ci-controls button { width: 26px; height: 26px; border-radius: 50%; border: 1px solid #ddd;
+                      background: #f8f9fa; cursor: pointer; font-size: 1rem; line-height:1; }
+.ci-qty { font-weight: 700; min-width: 20px; text-align: center; }
+.ci-sub { font-size: 0.85rem; font-weight: 600; color: #e74c3c; min-width: 45px; text-align: right; }
+.empty-comanda { text-align: center; color: #aaa; padding: 2rem; font-size: 0.9rem; }
+.comanda-footer { border-top: 2px solid #e9ecef; padding: 0.75rem; background: white; }
+.comanda-totale { font-size: 1.1rem; font-weight: 700; text-align: center; margin-bottom: 0.75rem; }
+.comanda-azioni { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
+@media (max-width: 700px) {
+  .ordine-layout { grid-template-columns: 1fr; }
+  .ordine-menu { max-height: 50vh; }
+  .staff-tavoli { grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); }
+}

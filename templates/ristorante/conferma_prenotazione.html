@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Prenotazione Confermata" %} - RistoBAR{% endblock %}
+
+{% block content %}
+<div class="conferma-container">
+    <div class="conferma-card">
+        <div class="conferma-icon">✅</div>
+        <h1>{% trans "Prenotazione confermata!" %}</h1>
+        <div class="conferma-dettagli">
+            <p><strong>{% trans "Nome:" %}</strong> {{ prenotazione.nome_cliente }}</p>
+            <p><strong>{% trans "Tavolo:" %}</strong> {{ prenotazione.tavolo }}</p>
+            <p><strong>{% trans "Data e ora:" %}</strong> {{ prenotazione.data_ora|date:"d/m/Y H:i" }}</p>
+            <p><strong>{% trans "Persone:" %}</strong> {{ prenotazione.num_persone }}</p>
+            {% if prenotazione.caparra_pagata %}
+            <p><strong>{% trans "Caparra versata:" %}</strong> ✅ €{{ prenotazione.caparra_importo }}</p>
+            {% endif %}
+        </div>
+        <p class="conferma-info">
+            {% trans "Riceverai una conferma via Telegram o SMS. A presto!" %}
+        </p>
+        <div class="qr-tavolo">
+            {% if prenotazione.tavolo.qr_code %}
+            <p>{% trans "Salva questo QR per accedere al menu dal tavolo:" %}</p>
+            <img src="{{ prenotazione.tavolo.qr_code.url }}" alt="QR Tavolo" style="max-width:200px">
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

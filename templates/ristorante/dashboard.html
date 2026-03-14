@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Dashboard" %} - RistoBAR{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <h1>{% trans "Dashboard Ristorante" %}</h1>
+
+    <!-- Azioni rapide capo -->
+    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1.25rem">
+      <a href="{% url 'gestione_eprint' %}" class="btn btn-outline">🖨️ Gestione ePrint</a>
+      <a href="{% url 'lista_spesa' %}" class="btn btn-outline">🛒 Lista Spesa Cucina</a>
+      <a href="{% url 'elenco_documenti' %}" class="btn btn-outline">📋 Documenti Fiscali</a>
+      <a href="{% url 'gestione_contatti' %}" class="btn btn-outline">📇 Contatti</a>
+      <a href="{% url 'impostazioni_ristorante' %}" class="btn btn-outline">⚙️ Impostazioni</a>
+    </div>
+
+    <!-- Statistiche rapide -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <span class="stat-icon">📅</span>
+            <div class="stat-value">{{ prenotazioni_oggi.count }}</div>
+            <div class="stat-label">{% trans "Prenotazioni oggi" %}</div>
+        </div>
+        <div class="stat-card">
+            <span class="stat-icon">🍽️</span>
+            <div class="stat-value">{{ ordini_aperti.count }}</div>
+            <div class="stat-label">{% trans "Ordini aperti" %}</div>
+        </div>
+    </div>
+
+    <!-- Sale e mappa tavoli -->
+    {% for sala in sale %}
+    <section class="sala-section">
+        <h2>
+            {{ sala.nome }}
+            <a href="{% url 'mappa_sala' sala.id %}"  class="btn btn-outline">{% trans "Mappa" %}</a>
+            <a href="{% url 'editor_sala' sala.id %}" class="btn btn-outline">🗺️ {% trans "Editor" %}</a>
+        </h2>
+        <div class="tavoli-grid">
+            {% for tavolo in sala.tavoli.all %}
+            <div class="tavolo-card tavolo-{{ tavolo.forma|lower }}"
+                 style="border-color: {{ tavolo.colore_stato }}"
+                 data-tavolo-id="{{ tavolo.id }}"
+                 data-stato="{{ tavolo.stato }}">
+                <div class="tavolo-numero">{{ tavolo.numero }}</div>
+                <div class="tavolo-posti">👤 {{ tavolo.capacita }}</div>
+                <div class="tavolo-stato" style="color: {{ tavolo.colore_stato }}">
+                    {{ tavolo.get_stato_display }}
+                </div>
+                <div class="tavolo-azioni">
+                    <select class="stato-select" onchange="cambiaStato({{ tavolo.id }}, this.value)">
+                        <option value="L" {% if tavolo.stato == 'L' %}selected{% endif %}>🟢 {% trans "Libero" %}</option>
+                        <option value="P" {% if tavolo.stato == 'P' %}selected{% endif %}>🟡 {% trans "Prenotato" %}</option>
+                        <option value="O" {% if tavolo.stato == 'O' %}selected{% endif %}>🔴 {% trans "Occupato" %}</option>
+                        <option value="C" {% if tavolo.stato == 'C' %}selected{% endif %}>🔵 {% trans "Conto" %}</option>
+                    </select>
+                </div>
+            </div>
+            {% empty %}
+            <p>{% trans "Nessun tavolo in questa sala." %}</p>
+            {% endfor %}
+        </div>
+    </section>
+    {% endfor %}
+
+    <!-- Prenotazioni di oggi -->
+    <section class="prenotazioni-section">
+        <h2>{% trans "Prenotazioni di oggi" %}</h2>
+        {% if prenotazioni_oggi %}
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>{% trans "Ora" %}</th>
+                        <th>{% trans "Cliente" %}</th>
+                        <th>{% trans "Tavolo" %}</th>
+                        <th>{% trans "Persone" %}</th>
+                        <th>{% trans "Caparra" %}</th>
+                        <th>{% trans "Stato" %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in prenotazioni_oggi %}
+                    <tr>
+                        <td>{{ p.data_ora|time:"H:i" }}</td>
+                        <td>{{ p.nome_cliente }}</td>
+                        <td>{{ p.tavolo }}</td>
+                        <td>{{ p.num_persone }}</td>
+                        <td>
+                            {% if p.caparra_pagata %}
+                                ✅ €{{ p.caparra_importo }}
+                            {% else %}
+                                ⏳ {% trans "In attesa" %}
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge badge-{{ p.stato }}">
+                                {{ p.get_stato_display }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted">{% trans "Nessuna prenotazione per oggi." %}</p>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function cambiaStato(tavoloId, nuovoStato) {
+    fetch(`/tavolo/${tavoloId}/stato/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken'),
+        },
+        body: JSON.stringify({stato: nuovoStato}),
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.successo) {
+            // Aggiorna colore in tempo reale senza ricaricare la pagina
+            const card = document.querySelector(`[data-tavolo-id="${tavoloId}"]`);
+            if (card) {
+                card.style.borderColor = data.colore;
+                card.querySelector('.tavolo-stato').style.color = data.colore;
+                card.querySelector('.tavolo-stato').textContent = data.stato;
+            }
+        }
+    });
+}
+
+function getCookie(name) {
+    let value = `; ${document.cookie}`;
+    let parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+}
+
+// Auto-aggiornamento ogni 30 secondi
+setInterval(() => location.reload(), 30000);
+</script>
+{% endblock %}

@@ -1,0 +1,101 @@
+{% load i18n static %}
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Documenti Fiscali — RistoBAR</title>
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  <link rel="stylesheet" href="{% static 'css/sala_staff.css' %}">
+  <style>
+    .ed-body { max-width: 1100px; margin: 0 auto; padding: 1.25rem; }
+    .ed-filtri { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; margin-bottom: 1rem; }
+    .ed-filtri select, .ed-filtri input { border: 1px solid #ddd; border-radius: 7px;
+      padding: 0.45rem 0.65rem; font-size: 0.85rem; }
+    .ed-table { width: 100%; border-collapse: collapse; background: white;
+                border-radius: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.07); }
+    .ed-table th { background: #1a1a2e; color: white; padding: 0.65rem 0.9rem;
+                   font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; text-align: left; }
+    .ed-table td { padding: 0.65rem 0.9rem; border-bottom: 1px solid #f0f0f0; font-size: 0.88rem; }
+    .ed-table tr:hover td { background: #f8f9fa; }
+    .badge-s { background: #d5f5e3; color: #1e8449; padding: 0.15rem 0.5rem; border-radius: 20px; font-size: 0.72rem; font-weight: 700; }
+    .badge-r { background: #d6eaf8; color: #1a5276; padding: 0.15rem 0.5rem; border-radius: 20px; font-size: 0.72rem; font-weight: 700; }
+    .badge-f { background: #e8daef; color: #6c3483; padding: 0.15rem 0.5rem; border-radius: 20px; font-size: 0.72rem; font-weight: 700; }
+    .ed-importo { font-weight: 700; }
+    .ed-empty { text-align: center; color: #aaa; padding: 3rem; font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+
+<nav class="staff-nav">
+  <div class="staff-brand">
+    <a href="/sala/capo/" class="back-link">←</a>
+    📋 Archivio Documenti Fiscali
+  </div>
+  <div class="staff-nav-right">
+    <a href="/logout/" class="btn-staff-logout">Esci</a>
+  </div>
+</nav>
+
+<div class="ed-body">
+  <form method="get" class="ed-filtri">
+    <select name="tipo" onchange="this.form.submit()">
+      <option value="">Tutti i tipi</option>
+      <option value="S" {% if tipo == 'S' %}selected{% endif %}>Scontrini</option>
+      <option value="R" {% if tipo == 'R' %}selected{% endif %}>Ricevute</option>
+      <option value="F" {% if tipo == 'F' %}selected{% endif %}>Fatture</option>
+    </select>
+    <select name="anno" onchange="this.form.submit()">
+      {% for a in anni %}
+      <option value="{{ a }}" {% if anno == a|stringformat:"s" %}selected{% endif %}>{{ a }}</option>
+      {% endfor %}
+    </select>
+    <span style="font-size:0.82rem;color:#888">{{ documenti|length }} documenti</span>
+  </form>
+
+  {% if documenti %}
+  <table class="ed-table">
+    <thead>
+      <tr>
+        <th>Numero</th>
+        <th>Tipo</th>
+        <th>Data</th>
+        <th>Ordine / Tavolo</th>
+        <th>Intestato a</th>
+        <th style="text-align:right">Totale</th>
+        <th>Operatore</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for d in documenti %}
+      <tr>
+        <td><strong>{{ d.numero }}</strong></td>
+        <td>
+          {% if d.tipo == 'S' %}<span class="badge-s">Scontrino</span>
+          {% elif d.tipo == 'R' %}<span class="badge-r">Ricevuta</span>
+          {% else %}<span class="badge-f">Fattura</span>{% endif %}
+        </td>
+        <td>{{ d.data|date:"d/m/Y" }}</td>
+        <td>#{{ d.ordine.pk }} — Tav.{{ d.ordine.tavolo.numero }}</td>
+        <td>{{ d.cliente_nome|default:"—" }}</td>
+        <td class="ed-importo" style="text-align:right">€{{ d.totale }}</td>
+        <td style="color:#888;font-size:0.8rem">{{ d.creata_da.username|default:"—" }}</td>
+        <td>
+          <a href="{% url 'fattura_print' d.pk %}" style="font-size:0.8rem;color:#3498db;text-decoration:none">
+            🖨️ Apri
+          </a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="ed-empty">
+    <div style="font-size:2.5rem;margin-bottom:0.75rem">📋</div>
+    Nessun documento per il periodo selezionato.
+  </div>
+  {% endif %}
+</div>
+</body>
+</html>

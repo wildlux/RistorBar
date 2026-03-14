@@ -1,0 +1,395 @@
+{% load i18n static %}
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rubrica Contatti — RistoBAR</title>
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  <link rel="stylesheet" href="{% static 'css/sala_staff.css' %}">
+  <style>
+    .gc-body { max-width: 1100px; margin: 0 auto; padding: 1.25rem; }
+
+    /* ── Sezione entità (ristorante / sede) ── */
+    .gc-sezione {
+      background: white; border: 1px solid #e9ecef; border-radius: 12px;
+      overflow: hidden; margin-bottom: 1.5rem;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+    }
+    .gc-sezione-head {
+      background: #1a1a2e; color: white;
+      padding: 0.85rem 1.25rem; display: flex; align-items: center;
+      gap: 0.75rem; flex-wrap: wrap;
+    }
+    .gc-sezione-head h3 { font-size: 1rem; font-weight: 700; flex: 1; }
+    .gc-sede-badge { font-size: 0.72rem; background: rgba(255,255,255,0.15);
+                     padding: 0.15rem 0.6rem; border-radius: 20px; }
+    .gc-sezione-body { padding: 0; }
+
+    /* ── Tabella contatti ── */
+    .gc-table { width: 100%; border-collapse: collapse; }
+    .gc-table th {
+      font-size: 0.72rem; text-transform: uppercase; color: #888; letter-spacing: 0.06em;
+      padding: 0.55rem 1rem; text-align: left; border-bottom: 2px solid #f0f0f0;
+      background: #fafafa;
+    }
+    .gc-table td { padding: 0.65rem 1rem; border-bottom: 1px solid #f7f7f7;
+                   font-size: 0.88rem; vertical-align: middle; }
+    .gc-table tr:last-child td { border-bottom: none; }
+    .gc-table tr:hover td { background: #fafcff; }
+
+    .gc-icona { font-size: 1.15rem; }
+    .gc-tipo-label { font-size: 0.75rem; color: #888; display: block; }
+    .gc-valore a { color: #2471a3; text-decoration: none; font-weight: 600; }
+    .gc-valore a:hover { text-decoration: underline; }
+    .gc-etichetta { font-size: 0.78rem; color: #888; }
+    .gc-note { font-size: 0.75rem; color: #aaa; font-style: italic; }
+
+    .gc-badge-pub { font-size: 0.7rem; padding: 0.15rem 0.5rem; border-radius: 20px;
+                    font-weight: 700; cursor: pointer; border: none; transition: all 0.2s; }
+    .gc-badge-pub.pub  { background: #d5f5e3; color: #1e8449; }
+    .gc-badge-pub.priv { background: #fdecea; color: #c0392b; }
+
+    .gc-badge-princ { font-size: 0.7rem; background: #fff3cd; color: #856404;
+                      padding: 0.12rem 0.45rem; border-radius: 20px; font-weight: 700; }
+
+    .gc-btn-del { background: none; border: none; color: #e74c3c; cursor: pointer;
+                  font-size: 1rem; padding: 0.2rem 0.4rem; border-radius: 4px; }
+    .gc-btn-del:hover { background: #fdecea; }
+
+    /* ── Form aggiungi ── */
+    .gc-add-panel {
+      background: #f8f9fa; border-top: 2px solid #e9ecef;
+      padding: 1rem 1.25rem;
+    }
+    .gc-add-panel summary {
+      cursor: pointer; font-size: 0.85rem; font-weight: 700; color: #2471a3;
+      list-style: none; display: flex; align-items: center; gap: 0.5rem;
+    }
+    .gc-add-panel summary::-webkit-details-marker { display: none; }
+    .gc-add-form { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+                   gap: 0.65rem; margin-top: 0.85rem; }
+    .gc-add-form .full { grid-column: 1 / -1; }
+    .gc-field { display: flex; flex-direction: column; gap: 0.2rem; }
+    .gc-label { font-size: 0.72rem; color: #666; font-weight: 600; }
+    .gc-input { padding: 0.45rem 0.65rem; border: 1px solid #ddd; border-radius: 7px;
+                font-size: 0.85rem; width: 100%; }
+    .gc-input:focus { outline: none; border-color: #3498db; }
+    .gc-add-actions { display: flex; align-items: center; gap: 0.75rem; margin-top: 0.75rem; }
+    .gc-check { display: flex; align-items: center; gap: 0.35rem; font-size: 0.82rem; }
+
+    /* ── Empty state ── */
+    .gc-empty { text-align: center; color: #bbb; padding: 1.5rem; font-size: 0.85rem; }
+
+    /* ── Alert ── */
+    .gc-alert-ok  { background: #d5f5e3; color: #1e8449; border-radius: 8px;
+                    padding: 0.6rem 1rem; margin-bottom: 1rem; font-weight: 700; }
+    .gc-alert-err { background: #fdecea; color: #c0392b; border-radius: 8px;
+                    padding: 0.6rem 1rem; margin-bottom: 1rem; font-weight: 700; }
+
+    /* ── Stats bar ── */
+    .gc-stats { display: flex; gap: 1.5rem; flex-wrap: wrap; margin-bottom: 1.25rem;
+                background: white; border: 1px solid #e9ecef; border-radius: 10px;
+                padding: 0.85rem 1.25rem; }
+    .gc-stat { font-size: 0.82rem; color: #666; }
+    .gc-stat strong { font-size: 1.1rem; color: #1a1a2e; display: block; }
+
+    @media (max-width: 700px) {
+      .gc-add-form { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="staff-nav">
+  <div class="staff-brand">
+    <a href="/sala/capo/" class="back-link">←</a>
+    📇 Rubrica Contatti
+  </div>
+  <div class="staff-nav-right">
+    <a href="/sala/capo/impostazioni/" class="btn-staff-logout" style="color:rgba(255,255,255,0.7)">⚙️ Impostazioni</a>
+    <a href="/logout/" class="btn-staff-logout">Esci</a>
+  </div>
+</nav>
+
+<div class="gc-body">
+
+  {% if ok_msg %}<div class="gc-alert-ok">✅ {{ ok_msg }}</div>{% endif %}
+  {% if errore %}<div class="gc-alert-err">⚠️ {{ errore }}</div>{% endif %}
+
+  <!-- Statistiche rapide -->
+  {% with tot_pub=contatti_ristorante.count %}
+  <div class="gc-stats">
+    <div class="gc-stat"><strong>{{ contatti_ristorante.count }}</strong> contatti sede principale</div>
+    <div class="gc-stat"><strong>{{ sedi.count }}</strong> sedi/filiali</div>
+    <div class="gc-stat">
+      <strong>
+        {% with n=0 %}
+          {{ contatti_ristorante.count }}{% for sede in sedi %} + {{ contatti_per_sede|length }}{% endfor %}
+        {% endwith %}
+      </strong> totale contatti
+    </div>
+    <div class="gc-stat" style="margin-left:auto">
+      <a href="/amministrazione/ristorante/sede/" style="font-size:0.82rem;color:#3498db;text-decoration:none">
+        ➕ Aggiungi sede →
+      </a>
+    </div>
+  </div>
+  {% endwith %}
+
+  <!-- ═══ RISTORANTE PRINCIPALE ════════════════════════════════ -->
+  <div class="gc-sezione">
+    <div class="gc-sezione-head">
+      <span style="font-size:1.3rem">🏠</span>
+      <h3>{{ imp.nome }} <small style="font-weight:400;opacity:0.7">— sede principale</small></h3>
+      <span class="gc-sede-badge">Ristorante</span>
+    </div>
+
+    <div class="gc-sezione-body">
+      {% if contatti_ristorante %}
+      <table class="gc-table">
+        <thead>
+          <tr>
+            <th style="width:40px"></th>
+            <th>Tipo</th>
+            <th>Valore / URL</th>
+            <th>Etichetta</th>
+            <th>Ordine</th>
+            <th>Vetrina</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in contatti_ristorante %}
+          <tr id="row-{{ c.pk }}">
+            <td class="gc-icona">{{ c.get_icona }}</td>
+            <td>
+              <strong>{{ c.get_tipo_display|cut:"📞 "|cut:"📱 "|cut:"✉️ "|cut:"💬 "|cut:"✈️ "|cut:"📠 "|cut:"🌐 "|cut:"📘 "|cut:"📸 "|cut:"🎵 "|cut:"💼 "|cut:"▶️ "|cut:"📍 "|cut:"⭐ "|cut:"🍴 "|cut:"🛵 "|cut:"🟡 "|cut:"🟠 "|cut:"📌 " }}</strong>
+              {% if c.principale %}<span class="gc-badge-princ">★ principale</span>{% endif %}
+            </td>
+            <td class="gc-valore">
+              <a href="{{ c.url }}" target="_blank" rel="noopener">{{ c.valore }}</a>
+              {% if c.note %}<div class="gc-note">{{ c.note }}</div>{% endif %}
+            </td>
+            <td class="gc-etichetta">{{ c.etichetta|default:"—" }}</td>
+            <td style="color:#aaa;font-size:0.8rem">{{ c.ordine }}</td>
+            <td>
+              <button class="gc-badge-pub {% if c.pubblico %}pub{% else %}priv{% endif %}"
+                      onclick="togglePubblico({{ c.pk }}, this)"
+                      title="Clicca per cambiare">
+                {% if c.pubblico %}🌐 Pubblico{% else %}🔒 Privato{% endif %}
+              </button>
+            </td>
+            <td>
+              <form method="post" style="display:inline" onsubmit="return confirm('Eliminare questo contatto?')">
+                {% csrf_token %}
+                <input type="hidden" name="azione" value="elimina">
+                <input type="hidden" name="contatto_id" value="{{ c.pk }}">
+                <button type="submit" class="gc-btn-del" title="Elimina">🗑</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="gc-empty">Nessun contatto per il ristorante principale.</div>
+      {% endif %}
+
+      <!-- Form aggiungi contatto al ristorante -->
+      <div class="gc-add-panel">
+        <details>
+          <summary>➕ Aggiungi contatto a {{ imp.nome }}</summary>
+          <form method="post" class="gc-add-form" style="margin-top:0.85rem">
+            {% csrf_token %}
+            <input type="hidden" name="azione" value="aggiungi">
+            <input type="hidden" name="sede_id" value="">
+
+            <div class="gc-field">
+              <label class="gc-label">Tipo *</label>
+              <select class="gc-input" name="tipo">
+                {% for valore, etichetta in tipi %}
+                  {% if etichetta != '' and not etichetta|stringformat:"s"|slice:":2" == "──" %}
+                <option value="{{ valore }}">{{ etichetta }}</option>
+                  {% endif %}
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="gc-field">
+              <label class="gc-label">Valore / URL / Numero *</label>
+              <input class="gc-input" type="text" name="valore" placeholder="+39 02 1234567 oppure https://...">
+            </div>
+
+            <div class="gc-field">
+              <label class="gc-label">Etichetta</label>
+              <input class="gc-input" type="text" name="etichetta" placeholder="Prenotazioni, Delivery...">
+            </div>
+
+            <div class="gc-field">
+              <label class="gc-label">Ordine (↑ = prima)</label>
+              <input class="gc-input" type="number" name="ordine" value="10" min="0" max="999">
+            </div>
+
+            <div class="gc-field full gc-add-actions">
+              <label class="gc-check">
+                <input type="checkbox" name="principale"> Contatto principale per tipo
+              </label>
+              <label class="gc-check">
+                <input type="checkbox" name="pubblico" checked> Mostra su vetrina pubblica
+              </label>
+              <button type="submit" class="btn btn-primary" style="margin-left:auto">Aggiungi</button>
+            </div>
+          </form>
+        </details>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ SEDI / FILIALI ═══════════════════════════════════════ -->
+  {% for sede in sedi %}
+  <div class="gc-sezione">
+    <div class="gc-sezione-head" style="background:#2c3e50">
+      <span style="font-size:1.3rem">📍</span>
+      <h3>{{ sede.nome }} <small style="font-weight:400;opacity:0.7">— {{ sede.get_tipo_display }}</small></h3>
+      <span class="gc-sede-badge">{{ sede.citta|default:sede.indirizzo }}</span>
+      {% if sede.principale %}<span class="gc-sede-badge" style="background:rgba(255,215,0,0.3);color:#ffd700">★ principale</span>{% endif %}
+    </div>
+
+    <div style="font-size:0.78rem;color:#888;padding:0.5rem 1.25rem;background:#f8f9fa;border-bottom:1px solid #eee">
+      {{ sede.indirizzo_completo }}{% if sede.telefono %} &nbsp;·&nbsp; {{ sede.telefono }}{% endif %}
+    </div>
+
+    <div class="gc-sezione-body">
+      {% with contatti=contatti_per_sede|dictsort:"pk" %}
+      {% for s_id, cs in contatti_per_sede.items %}
+      {% if s_id == sede.pk %}
+        {% if cs %}
+        <table class="gc-table">
+          <thead>
+            <tr>
+              <th style="width:40px"></th>
+              <th>Tipo</th>
+              <th>Valore / URL</th>
+              <th>Etichetta</th>
+              <th>Ordine</th>
+              <th>Vetrina</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for c in cs %}
+            <tr id="row-{{ c.pk }}">
+              <td class="gc-icona">{{ c.get_icona }}</td>
+              <td>
+                <strong>{{ c.get_tipo_display|cut:"📞 "|cut:"📱 "|cut:"✉️ "|cut:"💬 "|cut:"✈️ "|cut:"📠 "|cut:"🌐 "|cut:"📘 "|cut:"📸 "|cut:"🎵 "|cut:"💼 "|cut:"▶️ "|cut:"📍 "|cut:"⭐ "|cut:"🍴 "|cut:"🛵 "|cut:"🟡 "|cut:"🟠 "|cut:"📌 " }}</strong>
+                {% if c.principale %}<span class="gc-badge-princ">★ principale</span>{% endif %}
+              </td>
+              <td class="gc-valore">
+                <a href="{{ c.url }}" target="_blank" rel="noopener">{{ c.valore }}</a>
+                {% if c.note %}<div class="gc-note">{{ c.note }}</div>{% endif %}
+              </td>
+              <td class="gc-etichetta">{{ c.etichetta|default:"—" }}</td>
+              <td style="color:#aaa;font-size:0.8rem">{{ c.ordine }}</td>
+              <td>
+                <button class="gc-badge-pub {% if c.pubblico %}pub{% else %}priv{% endif %}"
+                        onclick="togglePubblico({{ c.pk }}, this)">
+                  {% if c.pubblico %}🌐 Pubblico{% else %}🔒 Privato{% endif %}
+                </button>
+              </td>
+              <td>
+                <form method="post" style="display:inline" onsubmit="return confirm('Eliminare?')">
+                  {% csrf_token %}
+                  <input type="hidden" name="azione" value="elimina">
+                  <input type="hidden" name="contatto_id" value="{{ c.pk }}">
+                  <button type="submit" class="gc-btn-del">🗑</button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="gc-empty">Nessun contatto per questa sede.</div>
+        {% endif %}
+      {% endif %}
+      {% endfor %}
+      {% endwith %}
+
+      <!-- Form aggiungi contatto a questa sede -->
+      <div class="gc-add-panel">
+        <details>
+          <summary>➕ Aggiungi contatto a {{ sede.nome }}</summary>
+          <form method="post" class="gc-add-form" style="margin-top:0.85rem">
+            {% csrf_token %}
+            <input type="hidden" name="azione" value="aggiungi">
+            <input type="hidden" name="sede_id" value="{{ sede.pk }}">
+
+            <div class="gc-field">
+              <label class="gc-label">Tipo *</label>
+              <select class="gc-input" name="tipo">
+                {% for valore, etichetta in tipi %}
+                  {% if etichetta != '' and not etichetta|stringformat:"s"|slice:":2" == "──" %}
+                <option value="{{ valore }}">{{ etichetta }}</option>
+                  {% endif %}
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="gc-field">
+              <label class="gc-label">Valore / URL / Numero *</label>
+              <input class="gc-input" type="text" name="valore" placeholder="+39 02 1234567 oppure https://...">
+            </div>
+
+            <div class="gc-field">
+              <label class="gc-label">Etichetta</label>
+              <input class="gc-input" type="text" name="etichetta" placeholder="Prenotazioni, Chef...">
+            </div>
+
+            <div class="gc-field">
+              <label class="gc-label">Ordine</label>
+              <input class="gc-input" type="number" name="ordine" value="10" min="0" max="999">
+            </div>
+
+            <div class="gc-field full gc-add-actions">
+              <label class="gc-check">
+                <input type="checkbox" name="principale"> Principale per tipo
+              </label>
+              <label class="gc-check">
+                <input type="checkbox" name="pubblico" checked> Mostra su vetrina
+              </label>
+              <button type="submit" class="btn btn-primary" style="margin-left:auto">Aggiungi</button>
+            </div>
+          </form>
+        </details>
+      </div>
+    </div>
+  </div>
+  {% empty %}
+  <div style="text-align:center;color:#aaa;padding:2rem;font-size:0.9rem">
+    <div style="font-size:2rem;margin-bottom:0.5rem">📍</div>
+    Nessuna sede configurata.
+    <a href="/amministrazione/ristorante/sede/" style="color:#3498db">Aggiungine una →</a>
+  </div>
+  {% endfor %}
+
+</div><!-- /gc-body -->
+
+<script>
+const CSRF = '{{ csrf_token }}';
+
+async function togglePubblico(id, btn) {
+  const form = new FormData();
+  form.append('azione', 'toggle_pubblico');
+  form.append('contatto_id', id);
+  form.append('csrfmiddlewaretoken', CSRF);
+  const r    = await fetch(window.location.pathname, { method: 'POST', body: form });
+  const data = await r.json();
+  if (data.ok) {
+    btn.className = 'gc-badge-pub ' + (data.pubblico ? 'pub' : 'priv');
+    btn.textContent = data.pubblico ? '🌐 Pubblico' : '🔒 Privato';
+  }
+}
+</script>
+</body>
+</html>

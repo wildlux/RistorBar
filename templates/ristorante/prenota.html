@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Prenota" %} - {{ tavolo }} - RistoBAR{% endblock %}
+
+{% block content %}
+<div class="prenota-container">
+    <div class="prenota-header">
+        <h1>🍽️ {{ sala.nome }}</h1>
+        <h2>{% trans "Tavolo" %} {{ tavolo.numero }} — {% trans "max" %} {{ tavolo.capacita }} {% trans "persone" %}</h2>
+    </div>
+
+    <form method="post" class="prenota-form" id="form-prenota">
+        {% csrf_token %}
+        <div class="form-group">
+            <label for="nome">{% trans "Nome e Cognome" %} *</label>
+            <input type="text" name="nome" id="nome" class="input" required placeholder="Mario Rossi">
+        </div>
+        <div class="form-group">
+            <label for="telefono">{% trans "Telefono" %}</label>
+            <input type="tel" name="telefono" id="telefono" class="input" placeholder="+39 333 123 4567">
+        </div>
+        <div class="form-group">
+            <label for="persone">{% trans "Numero di persone" %} *</label>
+            <select name="persone" id="persone" class="input" required>
+                {% for i in "12345678910"|make_list %}
+                <option value="{{ forloop.counter }}">{{ forloop.counter }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="data_ora">{% trans "Data e ora" %} *</label>
+            <input type="datetime-local" name="data_ora" id="data_ora" class="input" required>
+        </div>
+        <div class="form-group">
+            <label for="note">{% trans "Note o richieste speciali" %}</label>
+            <textarea name="note" id="note" class="input" rows="3"
+                placeholder="{% trans 'Allergie, sedie per bambini, ecc.' %}"></textarea>
+        </div>
+
+        <div class="caparra-info">
+            <div class="caparra-card">
+                <span class="caparra-icon">💳</span>
+                <div>
+                    <strong>{% trans "Caparra confirmatoria: €10,00" %}</strong>
+                    <p>{% trans "Verrà detratta dal conto finale. Rimborso completo con disdetta entro 24 ore." %}</p>
+                </div>
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-large">
+            {% trans "Procedi al pagamento" %} →
+        </button>
+    </form>
+</div>
+{% endblock %}

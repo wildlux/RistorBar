@@ -1,0 +1,51 @@
+{% load i18n static %}
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% trans "Accedi" %} - RistoBAR</title>
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <style>
+        body { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: var(--bg); }
+        .login-box { background: var(--card); border-radius: var(--radius); padding: 2.5rem; width: 100%; max-width: 380px; box-shadow: var(--shadow); text-align: center; }
+        .login-logo { font-size: 3rem; margin-bottom: 0.5rem; }
+        .login-box h1 { font-size: 1.5rem; color: var(--primary); margin-bottom: 0.25rem; }
+        .login-box p { color: var(--muted); font-size: 0.9rem; margin-bottom: 2rem; }
+        .form-group { text-align: left; margin-bottom: 1.25rem; }
+        .form-group label { display: block; font-size: 0.9rem; font-weight: 600; margin-bottom: 0.4rem; }
+        .errori { background: #fdecea; border: 1px solid #e74c3c; border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 1rem; color: #c0392b; font-size: 0.9rem; text-align: left; }
+    </style>
+</head>
+<body>
+    <div class="login-box">
+        <div class="login-logo">🍽️</div>
+        <h1>RistoBAR</h1>
+        <p>{% trans "Accedi per gestire il tuo ristorante" %}</p>
+
+        {% if form.errors %}
+        <div class="errori">
+            ❌ {% trans "Credenziali non valide. Riprova." %}
+        </div>
+        {% endif %}
+
+        <form method="post">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="id_username">{% trans "Username" %}</label>
+                <input type="text" name="username" id="id_username" class="input"
+                       autofocus autocomplete="username" required placeholder="admin">
+            </div>
+            <div class="form-group">
+                <label for="id_password">{% trans "Password" %}</label>
+                <input type="password" name="password" id="id_password" class="input"
+                       autocomplete="current-password" required placeholder="••••••••">
+            </div>
+            <input type="hidden" name="next" value="{{ next }}">
+            <button type="submit" class="btn btn-primary btn-large">
+                {% trans "Accedi" %} →
+            </button>
+        </form>
+    </div>
+</body>
+</html>

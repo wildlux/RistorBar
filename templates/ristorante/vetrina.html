@@ -1,0 +1,159 @@
+{% load i18n static %}
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1a1a2e">
+  <title>La Trattoria — Ristorante</title>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  <link rel="stylesheet" href="{% static 'css/vetrina.css' %}">
+</head>
+<body class="vetrina-body">
+
+<!-- ── HERO ──────────────────────────────────────────── -->
+<header class="hero">
+  <nav class="hero-nav">
+    <div class="hero-brand">🍽️ La Trattoria</div>
+    <div class="hero-nav-links">
+      <a href="#menu">Menu</a>
+      <a href="#info">Informazioni</a>
+      <a href="#prenota" class="btn-hero-prenota">Prenota</a>
+    </div>
+  </nav>
+  <div class="hero-content">
+    <h1>Un'esperienza<br><span>indimenticabile</span></h1>
+    <p>Cucina italiana autentica nel cuore della città.<br>Ingredienti freschi, ricette della tradizione.</p>
+    <div class="hero-cta">
+      <a href="#prenota" class="btn-cta-primary">📅 Prenota un tavolo</a>
+      <a href="#menu"    class="btn-cta-outline">Scopri il menu ↓</a>
+    </div>
+  </div>
+  <div class="hero-scroll">↓</div>
+</header>
+
+<!-- ── FEATURES ──────────────────────────────────────── -->
+<section class="features">
+  <div class="feat">
+    <div class="feat-icon">🌿</div>
+    <h3>Km 0</h3>
+    <p>Ingredienti freschi da produttori locali selezionati</p>
+  </div>
+  <div class="feat">
+    <div class="feat-icon">👨‍🍳</div>
+    <h3>Chef esperto</h3>
+    <p>30 anni di tradizione culinaria italiana</p>
+  </div>
+  <div class="feat">
+    <div class="feat-icon">🍷</div>
+    <h3>Cantina selezionata</h3>
+    <p>Oltre 80 etichette di vini italiani e francesi</p>
+  </div>
+  <div class="feat">
+    <div class="feat-icon">📱</div>
+    <h3>Prenotazione digitale</h3>
+    <p>Prenota in 30 secondi, caparra sicura online</p>
+  </div>
+</section>
+
+<!-- ── MENU ──────────────────────────────────────────── -->
+<section class="vetrina-menu" id="menu">
+  <div class="section-header">
+    <h2>Il nostro menu</h2>
+    <p>Scopri le specialità dello chef</p>
+  </div>
+  {% for categoria in categorie %}
+  {% if categoria.piatti.exists %}
+  <div class="menu-section">
+    <h3 class="menu-cat-title">
+      {% if categoria.icona %}{{ categoria.icona }}{% endif %} {{ categoria.nome }}
+    </h3>
+    <div class="menu-items">
+      {% for piatto in categoria.piatti.all %}
+      {% if piatto.disponibile %}
+      <div class="menu-item">
+        <div class="menu-item-info">
+          <span class="menu-item-name">{{ piatto.nome }}</span>
+          {% if piatto.descrizione %}
+          <span class="menu-item-desc">{{ piatto.descrizione }}</span>
+          {% endif %}
+          {% if piatto.allergeni %}
+          <span class="menu-item-tag">⚠️ {{ piatto.allergeni }}</span>
+          {% endif %}
+        </div>
+        <span class="menu-item-price">€{{ piatto.prezzo }}</span>
+      </div>
+      {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+  {% endfor %}
+</section>
+
+<!-- ── INFO ──────────────────────────────────────────── -->
+<section class="vetrina-info" id="info">
+  <div class="info-grid">
+    <div class="info-card">
+      <h3>📍 Dove siamo</h3>
+      <p>Via Roma 42<br>00100 — Roma (RM)<br>
+        <a href="https://maps.google.com" target="_blank">Apri su Maps →</a>
+      </p>
+    </div>
+    <div class="info-card">
+      <h3>🕐 Orari</h3>
+      <table class="orari-table">
+        <tr><td>Lun–Ven</td><td>12:00–15:00 / 19:00–23:00</td></tr>
+        <tr><td>Sabato</td><td>12:00–15:30 / 19:00–23:30</td></tr>
+        <tr><td>Domenica</td><td>12:00–16:00</td></tr>
+      </table>
+    </div>
+    <div class="info-card">
+      <h3>📞 Contatti</h3>
+      <p>Tel: <a href="tel:+390612345678">06 1234 5678</a><br>
+         Email: <a href="mailto:info@latrattoria.it">info@latrattoria.it</a><br>
+         <a href="https://t.me/LaTrattoriaBot" target="_blank">💬 Prenota su Telegram</a>
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ── PRENOTA ─────────────────────────────────────── -->
+<section class="vetrina-prenota" id="prenota">
+  <div class="section-header light">
+    <h2>Prenota il tuo tavolo</h2>
+    <p>Garantisci il tuo posto con una caparra di €10 (detratta dal conto finale)</p>
+  </div>
+  <div class="prenota-quick">
+    <form action="/prenota/1/1/" method="get" class="quick-form">
+      <div class="quick-fields">
+        <input type="text"           placeholder="Il tuo nome" class="input" required>
+        <input type="number"         placeholder="Persone" class="input" min="1" max="20" required>
+        <input type="datetime-local" class="input" required>
+      </div>
+      <button type="submit" class="btn-cta-primary">
+        Cerca disponibilità →
+      </button>
+    </form>
+    <p class="prenota-note">Oppure contattaci su
+      <a href="https://t.me/LaTrattoriaBot">Telegram</a> o al telefono.
+    </p>
+  </div>
+</section>
+
+<!-- ── FOOTER ─────────────────────────────────────── -->
+<footer class="vetrina-footer">
+  <div class="footer-inner">
+    <div class="footer-brand">🍽️ La Trattoria</div>
+    <div class="footer-links">
+      <a href="#menu">Menu</a>
+      <a href="#info">Info</a>
+      <a href="/accounts/login/">Area riservata</a>
+    </div>
+    <div class="footer-copy">© 2026 La Trattoria — Powered by RistoBAR</div>
+  </div>
+</footer>
+
+</body>
+</html>

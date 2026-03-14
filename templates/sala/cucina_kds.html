@@ -1,0 +1,140 @@
+{% load i18n static %}
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cucina — KDS</title>
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  <link rel="stylesheet" href="{% static 'css/sala_staff.css' %}">
+  <style>
+    body { background:#111; color:#fff; }
+    .kds-header { background:#1a1a2e; padding:1rem 1.5rem; display:flex; justify-content:space-between; align-items:center; }
+    .kds-brand { font-size:1.3rem; font-weight:700; }
+    .kds-time { font-size:1.1rem; font-family:monospace; color:#aaa; }
+    .kds-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:1rem; padding:1rem; }
+    .kds-ordine {
+      background:#1e1e2e; border-radius:12px; overflow:hidden;
+      border-left:5px solid #f39c12;
+    }
+    .kds-ordine.urgente { border-color:#e74c3c; animation:pulse 1.5s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.7} }
+    .kds-head { background:#2c2c3e; padding:0.75rem 1rem; display:flex; justify-content:space-between; align-items:center; }
+    .kds-tavolo { font-size:1.2rem; font-weight:700; }
+    .kds-timer { font-size:0.85rem; color:#aaa; font-family:monospace; }
+    .kds-items { padding:0.5rem; }
+    .kds-item { display:flex; align-items:center; justify-content:space-between;
+                padding:0.6rem 0.75rem; margin-bottom:0.4rem; border-radius:8px;
+                background:#2a2a3a; transition:background 0.2s; }
+    .kds-item.pronto { background:#1a3a2a; }
+    .kds-item-nome { font-size:1rem; display:flex; align-items:center; gap:0.5rem; }
+    .kds-item-qty { background:#444; border-radius:20px; padding:0.1rem 0.5rem; font-size:0.85rem; }
+    .kds-item-btn { border:none; border-radius:6px; cursor:pointer; padding:0.35rem 0.75rem;
+                    font-size:0.8rem; font-weight:700; transition:all 0.2s; }
+    .btn-cucina { background:#f39c12; color:#000; }
+    .btn-pronto { background:#27ae60; color:#fff; }
+    .btn-servito { background:#3498db; color:#fff; }
+    .kds-empty { text-align:center; color:#555; padding:4rem; font-size:1.2rem; }
+    .kds-empty span { display:block; font-size:3rem; margin-bottom:1rem; }
+  </style>
+</head>
+<body>
+
+<div class="kds-header">
+  <div class="kds-brand">👨‍🍳 Cucina — Kitchen Display System</div>
+  <div style="display:flex;align-items:center;gap:1.5rem">
+    <span class="kds-time" id="orologio"></span>
+    <a href="/sala/cucina/lista-spesa/" style="color:#f39c12;font-size:0.85rem;text-decoration:none;font-weight:700">🛒 Lista Spesa</a>
+    <a href="/logout/" style="color:#aaa;font-size:0.85rem;text-decoration:none">Esci</a>
+  </div>
+</div>
+
+<div class="kds-grid" id="kds-grid">
+  {% if ordini %}
+    {% for ordine in ordini %}
+    <div class="kds-ordine" id="ord-{{ ordine.pk }}" data-creato="{{ ordine.creato_il.isoformat }}">
+      <div class="kds-head">
+        <div>
+          <div class="kds-tavolo">Tavolo {{ ordine.tavolo.numero }}</div>
+          <div style="font-size:0.8rem;color:#aaa">Ordine #{{ ordine.pk }}</div>
+        </div>
+        <div class="kds-timer" id="timer-{{ ordine.pk }}">--:--</div>
+      </div>
+      <div class="kds-items">
+        {% for item in ordine.items.all %}
+        <div class="kds-item {% if item.stato == 'P' %}pronto{% endif %}" id="item-{{ item.pk }}">
+          <div class="kds-item-nome">
+            <span class="kds-item-qty">{{ item.quantita }}×</span>
+            {{ item.piatto.nome }}
+            {% if item.note %}<small style="color:#888">({{ item.note }})</small>{% endif %}
+          </div>
+          <div style="display:flex;gap:0.4rem">
+            {% if item.stato == 'C' %}
+            <button class="kds-item-btn btn-pronto" onclick="aggiornaItem({{ item.pk }},'P')">✓ Pronto</button>
+            {% elif item.stato == 'P' %}
+            <button class="kds-item-btn btn-servito" onclick="aggiornaItem({{ item.pk }},'S')">✓ Servito</button>
+            {% else %}
+            <button class="kds-item-btn btn-cucina" onclick="aggiornaItem({{ item.pk }},'C')">In lavorazione</button>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+  <div class="kds-empty" style="grid-column:1/-1">
+    <span>✅</span>
+    Nessun ordine in corso.<br>Tutto in ordine!
+  </div>
+  {% endif %}
+</div>
+
+<script>
+const CSRF = '{{ csrf_token }}';
+
+async function aggiornaItem(itemId, nuovoStato) {
+  const r = await fetch(`/sala/cucina/item/${itemId}/stato/`, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json','X-CSRFToken':CSRF},
+    body: JSON.stringify({stato: nuovoStato}),
+  });
+  const data = await r.json();
+  if (data.ok) {
+    if (data.ordine_completato) {
+      // Rimuovi la scheda ordine con animazione
+      const el = document.getElementById(`item-${itemId}`)?.closest('.kds-ordine');
+      if (el) { el.style.opacity='0'; el.style.transition='opacity 0.5s'; setTimeout(()=>el.remove(),500); }
+    } else {
+      location.reload(); // Reload semplice per aggiornare i bottoni
+    }
+  }
+}
+
+// Timer per ogni ordine
+function aggiornaTimer() {
+  document.querySelectorAll('.kds-ordine').forEach(el => {
+    const creato = new Date(el.dataset.creato);
+    const minuti = Math.floor((Date.now() - creato) / 60000);
+    const secondi = Math.floor(((Date.now() - creato) % 60000) / 1000);
+    const timerEl = el.querySelector('.kds-timer');
+    if (timerEl) timerEl.textContent = `${String(minuti).padStart(2,'0')}:${String(secondi).padStart(2,'0')}`;
+    // Urgente se > 15 minuti
+    if (minuti >= 15) el.classList.add('urgente');
+  });
+}
+
+// Orologio
+function tick() {
+  document.getElementById('orologio').textContent =
+    new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+tick(); setInterval(tick, 1000);
+setInterval(aggiornaTimer, 1000);
+aggiornaTimer();
+
+// Auto-refresh ogni 20 secondi per nuovi ordini
+setInterval(() => location.reload(), 20000);
+</script>
+</body>
+</html>

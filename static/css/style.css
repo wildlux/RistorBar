@@ -1,0 +1,250 @@
+/* ─── Reset & Base ─────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+    --primary: #2c3e50;
+    --accent: #e74c3c;
+    --green: #27ae60;
+    --yellow: #f39c12;
+    --blue: #3498db;
+    --bg: #f5f6fa;
+    --card: #ffffff;
+    --text: #2d3436;
+    --muted: #636e72;
+    --border: #dfe6e9;
+    --radius: 12px;
+    --shadow: 0 4px 16px rgba(0,0,0,0.08);
+}
+
+body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); }
+
+/* ─── Navbar ───────────────────────────────────────────────── */
+.navbar {
+    background: var(--primary);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1.5rem;
+    position: sticky; top: 0; z-index: 100;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+.logo { font-size: 1.4rem; font-weight: 700; }
+.nav-links { display: flex; align-items: center; gap: 1rem; }
+.nav-links a { color: rgba(255,255,255,0.85); text-decoration: none; font-size: 0.9rem; }
+.nav-links a:hover { color: white; }
+.lang-form select { background: rgba(255,255,255,0.15); border: none; color: white; padding: 0.3rem 0.5rem; border-radius: 6px; cursor: pointer; }
+
+/* ─── Container ────────────────────────────────────────────── */
+.container { max-width: 1200px; margin: 0 auto; padding: 1.5rem; }
+
+/* ─── Bottoni ──────────────────────────────────────────────── */
+.btn {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    padding: 0.6rem 1.2rem; border-radius: 8px;
+    font-size: 0.9rem; font-weight: 600; cursor: pointer;
+    border: 2px solid transparent; text-decoration: none; transition: all 0.2s;
+}
+.btn-primary { background: var(--accent); color: white; }
+.btn-primary:hover { background: #c0392b; }
+.btn-outline { background: transparent; border-color: var(--primary); color: var(--primary); }
+.btn-outline:hover { background: var(--primary); color: white; }
+.btn-large { padding: 0.9rem 2rem; font-size: 1rem; width: 100%; justify-content: center; }
+
+/* ─── Alert ────────────────────────────────────────────────── */
+.alert { padding: 0.75rem 1rem; border-radius: var(--radius); margin-bottom: 1rem; }
+
+/* ─── Dashboard ─────────────────────────────────────────────── */
+.dashboard h1 { font-size: 1.8rem; margin-bottom: 1.5rem; }
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+.stat-card { background: var(--card); border-radius: var(--radius); padding: 1.5rem; text-align: center; box-shadow: var(--shadow); }
+.stat-icon { font-size: 2rem; }
+.stat-value { font-size: 2.5rem; font-weight: 700; color: var(--primary); }
+.stat-label { font-size: 0.85rem; color: var(--muted); margin-top: 0.25rem; }
+
+/* ─── Sala & Tavoli ─────────────────────────────────────────── */
+.sala-section { margin-bottom: 2rem; }
+.sala-section h2 { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; font-size: 1.3rem; }
+
+.tavoli-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 1rem; }
+
+.tavolo-card {
+    background: var(--card);
+    border: 3px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem;
+    text-align: center;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: var(--shadow);
+}
+.tavolo-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.12); }
+.tavolo-numero { font-size: 1.8rem; font-weight: 700; }
+.tavolo-posti { font-size: 0.8rem; color: var(--muted); }
+.tavolo-stato { font-size: 0.75rem; font-weight: 600; margin: 0.4rem 0; }
+.tavolo-r { border-radius: 50%; }
+.tavolo-q { border-radius: 8px; }
+.tavolo-t { border-radius: 4px; }
+
+.stato-select { width: 100%; margin-top: 0.5rem; padding: 0.25rem; border-radius: 6px; border: 1px solid var(--border); font-size: 0.75rem; cursor: pointer; }
+
+/* ─── Mappa sala ─────────────────────────────────────────────── */
+.mappa-container { padding: 1rem; }
+.mappa-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+.mappa-sala {
+    position: relative;
+    background: #f0f0f0;
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    overflow: auto;
+    min-height: 400px;
+}
+.tavolo-mappa {
+    position: absolute;
+    width: 80px; height: 80px;
+    border: 3px solid;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    cursor: pointer; transition: transform 0.2s;
+    font-size: 0.8rem;
+}
+.tavolo-mappa:hover { transform: scale(1.1); z-index: 10; }
+.tavolo-mappa.tavolo-r { border-radius: 50%; }
+.tavolo-mappa.tavolo-q { border-radius: 8px; }
+.t-numero { font-size: 1.2rem; font-weight: 700; }
+.t-posti { font-size: 0.65rem; color: var(--muted); }
+
+.legenda { display: flex; gap: 1.5rem; padding: 0.75rem; flex-wrap: wrap; margin-top: 0.5rem; }
+.legenda-item { font-size: 0.85rem; font-weight: 600; }
+
+/* ─── Modal ──────────────────────────────────────────────────── */
+.modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+.modal-content { background: var(--card); border-radius: var(--radius); padding: 2rem; max-width: 400px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+.modal-footer { margin-top: 1rem; text-align: right; }
+
+/* ─── Form prenotazione ─────────────────────────────────────── */
+.prenota-container { max-width: 540px; margin: 2rem auto; }
+.prenota-header { text-align: center; margin-bottom: 2rem; }
+.prenota-header h1 { font-size: 1.6rem; }
+.prenota-header h2 { font-size: 1rem; color: var(--muted); font-weight: 400; }
+
+.form-group { margin-bottom: 1.25rem; }
+.form-group label { display: block; font-size: 0.9rem; font-weight: 600; margin-bottom: 0.4rem; }
+.input { width: 100%; padding: 0.75rem 1rem; border: 2px solid var(--border); border-radius: 8px; font-size: 1rem; transition: border-color 0.2s; }
+.input:focus { outline: none; border-color: var(--primary); }
+
+.caparra-card { display: flex; gap: 1rem; align-items: flex-start; background: #e8f4fd; border-radius: var(--radius); padding: 1rem; margin: 1.5rem 0; border-left: 4px solid var(--blue); }
+.caparra-icon { font-size: 2rem; }
+.caparra-card p { font-size: 0.85rem; color: var(--muted); margin-top: 0.25rem; }
+
+/* ─── Conferma ───────────────────────────────────────────────── */
+.conferma-container { max-width: 480px; margin: 3rem auto; text-align: center; }
+.conferma-card { background: var(--card); border-radius: var(--radius); padding: 2.5rem; box-shadow: var(--shadow); }
+.conferma-icon { font-size: 4rem; margin-bottom: 1rem; }
+.conferma-dettagli { text-align: left; background: var(--bg); border-radius: 8px; padding: 1rem; margin: 1.5rem 0; }
+.conferma-dettagli p { margin: 0.5rem 0; }
+.conferma-info { color: var(--muted); font-size: 0.9rem; }
+
+/* ─── Menu tavolo ────────────────────────────────────────────── */
+.menu-header { text-align: center; padding: 1.5rem 0; border-bottom: 2px solid var(--border); margin-bottom: 1.5rem; }
+.menu-categoria { margin-bottom: 2rem; }
+.categoria-titolo { font-size: 1.3rem; font-weight: 700; padding: 0.5rem 0; border-bottom: 2px solid var(--border); margin-bottom: 1rem; }
+.piatti-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
+.piatto-card { background: var(--card); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); display: flex; }
+.piatto-img { width: 100px; object-fit: cover; }
+.piatto-info { padding: 1rem; flex: 1; }
+.piatto-info h3 { font-size: 1rem; margin-bottom: 0.25rem; }
+.piatto-desc { font-size: 0.85rem; color: var(--muted); margin: 0.25rem 0; }
+.piatto-allergeni { font-size: 0.75rem; color: #e67e22; }
+.piatto-prezzo { font-size: 1.1rem; font-weight: 700; color: var(--accent); display: block; margin-top: 0.5rem; }
+.menu-footer { text-align: center; margin-top: 2rem; }
+
+/* ─── Tabelle ────────────────────────────────────────────────── */
+.table-responsive { overflow-x: auto; }
+.table { width: 100%; border-collapse: collapse; background: var(--card); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
+.table th { background: var(--primary); color: white; padding: 0.75rem 1rem; text-align: left; font-size: 0.85rem; }
+.table td { padding: 0.75rem 1rem; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+.table tr:last-child td { border-bottom: none; }
+
+.badge { padding: 0.25rem 0.6rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+.badge-A { background: #ffeaa7; color: #856404; }
+.badge-C { background: #d4edda; color: #155724; }
+.badge-R { background: #f8d7da; color: #721c24; }
+.badge-X { background: #f0f0f0; color: #6c757d; }
+
+.prenotazioni-section { margin-top: 2rem; }
+.prenotazioni-section h2 { margin-bottom: 1rem; }
+
+.text-muted { color: var(--muted); }
+
+/* ─── Responsive ─────────────────────────────────────────────── */
+@media (max-width: 600px) {
+    .container { padding: 1rem; }
+    .tavoli-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); }
+    .stats-grid { grid-template-columns: 1fr 1fr; }
+    .nav-links a { display: none; }
+}
+
+/* ── Editor sala ────────────────────────────────────────────── */
+.editor-wrap { display: flex; flex-direction: column; height: calc(100vh - 60px); overflow: hidden; }
+
+.editor-toolbar {
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--primary); color: white;
+    padding: 0.5rem 1rem; gap: 0.5rem; flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+.tb-left  { display: flex; align-items: center; gap: 0.75rem; min-width: 180px; }
+.tb-center{ display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; justify-content: center; }
+.tb-right { display: flex; align-items: center; gap: 0.5rem; min-width: 180px; justify-content: flex-end; }
+.btn-sm   { padding: 0.35rem 0.75rem; font-size: 0.8rem; border-radius: 6px;
+            background: rgba(255,255,255,0.12); color: white; border: 1px solid rgba(255,255,255,0.2);
+            cursor: pointer; transition: background 0.15s; }
+.btn-sm:hover:not(:disabled) { background: rgba(255,255,255,0.25); }
+.btn-sm:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-danger { background: rgba(231,76,60,0.5) !important; }
+.btn-danger:hover:not(:disabled) { background: rgba(231,76,60,0.8) !important; }
+.btn-primary.btn-sm { background: #e74c3c; border-color: #c0392b; }
+.btn-primary.btn-sm:hover { background: #c0392b; }
+.tb-toggle { display: flex; align-items: center; gap: 0.3rem; color: rgba(255,255,255,0.8); font-size: 0.8rem; cursor: pointer; }
+#zoom-label { color: rgba(255,255,255,0.8); font-size: 0.8rem; min-width: 38px; text-align: center; }
+
+.editor-body { display: flex; flex: 1; overflow: hidden; }
+
+.editor-side {
+    width: 200px; flex-shrink: 0;
+    background: #fafafa; border-right: 1px solid var(--border);
+    overflow-y: auto; padding: 0.75rem;
+}
+.side-section { margin-bottom: 1.25rem; }
+.side-section h4 { font-size: 0.8rem; font-weight: 700; text-transform: uppercase;
+                   color: var(--muted); margin-bottom: 0.6rem; border-bottom: 1px solid var(--border); padding-bottom: 0.3rem; }
+.legenda-item { display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; margin-bottom: 0.3rem; }
+.dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; display: inline-block; }
+.shape-legend { display: grid; grid-template-columns: 40px 1fr; gap: 0.3rem 0.5rem; align-items: center; font-size: 0.8rem; }
+#info-panel p { font-size: 0.8rem; line-height: 1.6; }
+
+.editor-canvas-wrap {
+    flex: 1; overflow: auto; background: #e8ecf0;
+    display: flex; align-items: flex-start; justify-content: flex-start; padding: 1rem;
+}
+#editor-svg {
+    background: white;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    border-radius: 4px;
+    display: block;
+    transition: transform 0.1s;
+}
+.svg-tavolo { transition: filter 0.15s; }
+.svg-tavolo:hover { opacity: 0.9; }
+.svg-tavolo.dragging { filter: brightness(1.15); }
+
+/* Toast */
+.toast {
+    position: fixed; bottom: 1.5rem; right: 1.5rem;
+    padding: 0.75rem 1.25rem; border-radius: 10px;
+    font-size: 0.9rem; font-weight: 600;
+    opacity: 0; transition: opacity 0.3s; z-index: 9999;
+    pointer-events: none;
+}
+.toast-ok  { background: #27ae60; color: white; }
+.toast-err { background: #e74c3c; color: white; }

@@ -1,0 +1,186 @@
+{% load i18n static %}
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Impostazioni Ristorante — RistoBAR</title>
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  <link rel="stylesheet" href="{% static 'css/sala_staff.css' %}">
+  <style>
+    .ir-body { max-width: 760px; margin: 0 auto; padding: 1.25rem; }
+    .ir-card { background: white; border: 1px solid #e9ecef; border-radius: 12px;
+               padding: 1.25rem 1.5rem; margin-bottom: 1rem; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+    .ir-card h3 { font-size: 0.95rem; font-weight: 700; margin-bottom: 1rem;
+                  border-bottom: 2px solid #e9ecef; padding-bottom: 0.4rem; }
+    .ir-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+    .ir-full { grid-column: 1/-1; }
+    .ir-label { font-size: 0.78rem; color: #666; font-weight: 600; display: block; margin-bottom: 0.2rem; }
+    .ir-input { width: 100%; padding: 0.5rem 0.7rem; border: 1px solid #ddd;
+                border-radius: 7px; font-size: 0.88rem; }
+    .ir-input:focus { outline: none; border-color: #3498db; }
+    textarea.ir-input { resize: vertical; min-height: 70px; }
+    .ir-hint { font-size: 0.72rem; color: #aaa; margin-top: 0.2rem; }
+    .ir-msg { background: #d5f5e3; color: #1e8449; border-radius: 8px;
+              padding: 0.6rem 1rem; font-weight: 700; margin-bottom: 1rem; }
+    .ir-save { display: flex; gap: 0.75rem; align-items: center; }
+    .ir-logo-preview { max-height: 60px; border-radius: 6px; border: 1px solid #ddd; padding: 4px; }
+  </style>
+</head>
+<body>
+
+<nav class="staff-nav">
+  <div class="staff-brand">
+    <a href="/sala/capo/" class="back-link">←</a>
+    ⚙️ Impostazioni Ristorante
+  </div>
+</nav>
+
+<div class="ir-body">
+
+  {% if messaggio %}
+  <div class="ir-msg">✅ {{ messaggio }}</div>
+  {% endif %}
+
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+
+    <div class="ir-card">
+      <h3>🏷️ Dati generali</h3>
+      <div class="ir-grid">
+        <div class="ir-full">
+          <label class="ir-label">Nome ristorante</label>
+          <input class="ir-input" type="text" name="nome" value="{{ imp.nome }}">
+        </div>
+        <div class="ir-full">
+          <label class="ir-label">Slogan / sottotitolo</label>
+          <input class="ir-input" type="text" name="slogan" value="{{ imp.slogan }}">
+        </div>
+        <div>
+          <label class="ir-label">Telefono</label>
+          <input class="ir-input" type="text" name="telefono" value="{{ imp.telefono }}">
+        </div>
+        <div>
+          <label class="ir-label">Email</label>
+          <input class="ir-input" type="email" name="email" value="{{ imp.email }}">
+        </div>
+        <div class="ir-full">
+          <label class="ir-label">Sito web</label>
+          <input class="ir-input" type="url" name="sito" value="{{ imp.sito }}" placeholder="https://www.mioristorante.it">
+        </div>
+      </div>
+    </div>
+
+    <div class="ir-card">
+      <h3>📍 Indirizzo</h3>
+      <div class="ir-grid">
+        <div class="ir-full">
+          <label class="ir-label">Via / Piazza</label>
+          <input class="ir-input" type="text" name="indirizzo" value="{{ imp.indirizzo }}">
+        </div>
+        <div>
+          <label class="ir-label">CAP</label>
+          <input class="ir-input" type="text" name="cap" value="{{ imp.cap }}" maxlength="10">
+        </div>
+        <div>
+          <label class="ir-label">Città</label>
+          <input class="ir-input" type="text" name="citta" value="{{ imp.citta }}">
+        </div>
+        <div>
+          <label class="ir-label">Provincia (sigla)</label>
+          <input class="ir-input" type="text" name="provincia" value="{{ imp.provincia }}" maxlength="5" placeholder="MI">
+        </div>
+      </div>
+    </div>
+
+    <div class="ir-card">
+      <h3>🏛️ Dati fiscali</h3>
+      <div class="ir-grid">
+        <div>
+          <label class="ir-label">Partita IVA</label>
+          <input class="ir-input" type="text" name="piva" value="{{ imp.piva }}" maxlength="11" placeholder="12345678901">
+        </div>
+        <div>
+          <label class="ir-label">Codice Fiscale</label>
+          <input class="ir-input" type="text" name="cf" value="{{ imp.cf }}" maxlength="16">
+        </div>
+        <div>
+          <label class="ir-label">Regime fiscale SDI</label>
+          <input class="ir-input" type="text" name="regime_fiscale" value="{{ imp.regime_fiscale }}" placeholder="RF01">
+          <div class="ir-hint">RF01 = Ordinario, RF19 = Forfettario</div>
+        </div>
+        <div>
+          <label class="ir-label">IBAN</label>
+          <input class="ir-input" type="text" name="iban" value="{{ imp.iban }}" placeholder="IT60X0542811101000000123456">
+        </div>
+      </div>
+    </div>
+
+    <div class="ir-card">
+      <h3>🖼️ Logo</h3>
+      {% if imp.logo %}
+      <img src="{{ imp.logo.url }}" class="ir-logo-preview" alt="Logo attuale"><br><br>
+      {% endif %}
+      <input type="file" name="logo" accept="image/*">
+      <div class="ir-hint">Usato nell'intestazione di fatture e scontrini. Consigliato: PNG trasparente, max 300×100px.</div>
+    </div>
+
+    <div class="ir-card">
+      <h3>📝 Note documenti</h3>
+      <div class="ir-grid">
+        <div class="ir-full">
+          <label class="ir-label">Note a piè di scontrino</label>
+          <textarea class="ir-input" name="note_scontrino">{{ imp.note_scontrino }}</textarea>
+        </div>
+        <div class="ir-full">
+          <label class="ir-label">Note a piè di fattura</label>
+          <textarea class="ir-input" name="note_fattura">{{ imp.note_fattura }}</textarea>
+          <div class="ir-hint">Es. "Pagamento a 30gg d.f.f.m." oppure condizioni legali.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ir-save">
+      <button type="submit" class="btn btn-primary">💾 Salva impostazioni</button>
+      <a href="/sala/capo/" class="btn btn-secondary">Annulla</a>
+    </div>
+  </form>
+
+  <!-- Sedi / indirizzi aggiuntivi -->
+  <div class="ir-card" style="margin-top:1.5rem">
+    <h3>📍 Sedi / Indirizzi aggiuntivi</h3>
+    {% if imp.sedi.all %}
+    <table style="width:100%;border-collapse:collapse;font-size:0.85rem;margin-bottom:1rem">
+      <thead>
+        <tr style="background:#f8f9fa">
+          <th style="padding:0.4rem 0.6rem;text-align:left">Tipo</th>
+          <th style="padding:0.4rem 0.6rem;text-align:left">Nome</th>
+          <th style="padding:0.4rem 0.6rem;text-align:left">Indirizzo</th>
+          <th style="padding:0.4rem 0.6rem;text-align:left">Telefono</th>
+          <th style="padding:0.4rem 0.6rem;text-align:center">Principale</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for sede in imp.sedi.all %}{% if sede.attiva %}
+        <tr style="border-top:1px solid #f0f0f0">
+          <td style="padding:0.4rem 0.6rem">{{ sede.get_tipo_display }}</td>
+          <td style="padding:0.4rem 0.6rem"><strong>{{ sede.nome }}</strong></td>
+          <td style="padding:0.4rem 0.6rem">{{ sede.indirizzo_completo }}</td>
+          <td style="padding:0.4rem 0.6rem">{{ sede.telefono|default:"—" }}</td>
+          <td style="padding:0.4rem 0.6rem;text-align:center">{% if sede.principale %}✅{% else %}—{% endif %}</td>
+        </tr>
+        {% endif %}{% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p style="color:#aaa;font-size:0.85rem;margin-bottom:0.75rem">Nessuna sede aggiuntiva configurata.</p>
+    {% endif %}
+    <a href="/amministrazione/ristorante/sede/" class="btn btn-outline" style="font-size:0.85rem">
+      ⚙️ Gestisci sedi in Admin
+    </a>
+    <span style="font-size:0.78rem;color:#888;margin-left:0.5rem">Le sedi si gestiscono dal pannello amministrazione Django.</span>
+  </div>
+
+</div>
+</body>
+</html>

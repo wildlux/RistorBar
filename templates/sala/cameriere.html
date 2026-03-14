@@ -1,0 +1,113 @@
+{% load i18n static %}
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#2c3e50">
+  <title>Sala — Cameriere</title>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  <link rel="stylesheet" href="{% static 'css/sala_staff.css' %}">
+</head>
+<body>
+
+<nav class="staff-nav">
+  <div class="staff-brand">🍽️ <strong>Cameriere</strong> — {{ user.get_full_name|default:user.username }}</div>
+  <div class="staff-nav-right">
+    <span class="staff-time" id="orologio"></span>
+    <a href="/logout/" class="btn-staff-logout">Esci</a>
+  </div>
+</nav>
+
+<div class="staff-body">
+
+  <!-- Prenotazioni in arrivo -->
+  {% if prenotazioni_oggi %}
+  <div class="prenotazioni-strip">
+    <strong>📅 Prenotazioni di oggi:</strong>
+    {% for p in prenotazioni_oggi %}
+    <span class="prenot-chip">
+      {{ p.data_ora|time:"H:i" }} — <b>{{ p.nome_cliente }}</b> ({{ p.num_persone }}p) → {{ p.tavolo }}
+    </span>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Griglia sale + tavoli -->
+  {% for sala in sale %}
+  <section class="staff-sala">
+    <h2 class="sala-title">{{ sala.nome }}</h2>
+    <div class="staff-tavoli">
+      {% for tavolo in sala.tavoli.all %}
+      {% if tavolo.attivo %}
+      <div class="staff-tavolo stato-{{ tavolo.stato }}"
+           onclick="apriTavolo({{ tavolo.id }}, {{ tavolo.numero }}, '{{ tavolo.get_stato_display }}')"
+           title="Tavolo {{ tavolo.numero }} — {{ tavolo.get_stato_display }}">
+        <div class="st-numero">{{ tavolo.numero }}</div>
+        <div class="st-forma-icon">
+          {% if tavolo.forma == 'R' %}🔵{% elif tavolo.forma == 'T' %}▬{% else %}⬜{% endif %}
+        </div>
+        <div class="st-posti">{{ tavolo.capacita }}p</div>
+        <div class="st-stato">{{ tavolo.get_stato_display }}</div>
+      </div>
+      {% endif %}
+      {% endfor %}
+    </div>
+  </section>
+  {% endfor %}
+
+</div>
+
+<!-- Modal azioni tavolo -->
+<div class="staff-modal" id="modal-tavolo" style="display:none">
+  <div class="staff-modal-box">
+    <div class="staff-modal-header">
+      <h3 id="modal-title">Tavolo</h3>
+      <button onclick="chiudiModal()" class="modal-close">✕</button>
+    </div>
+    <div class="modal-azioni">
+      <button class="btn-azione verde" onclick="cambiaStatoUI('L')">🟢 Libero</button>
+      <button class="btn-azione giallo" onclick="cambiaStatoUI('O')">🔴 Occupato</button>
+      <button class="btn-azione blue" onclick="cambiaStatoUI('C')">🔵 Conto</button>
+    </div>
+    <div class="modal-divider">──────── oppure ────────</div>
+    <a id="link-ordine" href="#" class="btn-azione-grande">
+      🧾 Apri comanda / Aggiungi piatti
+    </a>
+  </div>
+</div>
+
+<script>
+let tavoloSelezionato = null;
+
+function apriTavolo(id, numero, stato) {
+  tavoloSelezionato = id;
+  document.getElementById('modal-title').textContent = `Tavolo ${numero} — ${stato}`;
+  document.getElementById('link-ordine').href = `/sala/cameriere/ordine/${id}/`;
+  document.getElementById('modal-tavolo').style.display = 'flex';
+}
+function chiudiModal() { document.getElementById('modal-tavolo').style.display = 'none'; }
+
+function cambiaStatoUI(stato) {
+  if (!tavoloSelezionato) return;
+  fetch(`/sala/tavolo/${tavoloSelezionato}/stato/`, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json','X-CSRFToken':'{{ csrf_token }}'},
+    body: JSON.stringify({stato}),
+  }).then(() => { chiudiModal(); location.reload(); });
+}
+
+// Orologio
+function tick() {
+  const d = new Date();
+  document.getElementById('orologio').textContent =
+    d.toLocaleTimeString('it-IT', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+}
+tick(); setInterval(tick, 1000);
+
+// Auto-refresh ogni 30 secondi
+setInterval(() => location.reload(), 30000);
+</script>
+</body>
+</html>

@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Mappa" %} {{ sala.nome }} - RistoBAR{% endblock %}
+
+{% block content %}
+<div class="mappa-container">
+    <div class="mappa-header">
+        <h1>{{ sala.nome }}</h1>
+        <a href="{% url 'dashboard' %}" class="btn btn-outline">← {% trans "Dashboard" %}</a>
+    </div>
+
+    <!-- Canvas della sala: i tavoli sono posizionati via CSS/JS in base a pos_x e pos_y -->
+    <div class="mappa-sala"
+         id="mappa"
+         style="width: {{ sala.larghezza }}00px; height: {{ sala.altezza }}0px;">
+        {% for tavolo in tavoli %}
+        <div class="tavolo-mappa tavolo-{{ tavolo.forma|lower }}"
+             id="t{{ tavolo.id }}"
+             style="
+                left: {{ tavolo.pos_x }}0px;
+                top: {{ tavolo.pos_y }}0px;
+                background-color: {{ tavolo.colore_stato }}22;
+                border-color: {{ tavolo.colore_stato }};
+             "
+             title="{{ tavolo }} - {{ tavolo.get_stato_display }}"
+             data-tavolo="{{ tavolo.id }}"
+             onclick="apriTavolo({{ tavolo.id }})">
+            <span class="t-numero">{{ tavolo.numero }}</span>
+            <span class="t-posti">{{ tavolo.capacita }}p</span>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Legenda -->
+    <div class="legenda">
+        <span class="legenda-item" style="color:#27ae60">⬛ {% trans "Libero" %}</span>
+        <span class="legenda-item" style="color:#f39c12">⬛ {% trans "Prenotato" %}</span>
+        <span class="legenda-item" style="color:#e74c3c">⬛ {% trans "Occupato" %}</span>
+        <span class="legenda-item" style="color:#3498db">⬛ {% trans "Conto richiesto" %}</span>
+    </div>
+
+    <!-- Modale tavolo -->
+    <div class="modal" id="modal-tavolo" style="display:none">
+        <div class="modal-content">
+            <h3 id="modal-titolo"></h3>
+            <div class="modal-body" id="modal-body"></div>
+            <div class="modal-footer">
+                <button onclick="chiudiModal()" class="btn btn-outline">{% trans "Chiudi" %}</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const tavoliData = {
+    {% for t in tavoli %}
+    {{ t.id }}: {
+        numero: {{ t.numero }},
+        stato: '{{ t.stato }}',
+        stato_display: '{{ t.get_stato_display }}',
+        capacita: {{ t.capacita }},
+        colore: '{{ t.colore_stato }}'
+    },
+    {% endfor %}
+};
+
+function apriTavolo(id) {
+    const t = tavoliData[id];
+    document.getElementById('modal-titolo').textContent = `Tavolo ${t.numero}`;
+    document.getElementById('modal-body').innerHTML = `
+        <p>Stato: <strong style="color:${t.colore}">${t.stato_display}</strong></p>
+        <p>Posti: ${t.capacita}</p>
+        <select id="nuovo-stato" class="input">
+            <option value="L" ${t.stato==='L'?'selected':''}>🟢 Libero</option>
+            <option value="P" ${t.stato==='P'?'selected':''}>🟡 Prenotato</option>
+            <option value="O" ${t.stato==='O'?'selected':''}>🔴 Occupato</option>
+            <option value="C" ${t.stato==='C'?'selected':''}>🔵 Conto richiesto</option>
+        </select>
+        <button onclick="salvaStato(${id})" class="btn btn-primary" style="margin-top:1rem">Salva</button>
+    `;
+    document.getElementById('modal-tavolo').style.display = 'flex';
+}
+
+function chiudiModal() {
+    document.getElementById('modal-tavolo').style.display = 'none';
+}
+
+function salvaStato(id) {
+    const stato = document.getElementById('nuovo-stato').value;
+    fetch(`/tavolo/${id}/stato/`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken')},
+        body: JSON.stringify({stato}),
+    }).then(r => r.json()).then(data => {
+        if (data.successo) {
+            const el = document.getElementById(`t${id}`);
+            el.style.borderColor = data.colore;
+            el.style.backgroundColor = data.colore + '22';
+            tavoliData[id].stato = stato;
+            tavoliData[id].colore = data.colore;
+            chiudiModal();
+        }
+    });
+}
+
+function getCookie(name) {
+    let v = `; ${document.cookie}`, parts = v.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+}
+</script>
+{% endblock %}

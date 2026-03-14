@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}Menu - {{ sala.nome }} Tavolo {{ tavolo.numero }}{% endblock %}
+
+{% block content %}
+<div class="menu-container">
+    <div class="menu-header">
+        <h1>🍽️ {% trans "Menu" %}</h1>
+        <p>{{ sala.nome }} — {% trans "Tavolo" %} {{ tavolo.numero }}</p>
+    </div>
+
+    {% for categoria in categorie %}
+    <section class="menu-categoria">
+        <h2 class="categoria-titolo">
+            {% if categoria.icona %}{{ categoria.icona }}{% endif %}
+            {{ categoria.nome }}
+        </h2>
+        <div class="piatti-grid">
+            {% for piatto in categoria.piatti.all %}
+            {% if piatto.disponibile %}
+            <div class="piatto-card">
+                {% if piatto.immagine %}
+                <img src="{{ piatto.immagine.url }}" alt="{{ piatto.nome }}" class="piatto-img">
+                {% endif %}
+                <div class="piatto-info">
+                    <h3>{{ piatto.nome }}</h3>
+                    {% if piatto.descrizione %}
+                    <p class="piatto-desc">{{ piatto.descrizione }}</p>
+                    {% endif %}
+                    {% if piatto.allergeni %}
+                    <p class="piatto-allergeni">⚠️ {{ piatto.allergeni }}</p>
+                    {% endif %}
+                    <span class="piatto-prezzo">€{{ piatto.prezzo }}</span>
+                </div>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+    </section>
+    {% empty %}
+    <p>{% trans "Menu non disponibile." %}</p>
+    {% endfor %}
+
+    <div class="menu-footer">
+        <a href="{% url 'prenota' sala.id tavolo.numero %}" class="btn btn-primary btn-large">
+            📅 {% trans "Prenota questo tavolo" %}
+        </a>
+    </div>
+</div>
+{% endblock %}

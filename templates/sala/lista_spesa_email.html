@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="it">
+<head><meta charset="UTF-8"><title>Lista Spesa</title>
+<style>
+  body { font-family: Arial, sans-serif; font-size: 13px; color: #222; max-width: 700px; margin: 0 auto; padding: 20px; }
+  h1 { font-size: 18px; margin-bottom: 4px; }
+  .periodo { color: #666; font-size: 12px; margin-bottom: 20px; }
+  h2 { font-size: 14px; background: #f0f0f0; padding: 6px 10px; margin: 16px 0 4px; border-left: 3px solid #333; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+  th { font-size: 11px; text-transform: uppercase; color: #888; text-align: left; padding: 4px 8px; border-bottom: 1px solid #ddd; }
+  td { padding: 5px 8px; border-bottom: 1px solid #f0f0f0; vertical-align: top; }
+  .qty { font-weight: bold; font-size: 15px; text-align: right; color: #c0392b; }
+  .ingredienti { font-size: 11px; color: #888; }
+  .footer { margin-top: 24px; font-size: 11px; color: #aaa; border-top: 1px solid #eee; padding-top: 8px; }
+</style>
+</head>
+<body>
+<h1>🛒 Lista Spesa — RistoBAR</h1>
+<p class="periodo">Periodo: {{ data_da|date:"d/m/Y" }} → {{ data_a|date:"d/m/Y" }} &nbsp;|&nbsp; Totale voci: {{ totale_voci }}</p>
+
+{% for cat_nome, cat_data in categorie_spesa.items %}
+<h2>{{ cat_data.icona }} {{ cat_nome }}</h2>
+<table>
+  <thead><tr><th>Piatto</th><th>Ingredienti per porzione</th><th style="text-align:right">Porzioni</th></tr></thead>
+  <tbody>
+  {% for v in cat_data.voci %}
+  <tr>
+    <td><strong>{{ v.piatto__nome }}</strong></td>
+    <td><span class="ingredienti">{{ v.piatto__ingredienti|default:"—" }}</span></td>
+    <td class="qty">{{ v.totale_qty }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% empty %}
+<p>Nessun ordine nel periodo.</p>
+{% endfor %}
+
+<p class="footer">Generato da RistoBAR &mdash; {% now "d/m/Y H:i" %}</p>
+</body>
+</html>

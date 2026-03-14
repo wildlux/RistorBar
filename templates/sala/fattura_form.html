@@ -1,0 +1,175 @@
+{% load i18n static %}
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Emetti Documento — Ordine #{{ ordine.pk }}</title>
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  <link rel="stylesheet" href="{% static 'css/sala_staff.css' %}">
+  <style>
+    .ff-body { max-width: 700px; margin: 0 auto; padding: 1.25rem; }
+    .ff-card { background: white; border: 1px solid #e9ecef; border-radius: 12px;
+               padding: 1.5rem; margin-bottom: 1rem; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+    .ff-card h3 { font-size: 0.95rem; font-weight: 700; margin-bottom: 1rem;
+                  padding-bottom: 0.5rem; border-bottom: 2px solid #e9ecef; }
+    .ff-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+    .ff-full { grid-column: 1 / -1; }
+    .ff-label { font-size: 0.78rem; color: #666; margin-bottom: 0.25rem; font-weight: 600; display: block; }
+    .ff-input {
+      width: 100%; padding: 0.55rem 0.75rem; border: 1px solid #ddd;
+      border-radius: 7px; font-size: 0.9rem; transition: border-color 0.15s;
+    }
+    .ff-input:focus { outline: none; border-color: #3498db; }
+    .ff-tipo-group { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+    .ff-tipo-btn { flex: 1; min-width: 120px; }
+    .ff-tipo-btn input[type=radio] { display: none; }
+    .ff-tipo-btn label {
+      display: block; text-align: center; padding: 1rem 0.5rem;
+      border: 2px solid #e9ecef; border-radius: 10px; cursor: pointer;
+      font-size: 0.85rem; font-weight: 700; transition: all 0.15s;
+    }
+    .ff-tipo-btn input[type=radio]:checked + label {
+      border-color: #3498db; background: #ebf5ff; color: #2471a3;
+    }
+    .ff-tipo-icon { font-size: 1.8rem; display: block; margin-bottom: 0.4rem; }
+
+    /* Ordine riepilogo */
+    .ff-ordine-box { background: #f8f9fa; border-radius: 8px; padding: 0.75rem 1rem;
+                     font-size: 0.85rem; margin-bottom: 1rem; }
+    .ff-ordine-box strong { font-size: 1rem; }
+
+    /* Sezione cliente (mostrata/nascosta per tipo) */
+    #sez-cliente { transition: opacity 0.2s; }
+
+    .ff-footer { display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center; }
+    .errore-msg { color: #e74c3c; font-size: 0.85rem; font-weight: 600; }
+  </style>
+</head>
+<body>
+
+<nav class="staff-nav">
+  <div class="staff-brand">
+    <a href="/sala/cameriere/ordine/{{ ordine.tavolo.id }}/" class="back-link">←</a>
+    📄 Emetti Documento — Ordine #{{ ordine.pk }}
+  </div>
+</nav>
+
+<div class="ff-body">
+
+  <!-- Riepilogo ordine -->
+  <div class="ff-ordine-box">
+    Tavolo {{ ordine.tavolo.numero }} ({{ ordine.tavolo.sala.nome }}) &nbsp;|&nbsp;
+    {{ ordine.items.count }} voci &nbsp;|&nbsp;
+    <strong>Totale €{{ ordine.totale }}</strong>
+    &nbsp;|&nbsp; {{ ordine.creato_il|date:"d/m/Y H:i" }}
+  </div>
+
+  {% if errore %}
+  <div class="errore-msg" style="margin-bottom:0.75rem">⚠️ {{ errore }}</div>
+  {% endif %}
+
+  <form method="post">
+    {% csrf_token %}
+
+    <!-- Tipo documento -->
+    <div class="ff-card">
+      <h3>Tipo documento</h3>
+      <div class="ff-tipo-group">
+        <div class="ff-tipo-btn">
+          <input type="radio" name="tipo" id="tipo-s" value="S" checked>
+          <label for="tipo-s" onclick="setTipo('S')">
+            <span class="ff-tipo-icon">🧾</span>Scontrino<br>
+            <span style="font-weight:400;font-size:0.78rem;color:#888">Cortesia, no dati cliente</span>
+          </label>
+        </div>
+        <div class="ff-tipo-btn">
+          <input type="radio" name="tipo" id="tipo-r" value="R">
+          <label for="tipo-r" onclick="setTipo('R')">
+            <span class="ff-tipo-icon">🧾</span>Ricevuta<br>
+            <span style="font-weight:400;font-size:0.78rem;color:#888">Intestata, con CF/Nome</span>
+          </label>
+        </div>
+        <div class="ff-tipo-btn">
+          <input type="radio" name="tipo" id="tipo-f" value="F">
+          <label for="tipo-f" onclick="setTipo('F')">
+            <span class="ff-tipo-icon">📑</span>Fattura<br>
+            <span style="font-weight:400;font-size:0.78rem;color:#888">Richiede P.IVA/SDI</span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dati cliente (opzionali per scontrino) -->
+    <div class="ff-card" id="sez-cliente">
+      <h3>Dati intestatario <span style="font-weight:400;color:#888;font-size:0.8rem">(opzionali per scontrino)</span></h3>
+      <div class="ff-grid">
+        <div class="ff-full">
+          <label class="ff-label">Nome / Ragione sociale <span id="lbl-req" style="color:#e74c3c">*</span></label>
+          <input class="ff-input" type="text" name="cliente_nome" placeholder="Mario Rossi / Rossi Srl">
+        </div>
+        <div class="ff-full">
+          <label class="ff-label">Indirizzo</label>
+          <input class="ff-input" type="text" name="cliente_indirizzo" placeholder="Via Roma 1">
+        </div>
+        <div>
+          <label class="ff-label">CAP</label>
+          <input class="ff-input" type="text" name="cliente_cap" placeholder="20100" maxlength="10">
+        </div>
+        <div>
+          <label class="ff-label">Città</label>
+          <input class="ff-input" type="text" name="cliente_citta" placeholder="Milano">
+        </div>
+        <div>
+          <label class="ff-label">Partita IVA</label>
+          <input class="ff-input" type="text" name="cliente_piva" placeholder="12345678901" maxlength="11">
+        </div>
+        <div>
+          <label class="ff-label">Codice Fiscale</label>
+          <input class="ff-input" type="text" name="cliente_cf" placeholder="RSSMRA80A01H501Z" maxlength="16">
+        </div>
+        <div>
+          <label class="ff-label">Email</label>
+          <input class="ff-input" type="email" name="cliente_email" placeholder="mario@esempio.it">
+        </div>
+        <div>
+          <label class="ff-label">PEC</label>
+          <input class="ff-input" type="email" name="cliente_pec" placeholder="mario@pec.it">
+        </div>
+        <div>
+          <label class="ff-label">Codice SDI <span style="font-size:0.72rem;color:#888">(fattura elettronica)</span></label>
+          <input class="ff-input" type="text" name="cliente_sdi" placeholder="XXXXXXX" maxlength="10">
+        </div>
+      </div>
+    </div>
+
+    <!-- Note -->
+    <div class="ff-card">
+      <h3>Note documento</h3>
+      <textarea class="ff-input" name="note" rows="2" placeholder="Eventuali note aggiuntive..."></textarea>
+    </div>
+
+    <div class="ff-footer">
+      <button type="submit" class="btn btn-primary">📄 Genera Documento</button>
+      <a href="/sala/cameriere/ordine/{{ ordine.tavolo.id }}/" class="btn btn-secondary">Annulla</a>
+      <span style="font-size:0.8rem;color:#888">Il documento viene numerato progressivamente.</span>
+    </div>
+  </form>
+
+</div>
+
+<script>
+function setTipo(t) {
+  const sez = document.getElementById('sez-cliente');
+  const req = document.getElementById('lbl-req');
+  if (t === 'S') {
+    sez.style.opacity = '0.5';
+    req.style.display = 'none';
+  } else {
+    sez.style.opacity = '1';
+    req.style.display = 'inline';
+  }
+}
+</script>
+</body>
+</html>

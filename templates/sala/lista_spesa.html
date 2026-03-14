@@ -1,0 +1,271 @@
+{% load i18n static %}
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lista Spesa — RistoBAR</title>
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  <link rel="stylesheet" href="{% static 'css/sala_staff.css' %}">
+  <style>
+    /* ── Schermo ────────────────────────────────────────── */
+    .ls-toolbar {
+      background: #fff; border-bottom: 2px solid #e9ecef;
+      padding: 0.75rem 1rem; display: flex; align-items: center;
+      gap: 0.75rem; flex-wrap: wrap; position: sticky; top: 60px; z-index: 50;
+    }
+    .ls-filtri { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+    .ls-filtri label { font-size: 0.82rem; color: #666; }
+    .ls-filtri input[type=date] {
+      border: 1px solid #ddd; border-radius: 6px; padding: 0.35rem 0.6rem;
+      font-size: 0.85rem;
+    }
+    .ls-actions { margin-left: auto; display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
+    .ls-body { max-width: 900px; margin: 0 auto; padding: 1.25rem; }
+
+    .ls-categoria {
+      background: white; border: 1px solid #e9ecef; border-radius: 12px;
+      overflow: hidden; margin-bottom: 1rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    .ls-cat-head {
+      background: #f8f9fa; padding: 0.75rem 1rem;
+      font-weight: 700; font-size: 1rem; border-bottom: 1px solid #e9ecef;
+      display: flex; align-items: center; gap: 0.5rem;
+    }
+    .ls-cat-count {
+      margin-left: auto; font-size: 0.75rem; background: #dee2e6;
+      border-radius: 20px; padding: 0.15rem 0.6rem; font-weight: 600;
+    }
+    .ls-table { width: 100%; border-collapse: collapse; }
+    .ls-table th {
+      font-size: 0.72rem; text-transform: uppercase; color: #888;
+      padding: 0.5rem 1rem; text-align: left; border-bottom: 1px solid #f0f0f0;
+    }
+    .ls-table th:last-child { text-align: right; }
+    .ls-table td { padding: 0.65rem 1rem; border-bottom: 1px solid #f7f7f7; font-size: 0.9rem; }
+    .ls-table tr:last-child td { border-bottom: none; }
+    .ls-qty {
+      text-align: right; font-weight: 800; font-size: 1.1rem;
+      color: #e74c3c; white-space: nowrap;
+    }
+    .ls-ingredienti { font-size: 0.78rem; color: #888; margin-top: 0.2rem; }
+    .ls-note-input {
+      width: 100%; border: 1px solid #eee; border-radius: 4px;
+      padding: 0.25rem 0.4rem; font-size: 0.78rem; color: #555;
+      background: #fafafa;
+    }
+    .ls-note-input:focus { outline: none; border-color: #3498db; background: white; }
+
+    .ls-summary {
+      background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 10px;
+      padding: 1rem; margin-bottom: 1.25rem; display: flex; gap: 2rem; flex-wrap: wrap;
+    }
+    .ls-summary-item { font-size: 0.85rem; color: #666; }
+    .ls-summary-item strong { font-size: 1.1rem; color: #333; display: block; }
+
+    /* Modal email */
+    .ls-modal {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+      display: flex; align-items: center; justify-content: center; z-index: 999;
+    }
+    .ls-modal-box {
+      background: white; border-radius: 14px; padding: 1.5rem;
+      width: 90%; max-width: 400px; box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+    }
+    .ls-modal-box h3 { margin-bottom: 1rem; }
+    .ls-modal-box input[type=email] {
+      width: 100%; padding: 0.6rem 0.75rem; border: 1px solid #ddd;
+      border-radius: 8px; font-size: 0.95rem; margin-bottom: 0.75rem;
+    }
+    .ls-modal-footer { display: flex; gap: 0.5rem; }
+
+    /* ── Stampa ─────────────────────────────────────────── */
+    @media print {
+      .staff-nav, .ls-toolbar, .ls-note-input, .ls-actions, .ls-modal { display: none !important; }
+      body { background: white; color: black; }
+      .ls-body { max-width: 100%; padding: 0; }
+      .ls-categoria { border: 1px solid #ccc; box-shadow: none; page-break-inside: avoid; }
+      .ls-cat-head { background: #f0f0f0; }
+      .print-header { display: block !important; margin-bottom: 1rem; }
+      .ls-table td, .ls-table th { padding: 0.4rem 0.6rem; }
+      .ls-qty { font-size: 1rem; }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="staff-nav">
+  <div class="staff-brand">
+    <a href="/sala/cucina/" class="back-link">←</a>
+    🛒 Lista Spesa
+  </div>
+  <div class="staff-nav-right">
+    <span class="staff-time" id="orologio"></span>
+    <a href="/logout/" class="btn-staff-logout">Esci</a>
+  </div>
+</nav>
+
+<!-- Intestazione solo stampa -->
+<div class="print-header" style="display:none; padding: 0 1rem;">
+  <h2 style="margin:0">🛒 Lista Spesa — RistoBAR</h2>
+  <p style="margin:0.2rem 0 0; color:#666; font-size:0.9rem">
+    Periodo: {{ data_da|date:"d/m/Y" }} → {{ data_a|date:"d/m/Y" }} &nbsp;|&nbsp;
+    Stampato il {% now "d/m/Y H:i" %}
+  </p>
+  <hr style="margin: 0.75rem 0">
+</div>
+
+<div class="ls-toolbar">
+  <form method="get" class="ls-filtri" id="form-filtri">
+    <label>Dal</label>
+    <input type="date" name="da" value="{{ data_da|date:'Y-m-d' }}" onchange="this.form.submit()">
+    <label>Al</label>
+    <input type="date" name="a"  value="{{ data_a|date:'Y-m-d' }}"  onchange="this.form.submit()">
+    <button type="submit" class="btn btn-sm btn-secondary">Aggiorna</button>
+    <button type="button" class="btn btn-sm btn-outline"
+            onclick="document.querySelector('[name=da]').value='{{ oggi }}';document.querySelector('[name=a]').value='{{ domani }}';document.getElementById('form-filtri').submit()">
+      Oggi
+    </button>
+    <button type="button" class="btn btn-sm btn-outline" onclick="setSettimana()">Questa settimana</button>
+  </form>
+  <div class="ls-actions">
+    <button class="btn btn-primary" onclick="window.print()">🖨️ Stampa / Salva PDF</button>
+    <button class="btn btn-secondary" onclick="document.getElementById('modal-email').style.display='flex'">✉️ Invia Email</button>
+  </div>
+</div>
+
+<div class="ls-body">
+
+  <div class="ls-summary">
+    <div class="ls-summary-item">
+      <strong>{{ totale_voci }}</strong>
+      voci nel periodo
+    </div>
+    <div class="ls-summary-item">
+      <strong>{{ data_da|date:"d/m/Y" }}</strong>
+      data inizio
+    </div>
+    <div class="ls-summary-item">
+      <strong>{{ data_a|date:"d/m/Y" }}</strong>
+      data fine
+    </div>
+  </div>
+
+  {% if categorie_spesa %}
+    {% for cat_nome, cat_data in categorie_spesa.items %}
+    <div class="ls-categoria">
+      <div class="ls-cat-head">
+        {{ cat_data.icona }} {{ cat_nome }}
+        <span class="ls-cat-count">{{ cat_data.voci|length }} voci</span>
+      </div>
+      <table class="ls-table">
+        <thead>
+          <tr>
+            <th style="width:35%">Piatto</th>
+            <th>Ingredienti / Note ricetta</th>
+            <th>Note spesa</th>
+            <th>Porzioni</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for v in cat_data.voci %}
+          <tr>
+            <td><strong>{{ v.piatto__nome }}</strong></td>
+            <td>
+              {% if v.piatto__ingredienti %}
+                <span class="ls-ingredienti">{{ v.piatto__ingredienti }}</span>
+              {% else %}
+                <span style="color:#ccc;font-size:0.78rem">—</span>
+              {% endif %}
+            </td>
+            <td>
+              <input class="ls-note-input" type="text" placeholder="aggiungi nota..." onkeydown="if(event.key==='Enter')this.blur()">
+            </td>
+            <td class="ls-qty">{{ v.totale_qty }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endfor %}
+  {% else %}
+  <div style="text-align:center; padding: 4rem 1rem; color:#aaa;">
+    <div style="font-size:3rem; margin-bottom:1rem">🛒</div>
+    <p>Nessun ordine nel periodo selezionato.</p>
+    <p style="font-size:0.85rem">Cambia il range di date per vedere i dati.</p>
+  </div>
+  {% endif %}
+
+</div>
+
+<!-- Modal invio email -->
+<div id="modal-email" class="ls-modal" style="display:none">
+  <div class="ls-modal-box">
+    <h3>✉️ Invia Lista Spesa via Email</h3>
+    <input type="email" id="email-dest" placeholder="es. cucina@mioristorante.it" value="{{ email_default }}">
+    <div style="font-size:0.78rem;color:#888;margin-bottom:0.75rem">
+      Periodo: {{ data_da|date:"d/m/Y" }} → {{ data_a|date:"d/m/Y" }}
+    </div>
+    <div class="ls-modal-footer">
+      <button class="btn btn-primary" style="flex:1" onclick="inviaEmail()">Invia</button>
+      <button class="btn btn-secondary" onclick="document.getElementById('modal-email').style.display='none'">Annulla</button>
+    </div>
+    <div id="email-feedback" style="margin-top:0.75rem;font-size:0.85rem"></div>
+  </div>
+</div>
+
+<script>
+// Orologio
+(function tick() {
+  document.getElementById('orologio').textContent =
+    new Date().toLocaleTimeString('it-IT', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  setTimeout(tick, 1000);
+})();
+
+// Questa settimana
+function setSettimana() {
+  const oggi = new Date();
+  const lun = new Date(oggi);
+  lun.setDate(oggi.getDate() - oggi.getDay() + 1);
+  const dom = new Date(lun);
+  dom.setDate(lun.getDate() + 6);
+  const fmt = d => d.toISOString().split('T')[0];
+  document.querySelector('[name=da]').value = fmt(lun);
+  document.querySelector('[name=a]').value  = fmt(dom);
+  document.getElementById('form-filtri').submit();
+}
+
+// Invio email
+async function inviaEmail() {
+  const dest = document.getElementById('email-dest').value.trim();
+  const fb   = document.getElementById('email-feedback');
+  if (!dest) { fb.textContent = '⚠️ Inserisci un indirizzo email.'; fb.style.color='#e74c3c'; return; }
+  fb.textContent = 'Invio in corso...'; fb.style.color = '#888';
+
+  const form = new FormData();
+  form.append('email', dest);
+  form.append('da', '{{ data_da|date:"Y-m-d" }}');
+  form.append('a',  '{{ data_a|date:"Y-m-d" }}');
+  form.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+  const r = await fetch('/sala/cucina/lista-spesa/email/', { method: 'POST', body: form });
+  const data = await r.json();
+  if (data.ok) {
+    fb.textContent = '✅ Email inviata con successo!';
+    fb.style.color = '#27ae60';
+    setTimeout(() => document.getElementById('modal-email').style.display = 'none', 1500);
+  } else {
+    fb.textContent = '❌ ' + (data.errore || 'Errore invio.');
+    fb.style.color = '#e74c3c';
+  }
+}
+
+// Chiudi modal cliccando fuori
+document.getElementById('modal-email').addEventListener('click', function(e) {
+  if (e.target === this) this.style.display = 'none';
+});
+</script>
+</body>
+</html>

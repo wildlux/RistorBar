@@ -1,0 +1,133 @@
+/* ── Vetrina pubblica ristorante ───────────────────── */
+.vetrina-body { font-family: 'Segoe UI', Georgia, serif; background: #fff; color: #1a1a2e; margin: 0; }
+
+/* HERO */
+.hero {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  color: white;
+  display: flex; flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+.hero::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+.hero-nav {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 1.5rem 3rem; position: relative; z-index: 10;
+}
+.hero-brand { font-size: 1.5rem; font-weight: 700; letter-spacing: 1px; }
+.hero-nav-links { display: flex; align-items: center; gap: 2rem; }
+.hero-nav-links a { color: rgba(255,255,255,0.8); text-decoration: none; font-size: 0.95rem; transition: color 0.2s; }
+.hero-nav-links a:hover { color: white; }
+.btn-hero-prenota {
+  background: #e74c3c; color: white !important; padding: 0.5rem 1.2rem;
+  border-radius: 25px; font-weight: 600;
+}
+.hero-content {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; text-align: center; padding: 2rem;
+  position: relative; z-index: 10;
+}
+.hero-content h1 { font-size: clamp(2.5rem, 7vw, 5rem); font-weight: 800; line-height: 1.1; margin-bottom: 1.5rem; }
+.hero-content h1 span { color: #e74c3c; }
+.hero-content p { font-size: 1.1rem; color: rgba(255,255,255,0.75); max-width: 500px; margin-bottom: 2.5rem; }
+.hero-cta { display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center; }
+.btn-cta-primary {
+  background: #e74c3c; color: white; padding: 0.9rem 2rem;
+  border-radius: 30px; font-size: 1rem; font-weight: 700;
+  text-decoration: none; transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 20px rgba(231,76,60,0.4);
+}
+.btn-cta-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(231,76,60,0.5); }
+.btn-cta-outline {
+  color: white; border: 2px solid rgba(255,255,255,0.4);
+  padding: 0.9rem 2rem; border-radius: 30px; font-size: 1rem;
+  text-decoration: none; transition: all 0.2s;
+}
+.btn-cta-outline:hover { border-color: white; }
+.hero-scroll { text-align: center; padding-bottom: 2rem; font-size: 1.5rem; animation: bounce 2s infinite; }
+@keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(8px)} }
+
+/* FEATURES */
+.features {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0; background: #f8f9fa;
+}
+.feat {
+  text-align: center; padding: 2.5rem 2rem;
+  border-right: 1px solid #e9ecef;
+}
+.feat:last-child { border-right: none; }
+.feat-icon { font-size: 2.5rem; margin-bottom: 1rem; }
+.feat h3 { font-size: 1.1rem; margin-bottom: 0.5rem; color: #1a1a2e; }
+.feat p { font-size: 0.9rem; color: #636e72; }
+
+/* MENU */
+.vetrina-menu { max-width: 900px; margin: 0 auto; padding: 5rem 2rem; }
+.section-header { text-align: center; margin-bottom: 3rem; }
+.section-header h2 { font-size: 2.5rem; font-weight: 800; color: #1a1a2e; }
+.section-header p { color: #636e72; margin-top: 0.5rem; }
+.section-header.light h2 { color: white; }
+.section-header.light p { color: rgba(255,255,255,0.75); }
+
+.menu-section { margin-bottom: 3rem; }
+.menu-cat-title {
+  font-size: 1.3rem; font-weight: 700; color: #e74c3c;
+  border-bottom: 2px solid #fde8e6; padding-bottom: 0.5rem; margin-bottom: 1rem;
+}
+.menu-items { display: grid; gap: 0; }
+.menu-item {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  padding: 1rem 0; border-bottom: 1px dashed #e9ecef;
+}
+.menu-item:last-child { border-bottom: none; }
+.menu-item-info { flex: 1; padding-right: 1rem; }
+.menu-item-name { display: block; font-weight: 600; font-size: 1rem; }
+.menu-item-desc { display: block; font-size: 0.85rem; color: #636e72; margin-top: 0.2rem; }
+.menu-item-tag  { display: inline-block; font-size: 0.75rem; color: #e67e22; margin-top: 0.2rem; }
+.menu-item-price { font-size: 1.1rem; font-weight: 700; color: #e74c3c; white-space: nowrap; }
+
+/* INFO */
+.vetrina-info { background: #f8f9fa; padding: 5rem 2rem; }
+.info-grid { max-width: 900px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 2rem; }
+.info-card { background: white; border-radius: 16px; padding: 2rem; box-shadow: 0 4px 20px rgba(0,0,0,0.06); }
+.info-card h3 { font-size: 1.1rem; margin-bottom: 1rem; }
+.info-card p { font-size: 0.95rem; line-height: 1.7; }
+.info-card a { color: #e74c3c; text-decoration: none; }
+.orari-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.orari-table td { padding: 0.3rem 0; }
+.orari-table td:first-child { font-weight: 600; padding-right: 1rem; }
+
+/* PRENOTA */
+.vetrina-prenota {
+  background: linear-gradient(135deg, #1a1a2e, #0f3460);
+  padding: 5rem 2rem; text-align: center; color: white;
+}
+.prenota-quick { max-width: 700px; margin: 0 auto; }
+.quick-form { display: flex; flex-direction: column; gap: 1rem; }
+.quick-fields { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+.quick-fields .input { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); color: white; }
+.quick-fields .input::placeholder { color: rgba(255,255,255,0.5); }
+.prenota-note { margin-top: 1rem; font-size: 0.9rem; color: rgba(255,255,255,0.6); }
+.prenota-note a { color: #e74c3c; }
+
+/* FOOTER */
+.vetrina-footer { background: #0a0a1a; color: rgba(255,255,255,0.6); padding: 2rem; }
+.footer-inner { max-width: 900px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; }
+.footer-brand { font-size: 1.2rem; font-weight: 700; color: white; }
+.footer-links { display: flex; gap: 1.5rem; }
+.footer-links a { color: rgba(255,255,255,0.6); text-decoration: none; font-size: 0.9rem; }
+.footer-links a:hover { color: white; }
+.footer-copy { font-size: 0.8rem; }
+
+@media (max-width: 700px) {
+  .hero-nav { padding: 1rem 1.5rem; }
+  .hero-nav-links a:not(.btn-hero-prenota) { display: none; }
+  .quick-fields { grid-template-columns: 1fr; }
+  .features { grid-template-columns: 1fr 1fr; }
+  .feat { border-right: none; border-bottom: 1px solid #e9ecef; }
+}

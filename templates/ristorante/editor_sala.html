@@ -1,0 +1,710 @@
+{% extends "base.html" %}
+{% load i18n static %}
+
+{% block title %}Editor — {{ sala.nome }}{% endblock %}
+
+{% block content %}
+<div class="editor-wrap">
+
+  <!-- ── Toolbar superiore ─────────────────────────────────── -->
+  <div class="editor-toolbar">
+    <div class="tb-left">
+      <a href="{% url 'mappa_sala' sala.id %}" class="btn btn-outline btn-sm">← Mappa</a>
+      <strong>{{ sala.nome }}</strong>
+    </div>
+    <div class="tb-center">
+      <button class="btn btn-sm" id="btn-select"    title="Seleziona (S)" onclick="setTool('select')">☝️ Seleziona</button>
+      <button class="btn btn-sm" id="btn-add"       title="Aggiungi tavolo (A)" onclick="openAggiungi()">➕ Aggiungi</button>
+      <button class="btn btn-sm" id="btn-edit"      title="Modifica selezionato (E)" onclick="openModifica()" disabled>✏️ Modifica</button>
+      <button class="btn btn-sm" id="btn-unisci"    title="Unisci selezionati (U)" onclick="unisciSel()" disabled>🔗 Unisci</button>
+      <button class="btn btn-sm" id="btn-separa"    title="Separa unione (X)" onclick="separaSel()" disabled>✂️ Separa</button>
+      <button class="btn btn-sm btn-danger" id="btn-delete" title="Elimina (Canc)" onclick="eliminaSel()" disabled>🗑️ Elimina</button>
+    </div>
+    <div class="tb-right">
+      <label class="tb-toggle"><input type="checkbox" id="snap-grid" checked> Griglia</label>
+      <button class="btn btn-sm" onclick="zoom(-0.15)">🔍−</button>
+      <span id="zoom-label">100%</span>
+      <button class="btn btn-sm" onclick="zoom(+0.15)">🔍+</button>
+      <button class="btn btn-primary btn-sm" onclick="salvaLayout()">💾 Salva layout</button>
+    </div>
+  </div>
+
+  <!-- ── Area principale ──────────────────────────────────── -->
+  <div class="editor-body">
+
+    <!-- Pannello laterale sinistro: legenda + info selezione -->
+    <aside class="editor-side">
+      <div class="side-section">
+        <h4>Legenda</h4>
+        <div class="legenda-item"><span class="dot" style="background:#27ae60"></span> Libero</div>
+        <div class="legenda-item"><span class="dot" style="background:#f39c12"></span> Prenotato</div>
+        <div class="legenda-item"><span class="dot" style="background:#e74c3c"></span> Occupato</div>
+        <div class="legenda-item"><span class="dot" style="background:#3498db"></span> Conto</div>
+        <div class="legenda-item"><span class="dot" style="background:#9b59b6; border:2px dashed #9b59b6; background:none"></span> Unione</div>
+      </div>
+      <div class="side-section" id="info-panel">
+        <h4>Selezione</h4>
+        <p id="info-text" class="text-muted">Clicca un tavolo per i dettagli</p>
+      </div>
+      <div class="side-section">
+        <h4>Forme</h4>
+        <div class="shape-legend">
+          <svg width="40" height="40"><circle cx="20" cy="20" r="18" fill="none" stroke="#666" stroke-width="2"/></svg><span>Rotondo</span>
+          <svg width="40" height="40"><rect x="2" y="2" width="36" height="36" rx="4" fill="none" stroke="#666" stroke-width="2"/></svg><span>Quadrato</span>
+          <svg width="40" height="40"><rect x="2" y="10" width="36" height="20" rx="3" fill="none" stroke="#666" stroke-width="2"/></svg><span>Rettang.</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Canvas SVG principale -->
+    <div class="editor-canvas-wrap" id="canvas-wrap">
+      <svg id="editor-svg"
+           width="{{ sala.svg_larghezza }}"
+           height="{{ sala.svg_altezza }}"
+           viewBox="0 0 {{ sala.svg_larghezza }} {{ sala.svg_altezza }}"
+           xmlns="http://www.w3.org/2000/svg">
+
+        <!-- Pattern griglia -->
+        <defs>
+          <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#e0e0e0" stroke-width="0.5"/>
+          </pattern>
+          <!-- Filtro ombra per tavoli selezionati -->
+          <filter id="sel-glow">
+            <feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#2980b9" flood-opacity="0.8"/>
+          </filter>
+        </defs>
+
+        <!-- Sfondo griglia -->
+        <rect id="grid-bg" width="100%" height="100%" fill="url(#grid)"/>
+
+        <!-- Planimetria SVG del cliente (se caricata) -->
+        {% if svg_content %}
+        <g id="planimetria">{{ svg_content|safe }}</g>
+        {% else %}
+        <!-- Planimetria di esempio generata automaticamente -->
+        <g id="planimetria" opacity="0.35">
+          <!-- Perimetro sala -->
+          <rect x="20" y="20" width="{{ sala.svg_larghezza|add:'-40' }}" height="{{ sala.svg_altezza|add:'-40' }}"
+                fill="#f8f9fa" stroke="#2c3e50" stroke-width="4" rx="6"/>
+          <!-- Porta ingresso -->
+          <rect x="{% widthratio sala.svg_larghezza 2 1 %}" y="16" width="80" height="10" fill="#ffffff" stroke="#2c3e50" stroke-width="2"/>
+          <path d="M {% widthratio sala.svg_larghezza 2 1 %} 20 q 40 -30 80 0" fill="none" stroke="#2c3e50" stroke-width="1.5" stroke-dasharray="4,2"/>
+          <!-- Bancone bar (angolo in basso a destra) -->
+          <rect x="{{ sala.svg_larghezza|add:'-220' }}" y="{{ sala.svg_altezza|add:'-120' }}"
+                width="200" height="80" fill="#d5b895" stroke="#8b6914" stroke-width="2" rx="4"/>
+          <text x="{{ sala.svg_larghezza|add:'-120' }}" y="{{ sala.svg_altezza|add:'-72' }}"
+                text-anchor="middle" font-size="14" fill="#8b6914" font-weight="bold">🍷 BAR</text>
+          <!-- Finestre lato sinistro -->
+          <rect x="16" y="100" width="10" height="60" fill="#aed6f1" stroke="#2c3e50" stroke-width="1.5"/>
+          <rect x="16" y="220" width="10" height="60" fill="#aed6f1" stroke="#2c3e50" stroke-width="1.5"/>
+          <rect x="16" y="340" width="10" height="60" fill="#aed6f1" stroke="#2c3e50" stroke-width="1.5"/>
+          <!-- Pianta decorativa -->
+          <circle cx="60" cy="{{ sala.svg_altezza|add:'-60' }}" r="25" fill="#58d68d" opacity="0.6"/>
+          <text cx="60" cy="{{ sala.svg_altezza|add:'-55' }}" text-anchor="middle" font-size="20">🌿</text>
+        </g>
+        {% endif %}
+
+        <!-- Layer unioni (disegnate sotto i tavoli) -->
+        <g id="layer-unioni"></g>
+
+        <!-- Layer tavoli (draggabili) -->
+        <g id="layer-tavoli"></g>
+
+      </svg>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal: Aggiungi tavolo ──────────────────────── -->
+<div class="modal" id="modal-aggiungi" style="display:none">
+  <div class="modal-content" style="max-width:340px">
+    <h3>➕ Aggiungi tavolo</h3>
+    <div class="form-group"><label>Numero</label>
+      <input type="number" id="ag-numero" class="input" min="1" value="1"></div>
+    <div class="form-group"><label>Forma</label>
+      <select id="ag-forma" class="input">
+        <option value="R">🔵 Rotondo</option>
+        <option value="Q" selected>⬜ Quadrato</option>
+        <option value="T">▬ Rettangolare</option>
+      </select></div>
+    <div class="form-group"><label>Posti</label>
+      <input type="number" id="ag-posti" class="input" min="1" max="20" value="4"></div>
+    <div class="modal-footer">
+      <button onclick="chiudiModal('modal-aggiungi')" class="btn btn-outline">Annulla</button>
+      <button onclick="confAggiungi()" class="btn btn-primary">Aggiungi</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal: Modifica tavolo ─────────────────────── -->
+<div class="modal" id="modal-modifica" style="display:none">
+  <div class="modal-content" style="max-width:340px">
+    <h3>✏️ Modifica tavolo</h3>
+    <input type="hidden" id="mod-id">
+    <div class="form-group"><label>Numero</label>
+      <input type="number" id="mod-numero" class="input" min="1"></div>
+    <div class="form-group"><label>Forma</label>
+      <select id="mod-forma" class="input">
+        <option value="R">🔵 Rotondo</option>
+        <option value="Q">⬜ Quadrato</option>
+        <option value="T">▬ Rettangolare</option>
+      </select></div>
+    <div class="form-group"><label>Posti</label>
+      <input type="number" id="mod-posti" class="input" min="1" max="20"></div>
+    <div class="modal-footer">
+      <button onclick="chiudiModal('modal-modifica')" class="btn btn-outline">Annulla</button>
+      <button onclick="confModifica()" class="btn btn-primary">Salva</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Toast feedback ─────────────────────────────── -->
+<div id="toast" class="toast"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// ═══════════════════════════════════════════════════════
+//  DATI DAL SERVER
+// ═══════════════════════════════════════════════════════
+const SALA_ID   = {{ sala.id }};
+const SVG_W     = {{ sala.svg_larghezza }};
+const SVG_H     = {{ sala.svg_altezza }};
+const CSRF      = '{{ csrf_token }}';
+const URL_BASE  = `/sala/${SALA_ID}/editor`;
+
+let tavoliData  = {{ tavoli_json }};   // [{id,numero,forma,capacita,stato,pos_x,pos_y}, …]
+let unioniData  = {{ unioni_json }};   // [{id,etichetta,tavoli_ids,capacita_totale}, …]
+
+// ═══════════════════════════════════════════════════════
+//  STATO EDITOR
+// ═══════════════════════════════════════════════════════
+let selectedIds  = new Set();   // id tavoli selezionati
+let selectedUnione = null;      // id unione selezionata
+let currentTool  = 'select';
+let scale        = 1;
+let snapGrid     = true;
+let GRID         = 40;
+let dragging     = null;        // {id, startX, startY, origX, origY}
+
+// ═══════════════════════════════════════════════════════
+//  COLORI STATO
+// ═══════════════════════════════════════════════════════
+const COLORI = {L:'#27ae60', P:'#f39c12', O:'#e74c3c', C:'#3498db'};
+const NOMI   = {L:'Libero', P:'Prenotato', O:'Occupato', C:'Conto'};
+const FORME  = {R:'Rotondo', Q:'Quadrato', T:'Rettangolare'};
+
+// ═══════════════════════════════════════════════════════
+//  RENDERING SVG
+// ═══════════════════════════════════════════════════════
+const layerTavoli = document.getElementById('layer-tavoli');
+const layerUnioni = document.getElementById('layer-unioni');
+
+function disegnaTabella(t) {
+  const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  g.setAttribute('id', `t${t.id}`);
+  g.setAttribute('class', 'svg-tavolo');
+  g.setAttribute('data-id', t.id);
+  g.setAttribute('transform', `translate(${t.pos_x},${t.pos_y})`);
+  g.setAttribute('cursor', 'grab');
+
+  const col = COLORI[t.stato] || '#95a5a6';
+  const W = t.forma === 'T' ? 110 : 70;
+  const H = t.forma === 'T' ? 55  : 70;
+
+  // Forma principale
+  let shape;
+  if (t.forma === 'R') {
+    shape = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    shape.setAttribute('cx', 35); shape.setAttribute('cy', 35); shape.setAttribute('r', 33);
+  } else {
+    shape = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    shape.setAttribute('width', W); shape.setAttribute('height', H);
+    shape.setAttribute('rx', t.forma === 'Q' ? 8 : 5);
+  }
+  shape.setAttribute('fill', col + '33');
+  shape.setAttribute('stroke', col);
+  shape.setAttribute('stroke-width', 2.5);
+  g.appendChild(shape);
+
+  // Seggioline decorative
+  disegnaSeggioline(g, t.forma, W, H, t.capacita, col);
+
+  // Numero
+  const txt = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  txt.setAttribute('x', t.forma === 'R' ? 35 : W/2);
+  txt.setAttribute('y', t.forma === 'R' ? 38 : (t.forma === 'T' ? 30 : 38));
+  txt.setAttribute('text-anchor', 'middle');
+  txt.setAttribute('font-size', '16');
+  txt.setAttribute('font-weight', 'bold');
+  txt.setAttribute('fill', col);
+  txt.textContent = t.numero;
+  g.appendChild(txt);
+
+  // Posti
+  const sub = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  sub.setAttribute('x', t.forma === 'R' ? 35 : W/2);
+  sub.setAttribute('y', t.forma === 'R' ? 52 : (t.forma === 'T' ? 46 : 54));
+  sub.setAttribute('text-anchor', 'middle');
+  sub.setAttribute('font-size', '9');
+  sub.setAttribute('fill', '#666');
+  sub.textContent = `${t.capacita}p`;
+  g.appendChild(sub);
+
+  // Interazione
+  g.addEventListener('mousedown', onTavoloMouseDown);
+  g.addEventListener('click', onTavoloClick);
+
+  layerTavoli.appendChild(g);
+}
+
+function disegnaSeggioline(g, forma, W, H, cap, col) {
+  // Piccoli rettangoli attorno al tavolo a simulare le sedie
+  const sCol = col + '80';
+  const seats = Math.min(cap, 8);
+  const positions = forma === 'R'
+    ? seatPositionsCircle(35, 35, 42, seats)
+    : seatPositionsRect(W, H, seats);
+  positions.forEach(([x, y, w, h, rx]) => {
+    const s = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    s.setAttribute('x', x); s.setAttribute('y', y);
+    s.setAttribute('width', w); s.setAttribute('height', h);
+    s.setAttribute('rx', rx || 3);
+    s.setAttribute('fill', sCol);
+    g.appendChild(s);
+  });
+}
+
+function seatPositionsCircle(cx, cy, r, n) {
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    const a = (2 * Math.PI * i / n) - Math.PI/2;
+    const x = cx + r * Math.cos(a) - 6;
+    const y = cy + r * Math.sin(a) - 6;
+    out.push([x, y, 12, 12, 6]);
+  }
+  return out;
+}
+
+function seatPositionsRect(W, H, n) {
+  const out = [];
+  const top = Math.ceil(n / 4), sides = Math.floor(n / 4);
+  const bot = n - top - sides * 2;
+  // Top
+  for (let i=0;i<top;i++) out.push([8 + i*(W-16)/Math.max(top-1,1)-5, -12, 12, 10, 3]);
+  // Bottom
+  for (let i=0;i<bot;i++) out.push([8 + i*(W-16)/Math.max(bot-1,1)-5, H+2, 12, 10, 3]);
+  // Left
+  for (let i=0;i<sides;i++) out.push([-12, 8 + i*(H-16)/Math.max(sides-1,1)-5, 10, 12, 3]);
+  // Right
+  for (let i=0;i<sides;i++) out.push([W+2, 8 + i*(H-16)/Math.max(sides-1,1)-5, 10, 12, 3]);
+  return out;
+}
+
+function disegnaUnione(u) {
+  const ids = u.tavoli_ids;
+  const tavoli = tavoliData.filter(t => ids.includes(t.id));
+  if (tavoli.length === 0) return;
+
+  const xs = tavoli.map(t => t.pos_x);
+  const ys = tavoli.map(t => t.pos_y);
+  const minX = Math.min(...xs) - 15;
+  const minY = Math.min(...ys) - 15;
+  const maxX = Math.max(...xs) + 130;
+  const maxY = Math.max(...ys) + 130;
+
+  const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  rect.setAttribute('id', `u${u.id}`);
+  rect.setAttribute('x', minX); rect.setAttribute('y', minY);
+  rect.setAttribute('width', maxX - minX); rect.setAttribute('height', maxY - minY);
+  rect.setAttribute('fill', '#9b59b620');
+  rect.setAttribute('stroke', '#9b59b6');
+  rect.setAttribute('stroke-width', 2.5);
+  rect.setAttribute('stroke-dasharray', '8,4');
+  rect.setAttribute('rx', 12);
+  rect.setAttribute('cursor', 'pointer');
+  rect.setAttribute('data-unione-id', u.id);
+  rect.addEventListener('click', (e) => { e.stopPropagation(); selectUnione(u.id); });
+  layerUnioni.appendChild(rect);
+
+  const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  label.setAttribute('id', `ul${u.id}`);
+  label.setAttribute('x', minX + 8); label.setAttribute('y', minY + 16);
+  label.setAttribute('font-size', '11'); label.setAttribute('fill', '#9b59b6');
+  label.setAttribute('font-weight', 'bold');
+  label.textContent = `🔗 ${u.etichetta} (${u.capacita_totale}p)`;
+  layerUnioni.appendChild(label);
+}
+
+function renderAll() {
+  layerTavoli.innerHTML = '';
+  layerUnioni.innerHTML = '';
+  unioniData.forEach(disegnaUnione);
+  tavoliData.forEach(disegnaTabella);
+  refreshSelection();
+}
+
+// ═══════════════════════════════════════════════════════
+//  SELEZIONE
+// ═══════════════════════════════════════════════════════
+function onTavoloClick(e) {
+  e.stopPropagation();
+  const id = parseInt(this.getAttribute('data-id'));
+  if (e.shiftKey) {
+    // Multi-select
+    selectedIds.has(id) ? selectedIds.delete(id) : selectedIds.add(id);
+  } else {
+    selectedIds = new Set([id]);
+  }
+  selectedUnione = null;
+  refreshSelection();
+  aggiornaPannello();
+}
+
+function selectUnione(uid) {
+  selectedIds.clear();
+  selectedUnione = uid;
+  refreshSelection();
+  aggiornaPannello();
+}
+
+// Click su sfondo → deseleziona
+document.getElementById('editor-svg').addEventListener('click', () => {
+  selectedIds.clear();
+  selectedUnione = null;
+  refreshSelection();
+  aggiornaPannello();
+});
+
+function refreshSelection() {
+  // Reset tutti
+  document.querySelectorAll('.svg-tavolo').forEach(g => {
+    g.removeAttribute('filter');
+    g.querySelector('rect,circle')?.setAttribute('stroke-width', 2.5);
+  });
+  document.querySelectorAll('[id^="u"]').forEach(r => {
+    r.setAttribute('stroke-width', 2.5);
+  });
+
+  // Evidenzia selezionati
+  selectedIds.forEach(id => {
+    const g = document.getElementById(`t${id}`);
+    if (g) {
+      g.setAttribute('filter', 'url(#sel-glow)');
+      g.querySelector('rect,circle')?.setAttribute('stroke-width', 4);
+    }
+  });
+  if (selectedUnione) {
+    const r = document.getElementById(`u${selectedUnione}`);
+    if (r) r.setAttribute('stroke-width', 4);
+  }
+
+  // Aggiorna pulsanti toolbar
+  const nSel = selectedIds.size;
+  document.getElementById('btn-edit').disabled   = nSel !== 1;
+  document.getElementById('btn-unisci').disabled  = nSel < 2;
+  document.getElementById('btn-delete').disabled  = nSel === 0;
+  document.getElementById('btn-separa').disabled  = !selectedUnione;
+}
+
+function aggiornaPannello() {
+  const div = document.getElementById('info-text');
+  if (selectedIds.size === 1) {
+    const t = tavoliData.find(t => t.id === [...selectedIds][0]);
+    if (t) div.innerHTML =
+      `<b>Tavolo ${t.numero}</b><br>
+       Forma: ${FORME[t.forma]}<br>
+       Posti: ${t.capacita}<br>
+       Stato: <span style="color:${COLORI[t.stato]}">${NOMI[t.stato]}</span><br>
+       Pos: (${t.pos_x}, ${t.pos_y})`;
+  } else if (selectedIds.size > 1) {
+    const tot = [...selectedIds].reduce((s,id) => {
+      const t = tavoliData.find(t=>t.id===id);
+      return s + (t ? t.capacita : 0);
+    }, 0);
+    div.innerHTML = `<b>${selectedIds.size} tavoli selezionati</b><br>Totale posti: ${tot}<br><small>Shift+click per multi-selezione</small>`;
+  } else if (selectedUnione) {
+    const u = unioniData.find(u=>u.id===selectedUnione);
+    if (u) div.innerHTML = `<b>Unione ${u.etichetta}</b><br>Posti totali: ${u.capacita_totale}<br>Tavoli: ${u.tavoli_ids.length}`;
+  } else {
+    div.innerHTML = '<span class="text-muted">Clicca un tavolo per i dettagli</span>';
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  DRAG & DROP (mouse + touch)
+// ═══════════════════════════════════════════════════════
+let svg = document.getElementById('editor-svg');
+let pt  = svg.createSVGPoint();
+
+function getEventCoords(e) {
+  if (e.touches && e.touches.length > 0) {
+    return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  }
+  return { x: e.clientX, y: e.clientY };
+}
+
+function svgPoint(e) {
+  const coords = getEventCoords(e);
+  pt.x = coords.x; pt.y = coords.y;
+  return pt.matrixTransform(svg.getScreenCTM().inverse());
+}
+
+function onTavoloMouseDown(e) {
+  if (e.type === 'touchstart') {
+    if (e.cancelable) e.preventDefault();
+  } else if (e.button !== 0) return;
+  e.stopPropagation();
+  const id = parseInt(this.getAttribute('data-id'));
+  const t = tavoliData.find(t => t.id === id);
+  if (!t) return;
+  const sp = svgPoint(e);
+  dragging = { id, startX: sp.x - t.pos_x, startY: sp.y - t.pos_y };
+  
+  if (e.type === 'touchstart') {
+    document.addEventListener('touchmove', onTouchMove, { passive: false });
+    document.addEventListener('touchend', onTouchEnd);
+  } else {
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  }
+  
+  this.classList.add('dragging');
+  svg.setAttribute('cursor', 'grabbing');
+}
+
+function onMouseMove(e) {
+  if (!dragging) return;
+  const sp = svgPoint(e);
+  moveTable(sp.x, sp.y);
+}
+
+function onTouchMove(e) {
+  if (!dragging) return;
+  if (e.cancelable) e.preventDefault();
+  const sp = svgPoint(e);
+  moveTable(sp.x, sp.y);
+}
+
+function moveTable(x, y) {
+  let nx = x - dragging.startX;
+  let ny = y - dragging.startY;
+  if (document.getElementById('snap-grid').checked) {
+    nx = Math.round(nx / GRID) * GRID;
+    ny = Math.round(ny / GRID) * GRID;
+  }
+  nx = Math.max(0, Math.min(SVG_W - 120, nx));
+  ny = Math.max(0, Math.min(SVG_H - 100, ny));
+
+  const g = document.getElementById(`t${dragging.id}`);
+  if (g) g.setAttribute('transform', `translate(${nx},${ny})`);
+
+  const t = tavoliData.find(t => t.id === dragging.id);
+  if (t) { t.pos_x = Math.round(nx); t.pos_y = Math.round(ny); }
+
+  unioniData.forEach(u => {
+    if (u.tavoli_ids.includes(dragging.id)) ridisegnaUnione(u.id);
+  });
+}
+
+function onMouseUp() {
+  endDrag();
+}
+
+function onTouchEnd() {
+  endDrag();
+}
+
+function endDrag() {
+  dragging = null;
+  svg.setAttribute('cursor', 'default');
+  document.querySelectorAll('.svg-tavolo.dragging').forEach(el => el.classList.remove('dragging'));
+  document.removeEventListener('mousemove', onMouseMove);
+  document.removeEventListener('mouseup', onMouseUp);
+  document.removeEventListener('touchmove', onTouchMove);
+  document.removeEventListener('touchend', onTouchEnd);
+  aggiornaPannello();
+}
+
+function ridisegnaUnione(uid) {
+  document.getElementById(`u${uid}`)?.remove();
+  document.getElementById(`ul${uid}`)?.remove();
+  const u = unioniData.find(u => u.id === uid);
+  if (u) disegnaUnione(u);
+}
+
+// ═══════════════════════════════════════════════════════
+//  ZOOM
+// ═══════════════════════════════════════════════════════
+function zoom(delta) {
+  scale = Math.max(0.3, Math.min(2.5, scale + delta));
+  document.getElementById('editor-svg').style.transform = `scale(${scale})`;
+  document.getElementById('editor-svg').style.transformOrigin = 'top left';
+  document.getElementById('zoom-label').textContent = Math.round(scale*100) + '%';
+}
+
+function setTool(t) { currentTool = t; }
+
+// ═══════════════════════════════════════════════════════
+//  MODAL helpers
+// ═══════════════════════════════════════════════════════
+function chiudiModal(id) { document.getElementById(id).style.display = 'none'; }
+
+// ═══════════════════════════════════════════════════════
+//  AGGIUNGI TAVOLO
+// ═══════════════════════════════════════════════════════
+function openAggiungi() {
+  // Suggerisci numero successivo
+  const maxN = tavoliData.length ? Math.max(...tavoliData.map(t=>t.numero)) : 0;
+  document.getElementById('ag-numero').value = maxN + 1;
+  document.getElementById('modal-aggiungi').style.display = 'flex';
+}
+
+async function confAggiungi() {
+  const payload = {
+    numero: parseInt(document.getElementById('ag-numero').value),
+    forma:  document.getElementById('ag-forma').value,
+    capacita: parseInt(document.getElementById('ag-posti').value),
+    x: 100, y: 100,
+  };
+  const r = await post(`${URL_BASE}/aggiungi/`, payload);
+  if (r.ok) {
+    tavoliData.push({id:r.id, numero:r.numero, forma:r.forma, capacita:r.capacita,
+                     stato:'L', pos_x:r.pos_x, pos_y:r.pos_y});
+    disegnaTabella(tavoliData[tavoliData.length-1]);
+    chiudiModal('modal-aggiungi');
+    toast('Tavolo aggiunto ✅');
+  } else toast(r.errore || 'Errore', true);
+}
+
+// ═══════════════════════════════════════════════════════
+//  MODIFICA TAVOLO
+// ═══════════════════════════════════════════════════════
+function openModifica() {
+  if (selectedIds.size !== 1) return;
+  const id = [...selectedIds][0];
+  const t = tavoliData.find(t => t.id === id);
+  if (!t) return;
+  document.getElementById('mod-id').value     = id;
+  document.getElementById('mod-numero').value  = t.numero;
+  document.getElementById('mod-forma').value   = t.forma;
+  document.getElementById('mod-posti').value   = t.capacita;
+  document.getElementById('modal-modifica').style.display = 'flex';
+}
+
+async function confModifica() {
+  const id = parseInt(document.getElementById('mod-id').value);
+  const payload = {
+    numero:   parseInt(document.getElementById('mod-numero').value),
+    forma:    document.getElementById('mod-forma').value,
+    capacita: parseInt(document.getElementById('mod-posti').value),
+  };
+  const r = await post(`${URL_BASE}/tavolo/${id}/modifica/`, payload);
+  if (r.ok) {
+    const t = tavoliData.find(t => t.id === id);
+    if (t) { t.numero = r.numero; t.forma = r.forma; t.capacita = r.capacita; }
+    // Ridisegna solo questo tavolo
+    document.getElementById(`t${id}`)?.remove();
+    disegnaTabella(tavoliData.find(t => t.id === id));
+    chiudiModal('modal-modifica');
+    toast('Tavolo modificato ✅');
+  } else toast(r.errore || 'Errore', true);
+}
+
+// ═══════════════════════════════════════════════════════
+//  UNISCI
+// ═══════════════════════════════════════════════════════
+async function unisciSel() {
+  if (selectedIds.size < 2) return;
+  const r = await post(`${URL_BASE}/unisci/`, {ids: [...selectedIds]});
+  if (r.ok) {
+    unioniData.push({id:r.id, etichetta:r.etichetta, tavoli_ids:r.tavoli_ids, capacita_totale:r.capacita_totale});
+    disegnaUnione(unioniData[unioniData.length-1]);
+    selectedIds.clear();
+    refreshSelection();
+    toast(`Unione ${r.etichetta} creata 🔗`);
+  } else toast(r.errore || 'Errore', true);
+}
+
+// ═══════════════════════════════════════════════════════
+//  SEPARA
+// ═══════════════════════════════════════════════════════
+async function separaSel() {
+  if (!selectedUnione) return;
+  const r = await post(`${URL_BASE}/separa/`, {unione_id: selectedUnione});
+  if (r.ok) {
+    const uid = selectedUnione;
+    unioniData = unioniData.filter(u => u.id !== uid);
+    document.getElementById(`u${uid}`)?.remove();
+    document.getElementById(`ul${uid}`)?.remove();
+    selectedUnione = null;
+    refreshSelection();
+    toast('Unione separata ✂️');
+  } else toast(r.errore || 'Errore', true);
+}
+
+// ═══════════════════════════════════════════════════════
+//  ELIMINA
+// ═══════════════════════════════════════════════════════
+async function eliminaSel() {
+  if (selectedIds.size === 0) return;
+  if (!confirm(`Eliminare ${selectedIds.size} tavolo/i?`)) return;
+  for (const id of selectedIds) {
+    const r = await post(`${URL_BASE}/tavolo/${id}/elimina/`, {});
+    if (r.ok) {
+      tavoliData = tavoliData.filter(t => t.id !== id);
+      document.getElementById(`t${id}`)?.remove();
+    }
+  }
+  selectedIds.clear();
+  refreshSelection();
+  toast('Eliminato 🗑️');
+}
+
+// ═══════════════════════════════════════════════════════
+//  SALVA LAYOUT
+// ═══════════════════════════════════════════════════════
+async function salvaLayout() {
+  const payload = { tavoli: tavoliData.map(t => ({id:t.id, x:t.pos_x, y:t.pos_y})) };
+  const r = await post(`${URL_BASE}/salva/`, payload);
+  toast(r.ok ? 'Layout salvato 💾' : 'Errore salvataggio', !r.ok);
+}
+
+// ═══════════════════════════════════════════════════════
+//  UTILITY
+// ═══════════════════════════════════════════════════════
+async function post(url, data) {
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','X-CSRFToken': CSRF},
+      body: JSON.stringify(data),
+    });
+    return await res.json();
+  } catch(e) { return {errore: e.message}; }
+}
+
+function toast(msg, err=false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast ' + (err ? 'toast-err' : 'toast-ok');
+  t.style.opacity = '1';
+  setTimeout(() => t.style.opacity = '0', 2800);
+}
+
+// Tastiera shortcuts
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+  if (e.key === 'a' || e.key === 'A') openAggiungi();
+  if (e.key === 'e' || e.key === 'E') openModifica();
+  if (e.key === 'u' || e.key === 'U') unisciSel();
+  if (e.key === 'x' || e.key === 'X') separaSel();
+  if (e.key === 'Delete' || e.key === 'Backspace') eliminaSel();
+  if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); salvaLayout(); }
+});
+
+// ── AVVIO ──
+renderAll();
+</script>
+{% endblock %}

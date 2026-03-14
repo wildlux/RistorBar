@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RistoBAR — Developer Panel</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --card: #161b22;
+      --border: #30363d;
+      --accent: #58a6ff;
+      --accent2: #3fb950;
+      --accent3: #f78166;
+      --accent4: #d2a8ff;
+      --accent5: #ffa657;
+      --muted: #8b949e;
+      --text: #e6edf3;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; }
+
+    /* Header */
+    .dev-header {
+      background: var(--card); border-bottom: 1px solid var(--border);
+      padding: 1rem 1.5rem; display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 100;
+    }
+    .dev-brand { display: flex; align-items: center; gap: 0.75rem; }
+    .dev-brand h1 { font-size: 1.2rem; font-weight: 700; }
+    .dev-badge { font-size: 0.7rem; background: #f78166; color: #000; padding: 0.1rem 0.5rem;
+                 border-radius: 20px; font-weight: 800; letter-spacing: 0.05em; }
+    .dev-stats { display: flex; gap: 1.5rem; font-size: 0.82rem; color: var(--muted); }
+    .dev-stat span { color: var(--text); font-weight: 700; }
+
+    /* Layout */
+    .dev-body { max-width: 1400px; margin: 0 auto; padding: 1.5rem; }
+    .dev-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 1.25rem; }
+
+    /* Card sezione */
+    .dev-section {
+      background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+      overflow: hidden;
+    }
+    .dev-section-head {
+      padding: 0.75rem 1rem; display: flex; align-items: center; gap: 0.6rem;
+      border-bottom: 1px solid var(--border); font-weight: 700; font-size: 0.95rem;
+    }
+    .dev-section-head .icon { font-size: 1.1rem; }
+    .dev-section-head .badge-count {
+      margin-left: auto; font-size: 0.7rem; background: rgba(255,255,255,0.08);
+      padding: 0.1rem 0.5rem; border-radius: 20px; font-weight: 600;
+    }
+
+    /* Colori sezioni */
+    .sect-pubblica  .dev-section-head { background: rgba(88,166,255,0.08); color: var(--accent); }
+    .sect-staff     .dev-section-head { background: rgba(63,185,80,0.08);  color: var(--accent2); }
+    .sect-editor    .dev-section-head { background: rgba(210,168,255,0.08);color: var(--accent4); }
+    .sect-api       .dev-section-head { background: rgba(255,166,87,0.08); color: var(--accent5); }
+    .sect-admin     .dev-section-head { background: rgba(247,129,102,0.08);color: var(--accent3); }
+    .sect-webhook   .dev-section-head { background: rgba(139,148,158,0.08);color: var(--muted); }
+
+    /* Link rows */
+    .dev-links { padding: 0.5rem; }
+    .dev-link {
+      display: flex; align-items: center; gap: 0.75rem;
+      padding: 0.55rem 0.75rem; border-radius: 6px; text-decoration: none;
+      color: var(--text); transition: background 0.15s; margin-bottom: 0.2rem;
+      border: 1px solid transparent;
+    }
+    .dev-link:hover { background: rgba(255,255,255,0.05); border-color: var(--border); }
+    .dev-link:last-child { margin-bottom: 0; }
+
+    .dl-method {
+      font-size: 0.65rem; font-weight: 800; padding: 0.15rem 0.4rem;
+      border-radius: 4px; flex-shrink: 0; letter-spacing: 0.03em;
+      font-family: monospace;
+    }
+    .m-get    { background: #1a3a5c; color: #58a6ff; }
+    .m-post   { background: #1a3a1a; color: #3fb950; }
+    .m-any    { background: #3a2a1a; color: #ffa657; }
+
+    .dl-path {
+      font-family: monospace; font-size: 0.82rem; color: var(--accent);
+      flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .dl-desc { font-size: 0.75rem; color: var(--muted); white-space: nowrap; }
+    .dl-role {
+      font-size: 0.65rem; padding: 0.1rem 0.4rem; border-radius: 20px;
+      background: rgba(255,255,255,0.07); color: var(--muted); white-space: nowrap;
+    }
+
+    /* Sezione credenziali */
+    .dev-creds { padding: 0.5rem; }
+    .cred-row {
+      display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem;
+      padding: 0.45rem 0.75rem; border-radius: 6px; font-size: 0.8rem;
+      margin-bottom: 0.25rem; background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border);
+    }
+    .cred-user { font-weight: 700; font-family: monospace; }
+    .cred-pass { color: var(--muted); font-family: monospace; }
+    .cred-role { color: var(--accent4); text-align: right; }
+
+    /* Info box */
+    .dev-info { padding: 0.75rem 1rem; font-size: 0.8rem; color: var(--muted);
+                border-top: 1px solid var(--border); line-height: 1.6; }
+    .dev-info code { background: rgba(255,255,255,0.07); padding: 0.1rem 0.3rem;
+                     border-radius: 3px; font-size: 0.78rem; color: var(--accent5); }
+
+    /* Full-width card */
+    .dev-section.full { grid-column: 1 / -1; }
+
+    /* QR section */
+    .dev-qr-note { padding: 0.5rem 1rem 0.75rem; font-size: 0.78rem; color: var(--muted); }
+    .dev-qr-note a { color: var(--accent); }
+
+    @media (max-width: 700px) {
+      .dev-stats { display: none; }
+      .dev-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<header class="dev-header">
+  <div class="dev-brand">
+    <span style="font-size:1.5rem">🍽️</span>
+    <h1>RistoBAR</h1>
+    <span class="dev-badge">DEV</span>
+  </div>
+  <div class="dev-stats">
+    <div>Sale: <span>{{ n_sale }}</span></div>
+    <div>Tavoli: <span>{{ n_tavoli }}</span></div>
+    <div>Piatti: <span>{{ n_piatti }}</span></div>
+    <div>Ordini: <span>{{ n_ordini }}</span></div>
+    <div>Prenotazioni: <span>{{ n_prenotazioni }}</span></div>
+  </div>
+</header>
+
+<div class="dev-body">
+  <div class="dev-grid">
+
+    <!-- ── PUBBLICA ─────────────────────────────────────────────── -->
+    <div class="dev-section sect-pubblica">
+      <div class="dev-section-head">
+        <span class="icon">🌐</span> Area Pubblica (clienti)
+        <span class="badge-count">GET · no login</span>
+      </div>
+      <div class="dev-links">
+        <a class="dev-link" href="/" target="_blank">
+          <span class="dl-method m-get">GET</span>
+          <span class="dl-path">/</span>
+          <span class="dl-desc">→ redirect homepage</span>
+        </a>
+        <a class="dev-link" href="/homepage" target="_blank">
+          <span class="dl-method m-get">GET</span>
+          <span class="dl-path">/homepage</span>
+          <span class="dl-desc">Vetrina ristorante</span>
+        </a>
+        {% if sala1 and tavolo1 %}
+        <a class="dev-link" href="/menu/{{ sala1.id }}/{{ tavolo1.numero }}/" target="_blank">
+          <span class="dl-method m-get">GET</span>
+          <span class="dl-path">/menu/{{ sala1.id }}/{{ tavolo1.numero }}/</span>
+          <span class="dl-desc">Menu QR tavolo</span>
+        </a>
+        <a class="dev-link" href="/prenota/{{ sala1.id }}/{{ tavolo1.numero }}/" target="_blank">
+          <span class="dl-method m-get">GET</span>
+          <span class="dl-path">/prenota/{{ sala1.id }}/{{ tavolo1.numero }}/</span>
+          <span class="dl-desc">Form prenotazione</span>
+        </a>
+        {% else %}
+        <div class="dev-link" style="opacity:0.4;cursor:default">
+          <span class="dl-method m-get">GET</span>
+          <span class="dl-path">/menu/{sala}/{tavolo}/</span>
+          <span class="dl-desc">Nessun tavolo in DB</span>
+        </div>
+        {% endif %}
+        {% if prenotazione1 %}
+        <a class="dev-link" href="/prenota/conferma/{{ prenotazione1.id }}/" target="_blank">
+          <span class="dl-method m-get">GET</span>
+          <span class="dl-path">/prenota/conferma/{{ prenotazione1.id }}/</span>
+          <span class="dl-desc">Conferma prenotazione</span>
+        </a>
+        <a class="dev-link" href="/prenota/caparra/{{ prenotazione1.id }}/" target="_blank">
+          <span class="dl-method m-get">GET</span>
+          <span class="dl-path">/prenota/caparra/{{ prenotazione1.id }}/</span>
+          <span class="dl-desc">Pagamento caparra Stripe</span>
+        </a>
+        {% endif %}
+      </div>
+      <div class="dev-info">
+        Pagine navigabili senza login. Il menu viene generato via QR code incollato sul tavolo.<br>
+        Sale disponibili: <code>{{ n_sale }}</code> · Tavoli attivi: <code>{{ n_tavoli }}</code>
+      </div>
+    </div>
+
+    <!-- ── AUTH ─────────────────────────────────────────────────── -->
+    <div class="dev-section sect-admin">
+      <div class="dev-section-head">
+        <span class="icon">🔐</span> Autenticazione
+      </div>
+      <div class="dev-links">
+        <a class="dev-link" href="/login/" target="_blank">
+          <span class="dl-method m-any">GET/POST</span>
+          <span class="dl-path">/login/</span>
+          <span class="dl-desc">Pagina di login</span>
+        </a>
+        <a class="dev-link" href="/logout/" target="_blank">
+          <span class="dl-method m-get">GET</span>
+          <span class="dl-path">/logout/</span>
+          <span class="dl-desc">Logout → homepage</span>
+        </a>
+        <a class="dev-link" href="/sala/" target="_blank">
+          <span class="dl-method m-get">GET</span>
+          <span class="dl-path">/sala/</span>
+          <span class="dl-desc">Dispatch ruolo (reindirizza)</span>
+          <span class="dl-role">login req.</span>
+        </a>
+      </div>
+      <div class="dev-creds">
+        <div class="cred-row" style="font-size:0.7rem;color:var(--muted);font-weight:600">
+          <span>USERNAME</span><span>PASSWORD</span><span style="text-align:right">RUOLO</span>
+        </div>
+        <div class="cred-row"><span class="cred-user">admin</span><span class="cred-pass">admin123</span><span class="cred-role">superuser</span></div>
+        <div class="cred-row"><span class="cred-user">titolare</span><span class="cred-pass">titolare123</span><span class="cred-role">titolare</span></div>
+        <div class="cred-row"><span class="cred-user">capo_area</span><span class="cred-pass">capo123</span><span class="cred-role">capo_area</span></div>
+        <div class="cred-row"><span class="cred-user">cameriere1</span><span class="cred-pass">cam123</span><span class="cred-role">cameriere</span></div>
+        <div class="cred-row"><span class="cred-user">cuoco1</span><span class="cred-pass">cuoco123</span><span class="cred-role">cuoco</span></div>
+      </div>
+    </div>
+
+    <!-- ── STAFF CAMERIERE ────────────────────────────────────────── -->
+    <div class="dev-section sect-staff">
+      <div class="dev-section-head">
+        <span class="icon">🍽️</span> Staff — Cameriere
+        <span class="badge-count">cameriere</span>
+      </div>
+      <div class="dev-links">
+        <a class="dev-link" href="/sala/cameriere/" target="_blank">
+          <span class="dl-method m-get">GET</span>
+          <span class="dl-path">/sala/cameriere/</span>
+          <span class="dl-desc">Griglia tavoli</span>
+          <span class="dl-role">cameriere</span>
+        </a>
+        {% if tavolo1 %}
+        <a class="dev-link" href="/sala/cameriere/ordine/{{ tavolo1.id }}/" target="_blank">
+          <span class="dl-method m-get">GET</span>
+          <span class="dl-path">/sala/cameriere/ordine/{{ tavolo1.id }}/</span>
+          <span class="dl-desc">Comanda tavolo {{ tavolo1.numero }}</span>
+          <span class="dl-role">cameriere</span>
+        </a>
+        {% endif %}
+        <div class="dev-link" style="opacity:0.5;cursor:default">
+          <span class="dl-method m-post">POST</span>
+          <span class="dl-path">/sala/cameriere/ordine/{id}/</span>
+          <span class="dl-desc">azione: nuovo_ordine / aggiungi_piatto / invia_cucina / chiedi_conto</span>
+        </div>
+        <div class="dev-link" style="opacity:0.5;cursor:default">
+          <span class="dl-method m-post">POST</span>
+          <span class="dl-path">/sala/tavolo/{id}/stato/</span>
+          <span class="dl-desc">Cambia stato tavolo (L/P/O/C)</span>
+        </div>
+      </div>
+      <div class="dev-info">
+        Flusso comanda: <code>nuovo_ordine</code> → <code>aggiungi_piatto</code> → <code>invia_cucina</code> → <code>chiedi_conto</code>
+      </div>
+    </div>
+
+    <!-- ── STAFF CUCINA KDS ────────────────────────────────────────── -->
+    <div class="dev-section sect-staff">
+      <div class="dev-section-head">
+        <span class="icon">👨‍🍳</span> Staff — Cucina KDS
+        <span class="badge-count">cuoco</span>
+      </div>
+      <div class="dev-links">
+        <a class="dev-link" href="/sala/cucina/" target="_blank">
+          <span class="dl-method m-get">GET</span>
+          <span class="dl-path">/sala/cucina/</span>
+          <span class="dl-desc">Kitchen Display System</span>
+          <span class="dl-role">cuoco</span>
+        </a>
+        <div class="dev-link" style="opacity:0.5;cursor:default">
+          <span class="dl-method m-post">POST</span>
+          <span class="dl-path">/sala/cucina/item/{id}/stato/</span>
+          <span class="dl-desc">Aggiorna stato item: A→C→P→S</span>
+        </div>
+      </div>
+      <div class="dev-info">
+        Stato items: <code>A</code>=Attesa · <code>C</code>=In cucina · <code>P</code>=Pronto · <code>S</code>=Servito<br>
+        Auto-refresh 20s · Timer urgenza dopo 15min
+      </div>
+    </div>
+
+    <!-- ── STAFF DASHBOARD ─────────────────────────────────────────── -->
+    <div class="dev-section sect-staff">
+      <div class="dev-section-head">
+        <span class="icon">📊</span> Staff — Dashboard Capo
+        <span class="badge-count">capo_area / titolare</span>
+      </div>
+      <div class="dev-links">
+        <a class="dev-link" href="/sala/capo/" target="_blank">
+          <span class="dl-method m-get">GET</span>
+          <span class="dl-path">/sala/capo/</span>
+          <span class="dl-desc">Dashboard completa</span>
+          <span class="dl-role">capo_area</span>
+        </a>
+        {% if sala1 %}
+        <a class="dev-link" href="/sala/capo/sala/{{ sala1.id }}/" target="_blank">
+          <span class="dl-method m-get">GET</span>
+          <span class="dl-path">/sala/capo/sala/{{ sala1.id }}/</span>
+          <span class="dl-desc">Mappa sala {{ sala1.nome }}</span>
+          <span class="dl-role">capo_area</span>
+        </a>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- ── EDITOR ────────────────────────────────────────────────── -->
+    <div class="dev-section sect-editor">
+      <div class="dev-section-head">
+        <span class="icon">🗺️</span> Editor Planimetria
+        <span class="badge-count">titolare / capo_area</span>
+      </div>
+      <div class="dev-links">
+        {% if sala1 %}
+        <a class="dev-link" href="/sala/editor/{{ sala1.id }}/" target="_blank">
+          <span class="dl-method m-get">GET</span>
+          <span class="dl-path">/sala/editor/{{ sala1.id }}/</span>
+          <span class="dl-desc">Editor — {{ sala1.nome }}</span>
+          <span class="dl-role">titolare</span>
+        </a>
+        {% endif %}
+        <div class="dev-link" style="opacity:0.5;cursor:default">
+          <span class="dl-method m-post">POST</span>
+          <span class="dl-path">/sala/editor/{id}/salva/</span>
+          <span class="dl-desc">Salva posizioni drag&amp;drop</span>
+        </div>
+        <div class="dev-link" style="opacity:0.5;cursor:default">
+          <span class="dl-method m-post">POST</span>
+          <span class="dl-path">/sala/editor/{id}/unisci/</span>
+          <span class="dl-desc">Unisce tavoli selezionati</span>
+        </div>
+        <div class="dev-link" style="opacity:0.5;cursor:default">
+          <span class="dl-method m-post">POST</span>
+          <span class="dl-path">/sala/editor/{id}/separa/</span>
+          <span class="dl-desc">Scioglie unione tavoli</span>
+        </div>
+        <div class="dev-link" style="opacity:0.5;cursor:default">
+          <span class="dl-method m-post">POST</span>
+          <span class="dl-path">/sala/editor/{id}/aggiungi/</span>
+          <span class="dl-desc">Aggiunge nuovo tavolo</span>
+        </div>
+        <div class="dev-link" style="opacity:0.5;cursor:default">
+          <span class="dl-method m-post">POST</span>
+          <span class="dl-path">/sala/editor/{id}/tavolo/{tid}/modifica/</span>
+          <span class="dl-desc">Modifica proprietà tavolo</span>
+        </div>
+        <div class="dev-link" style="opacity:0.5;cursor:default">
+          <span class="dl-method m-post">POST</span>
+          <span class="dl-path">/sala/editor/{id}/tavolo/{tid}/elimina/</span>
+          <span class="dl-desc">Disattiva tavolo</span>
+        </div>
+      </div>
+      <div class="dev-info">
+        Shortcuts editor: <code>A</code> aggiungi · <code>E</code> modifica · <code>U</code> unisci · <code>X</code> separa · <code>Del</code> elimina · <code>Ctrl+S</code> salva
+      </div>
+    </div>
+
+    <!-- ── API REST ──────────────────────────────────────────────── -->
+    <div class="dev-section sect-api">
+      <div class="dev-section-head">
+        <span class="icon">⚡</span> API REST (DRF + STM32)
+      </div>
+      <div class="dev-links">
+        <a class="dev-link" href="/api/" target="_blank">
+          <span class="dl-method m-get">GET</span>
+          <span class="dl-path">/api/</span>
+          <span class="dl-desc">Browsable API root</span>
+        </a>
+        <a class="dev-link" href="/api/tavoli/" target="_blank">
+          <span class="dl-method m-any">CRUD</span>
+          <span class="dl-path">/api/tavoli/</span>
+          <span class="dl-desc">ViewSet tavoli</span>
+        </a>
+        <a class="dev-link" href="/api/prenotazioni/" target="_blank">
+          <span class="dl-method m-any">CRUD</span>
+          <span class="dl-path">/api/prenotazioni/</span>
+          <span class="dl-desc">ViewSet prenotazioni</span>
+        </a>
+        <a class="dev-link" href="/api/ordini/" target="_blank">
+          <span class="dl-method m-any">CRUD</span>
+          <span class="dl-path">/api/ordini/</span>
+          <span class="dl-desc">ViewSet ordini</span>
+        </a>
+        <a class="dev-link" href="/api/piatti/" target="_blank">
+          <span class="dl-method m-any">CRUD</span>
+          <span class="dl-path">/api/piatti/</span>
+          <span class="dl-desc">ViewSet piatti (solo disponibili)</span>
+        </a>
+        {% if sala1 and tavolo1 %}
+        <a class="dev-link" href="/api/tavolo/{{ sala1.id }}/{{ tavolo1.numero }}/" target="_blank">
+          <span class="dl-method m-get">GET</span>
+          <span class="dl-path">/api/tavolo/{{ sala1.id }}/{{ tavolo1.numero }}/</span>
+          <span class="dl-desc">Stato singolo tavolo (STM32)</span>
+        </a>
+        <a class="dev-link" href="/api/sala/{{ sala1.id }}/" target="_blank">
+          <span class="dl-method m-get">GET</span>
+          <span class="dl-path">/api/sala/{{ sala1.id }}/</span>
+          <span class="dl-desc">Tutti tavoli sala (bulk STM32)</span>
+        </a>
+        {% endif %}
+      </div>
+      <div class="dev-info">
+        Risposta STM32 compressa: <code>t</code>=numero · <code>s</code>=stato · <code>n</code>=nome_cliente · <code>p</code>=persone · <code>h</code>=ora<br>
+        Auth DRF: <code>IsAuthenticatedOrReadOnly</code> (ordini: <code>IsAuthenticated</code>)
+      </div>
+    </div>
+
+    <!-- ── ADMIN ─────────────────────────────────────────────────── -->
+    <div class="dev-section sect-admin">
+      <div class="dev-section-head">
+        <span class="icon">🛠️</span> Django Admin
+        <span class="badge-count">superuser</span>
+      </div>
+      <div class="dev-links">
+        <a class="dev-link" href="/amministrazione/" target="_blank">
+          <span class="dl-method m-get">GET</span>
+          <span class="dl-path">/amministrazione/</span>
+          <span class="dl-desc">Admin Django (rinominato)</span>
+          <span class="dl-role">superuser</span>
+        </a>
+        <a class="dev-link" href="/amministrazione/ristorante/sala/" target="_blank">
+          <span class="dl-method m-get">GET</span>
+          <span class="dl-path">/amministrazione/ristorante/sala/</span>
+          <span class="dl-desc">Gestione Sale</span>
+        </a>
+        <a class="dev-link" href="/amministrazione/ristorante/tavolo/" target="_blank">
+          <span class="dl-method m-get">GET</span>
+          <span class="dl-path">/amministrazione/ristorante/tavolo/</span>
+          <span class="dl-desc">Gestione Tavoli</span>
+        </a>
+        <a class="dev-link" href="/amministrazione/ristorante/piatto/" target="_blank">
+          <span class="dl-method m-get">GET</span>
+          <span class="dl-path">/amministrazione/ristorante/piatto/</span>
+          <span class="dl-desc">Gestione Piatti / Menu</span>
+        </a>
+        <a class="dev-link" href="/amministrazione/ristorante/prenotazione/" target="_blank">
+          <span class="dl-method m-get">GET</span>
+          <span class="dl-path">/amministrazione/ristorante/prenotazione/</span>
+          <span class="dl-desc">Gestione Prenotazioni</span>
+        </a>
+        <a class="dev-link" href="/amministrazione/ristorante/ordine/" target="_blank">
+          <span class="dl-method m-get">GET</span>
+          <span class="dl-path">/amministrazione/ristorante/ordine/</span>
+          <span class="dl-desc">Gestione Ordini</span>
+        </a>
+        <a class="dev-link" href="/amministrazione/auth/user/" target="_blank">
+          <span class="dl-method m-get">GET</span>
+          <span class="dl-path">/amministrazione/auth/user/</span>
+          <span class="dl-desc">Utenti e Gruppi</span>
+        </a>
+        <a class="dev-link" href="/amministrazione/auth/group/" target="_blank">
+          <span class="dl-method m-get">GET</span>
+          <span class="dl-path">/amministrazione/auth/group/</span>
+          <span class="dl-desc">Gruppi (ruoli)</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- ── WEBHOOKS ──────────────────────────────────────────────── -->
+    <div class="dev-section sect-webhook">
+      <div class="dev-section-head">
+        <span class="icon">🔗</span> Webhooks &amp; PWA
+      </div>
+      <div class="dev-links">
+        <div class="dev-link" style="opacity:0.5;cursor:default">
+          <span class="dl-method m-post">POST</span>
+          <span class="dl-path">/webhooks/stripe/</span>
+          <span class="dl-desc">Stripe payment events (CSRF exempt)</span>
+        </div>
+        <div class="dev-link" style="opacity:0.5;cursor:default">
+          <span class="dl-method m-post">POST</span>
+          <span class="dl-path">/webhooks/telegram/</span>
+          <span class="dl-desc">Telegram Bot updates (CSRF exempt)</span>
+        </div>
+        <a class="dev-link" href="/manifest.json" target="_blank">
+          <span class="dl-method m-get">GET</span>
+          <span class="dl-path">/manifest.json</span>
+          <span class="dl-desc">PWA manifest</span>
+        </a>
+        <a class="dev-link" href="/serviceworker.js" target="_blank">
+          <span class="dl-method m-get">GET</span>
+          <span class="dl-path">/serviceworker.js</span>
+          <span class="dl-desc">PWA Service Worker</span>
+        </a>
+        <a class="dev-link" href="/i18n/setlang/" target="_blank">
+          <span class="dl-method m-post">POST</span>
+          <span class="dl-path">/i18n/setlang/</span>
+          <span class="dl-desc">Cambia lingua (IT/EN/FR/DE/ES/ZH/JA/AR)</span>
+        </a>
+      </div>
+      <div class="dev-info">
+        Stripe: caparra €10 per prenotazione (PaymentIntent). Telegram: bot prenotazioni via chat.<br>
+        i18n: 8 lingue configurate, file <code>.po</code> in <code>locale/</code>
+      </div>
+    </div>
+
+    <!-- ── ARCHITETTURA ──────────────────────────────────────────── -->
+    <div class="dev-section full" style="border-color: #30363d;">
+      <div class="dev-section-head" style="background: rgba(255,255,255,0.03); color: var(--muted);">
+        <span class="icon">🏗️</span> Architettura &amp; Note tecniche
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 0; border-top: 1px solid var(--border);">
+
+        <div style="padding: 1rem; border-right: 1px solid var(--border);">
+          <div style="font-size:0.75rem; color: var(--muted); font-weight:700; margin-bottom:0.5rem;">MODELLI</div>
+          <div style="font-size:0.8rem; line-height:1.8; font-family:monospace;">
+            Sala → Tavolo (M2O)<br>
+            Tavolo → TavoloUnione (M2M)<br>
+            Tavolo → Prenotazione<br>
+            Tavolo → Ordine → OrdineItem<br>
+            Categoria → Piatto
+          </div>
+        </div>
+
+        <div style="padding: 1rem; border-right: 1px solid var(--border);">
+          <div style="font-size:0.75rem; color: var(--muted); font-weight:700; margin-bottom:0.5rem;">STATI TAVOLO</div>
+          <div style="font-size:0.8rem; line-height:1.9;">
+            <span style="color:#27ae60">●</span> <code>L</code> Libero<br>
+            <span style="color:#f39c12">●</span> <code>P</code> Prenotato<br>
+            <span style="color:#e74c3c">●</span> <code>O</code> Occupato<br>
+            <span style="color:#3498db">●</span> <code>C</code> Conto richiesto
+          </div>
+        </div>
+
+        <div style="padding: 1rem; border-right: 1px solid var(--border);">
+          <div style="font-size:0.75rem; color: var(--muted); font-weight:700; margin-bottom:0.5rem;">STATI ORDINE ITEM</div>
+          <div style="font-size:0.8rem; line-height:1.9;">
+            <span style="color:#f39c12">●</span> <code>A</code> In attesa<br>
+            <span style="color:#e74c3c">●</span> <code>C</code> In cucina<br>
+            <span style="color:#27ae60">●</span> <code>P</code> Pronto<br>
+            <span style="color:#3498db">●</span> <code>S</code> Servito
+          </div>
+        </div>
+
+        <div style="padding: 1rem;">
+          <div style="font-size:0.75rem; color: var(--muted); font-weight:700; margin-bottom:0.5rem;">COMANDI UTILI</div>
+          <div style="font-size:0.78rem; line-height:1.9; font-family:monospace;">
+            venv/bin/python manage.py demo_data<br>
+            venv/bin/python manage.py migrate<br>
+            venv/bin/python manage.py runserver<br>
+            venv/bin/python manage.py collectstatic
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>

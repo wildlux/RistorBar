@@ -1,0 +1,194 @@
+{% load i18n static %}
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Comanda — Tavolo {{ tavolo.numero }}</title>
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  <link rel="stylesheet" href="{% static 'css/sala_staff.css' %}">
+</head>
+<body>
+<nav class="staff-nav">
+  <div class="staff-brand">
+    <a href="/sala/cameriere/" class="back-link">←</a>
+    🧾 Tavolo {{ tavolo.numero }}
+    <span class="stato-badge stato-{{ tavolo.stato }}">{{ tavolo.get_stato_display }}</span>
+  </div>
+  <div class="staff-nav-right">
+    {% if ordine %}
+    <span class="totale-nav">Totale: <strong>€{{ ordine.totale }}</strong></span>
+    {% endif %}
+  </div>
+</nav>
+
+<div class="ordine-layout">
+
+  <!-- Colonna sinistra: menu -->
+  <div class="ordine-menu">
+    <div class="ordine-menu-header">Menu</div>
+    {% for categoria in categorie %}
+    {% if categoria.piatti.exists %}
+    <div class="menu-cat-group">
+      <div class="menu-cat-label">{{ categoria.icona }} {{ categoria.nome }}</div>
+      {% for piatto in categoria.piatti.all %}
+      {% if piatto.disponibile %}
+      <button class="menu-piatto-btn" onclick="aggiungiPiatto({{ piatto.id }}, '{{ piatto.nome|escapejs }}', {{ piatto.prezzo }})">
+        <span class="mpb-nome">{{ piatto.nome }}</span>
+        <span class="mpb-prezzo">€{{ piatto.prezzo }}</span>
+      </button>
+      {% endif %}
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% endfor %}
+  </div>
+
+  <!-- Colonna destra: comanda corrente -->
+  <div class="ordine-comanda">
+    <div class="comanda-header">
+      <span>Comanda</span>
+      {% if not ordine %}
+      <button class="btn btn-primary btn-sm" onclick="nuovoOrdine()">+ Nuova comanda</button>
+      {% endif %}
+    </div>
+
+    <div id="comanda-items">
+      {% if ordine %}
+        {% for item in ordine.items.all %}
+        <div class="comanda-item" id="ci-{{ item.id }}">
+          <div class="ci-info">
+            <span class="ci-stato ci-{{ item.stato }}"></span>
+            <span class="ci-nome">{{ item.piatto.nome }}</span>
+          </div>
+          <div class="ci-controls">
+            <button onclick="rimuoviPiatto({{ item.id }})">−</button>
+            <span class="ci-qty">{{ item.quantita }}</span>
+            <button onclick="aggiungiPiatto({{ item.piatto.id }}, '{{ item.piatto.nome|escapejs }}', {{ item.prezzo_unitario }})">+</button>
+            <span class="ci-sub">€{{ item.subtotale }}</span>
+          </div>
+        </div>
+        {% empty %}
+        <p class="empty-comanda" id="empty-msg">Nessun piatto ancora. Seleziona dal menu →</p>
+        {% endfor %}
+      {% else %}
+      <p class="empty-comanda" id="empty-msg">Premi "Nuova comanda" per iniziare.</p>
+      {% endif %}
+    </div>
+
+    {% if ordine %}
+    <div class="comanda-footer">
+      <div class="comanda-totale">
+        Totale: <strong id="totale-display">€{{ ordine.totale }}</strong>
+      </div>
+      <div class="comanda-azioni">
+        <button class="btn-azione-grande verde" onclick="inviaCucina()">
+          👨‍🍳 Invia in cucina
+        </button>
+        <button class="btn-azione-grande blue" onclick="chiediConto()">
+          🧾 Chiedi il conto
+        </button>
+      </div>
+      {% if tavolo.eprint_email %}
+      <div style="margin-top:0.5rem">
+        <button class="btn-azione-grande" style="background:#8e44ad;color:white" onclick="stampaEprint()">
+          🖨️ Stampa via ePrint
+        </button>
+      </div>
+      {% endif %}
+      {% if ordine %}
+      <div style="margin-top:0.5rem;display:grid;grid-template-columns:1fr 1fr;gap:0.4rem">
+        <a href="/sala/ordine/{{ ordine.id }}/scontrino/" target="_blank"
+           class="btn-azione-grande" style="background:#27ae60;color:white;display:block;text-align:center;text-decoration:none;padding:0.75rem;border-radius:10px;font-weight:700">
+          🧾 Scontrino
+        </a>
+        <a href="/sala/ordine/{{ ordine.id }}/fattura/"
+           class="btn-azione-grande" style="background:#6c3483;color:white;display:block;text-align:center;text-decoration:none;padding:0.75rem;border-radius:10px;font-weight:700">
+          📑 Fattura
+        </a>
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+
+<script>
+const TAVOLO_ID = {{ tavolo.id }};
+const CSRF = '{{ csrf_token }}';
+let ORDINE_ID = {% if ordine %}{{ ordine.id }}{% else %}null{% endif %};
+
+async function post(azione, extra={}) {
+  const r = await fetch(`/sala/cameriere/ordine/${TAVOLO_ID}/`, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json','X-CSRFToken':CSRF},
+    body: JSON.stringify({azione, ordine_id: ORDINE_ID, ...extra}),
+  });
+  return r.json();
+}
+
+async function nuovoOrdine() {
+  const r = await post('nuovo_ordine');
+  if (r.ok) { ORDINE_ID = r.ordine_id; location.reload(); }
+}
+
+async function aggiungiPiatto(piatto_id, nome, prezzo) {
+  if (!ORDINE_ID) { alert('Prima crea una nuova comanda.'); return; }
+  const r = await post('aggiungi_piatto', {piatto_id});
+  if (r.ok) {
+    document.getElementById('empty-msg')?.remove();
+    // Aggiorna UI senza reload
+    const existing = document.querySelector(`[data-piatto="${piatto_id}"]`);
+    if (existing) {
+      existing.querySelector('.ci-qty').textContent = r.qty;
+      existing.querySelector('.ci-sub').textContent = `€${r.subtotale}`;
+    } else {
+      const div = document.createElement('div');
+      div.className = 'comanda-item'; div.setAttribute('data-piatto', piatto_id);
+      div.innerHTML = `<div class="ci-info"><span class="ci-stato ci-A"></span><span class="ci-nome">${nome}</span></div>
+        <div class="ci-controls">
+          <button onclick="rimuoviPiattoByPiatto(${piatto_id})">−</button>
+          <span class="ci-qty">${r.qty}</span>
+          <button onclick="aggiungiPiatto(${piatto_id},'${nome}',${prezzo})">+</button>
+          <span class="ci-sub">€${r.subtotale}</span>
+        </div>`;
+      document.getElementById('comanda-items').appendChild(div);
+    }
+  }
+}
+
+async function rimuoviPiatto(item_id) {
+  const r = await post('rimuovi_piatto', {item_id});
+  if (r.ok) location.reload();
+}
+async function rimuoviPiattoByPiatto(piatto_id) { location.reload(); }
+
+async function inviaCucina() {
+  if (!ORDINE_ID) return;
+  const r = await post('invia_cucina');
+  if (r.ok) { alert('✅ Ordine inviato in cucina!'); location.href = '/sala/cameriere/'; }
+}
+
+async function chiediConto() {
+  if (!ORDINE_ID) return;
+  const r = await post('chiedi_conto');
+  if (r.ok) { alert('🔵 Conto richiesto!'); location.href = '/sala/cameriere/'; }
+}
+
+async function stampaEprint() {
+  if (!ORDINE_ID) return;
+  const r = await fetch(`/sala/ordine/${ORDINE_ID}/eprint/`, {
+    method: 'POST',
+    headers: {'X-CSRFToken': CSRF},
+  });
+  const data = await r.json();
+  if (data.ok) {
+    alert(`🖨️ Stampa inviata a ${data.stampante}`);
+  } else {
+    alert('❌ ' + (data.errore || 'Errore ePrint'));
+  }
+}
+</script>
+</body>
+</html>
