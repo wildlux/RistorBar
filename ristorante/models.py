@@ -612,4 +612,90 @@ class Fattura(models.Model):
         if not self.numero:
             self.numero = self._prossimo_numero()
         self.calcola_totali()
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  DISPOSITIVI HARDWARE - Centro di Controllo
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class Dispositivo(models.Model):
+    """Dispositivo hardware (ESP32, Arduino, STM32) per display e-ink tavoli."""
+    
+    TIPO_CHOICES = [
+        ('ESP32_WIFI', 'ESP32 (WiFi)'),
+        ('ESP32_BLE', 'ESP32 (BLE)'),
+        ('ESP32_MULTI', 'ESP32 (Multi-mode)'),
+        ('ARDUINO_ESP01', 'Arduino + ESP-01'),
+        ('STM32_BLE', 'STM32 (BLE)'),
+    ]
+    
+    MODALITA_CHOICES = [
+        ('WIFI', 'WiFi only'),
+        ('BLE', 'Bluetooth only'),
+        ('COMBINED', 'WiFi + BLE'),
+    ]
+    
+    STATO_CHOICES = [
+        ('ONLINE', 'Online'),
+        ('OFFLINE', 'Offline'),
+        ('ERROR', 'Errore'),
+        ('MAINTENANCE', 'Manutenzione'),
+    ]
+    
+    nome = models.CharField(_('Nome dispositivo'), max_length=50)
+    tipo = models.CharField(_('Tipo'), max_length=20, choices=TIPO_CHOICES)
+    modalita = models.CharField(_('Modalità'), max_length=10, choices=MODALITA_CHOICES, default='WIFI')
+    stato = models.CharField(_('Stato'), max_length=15, choices=STATO_CHOICES, default='OFFLINE')
+    
+    sala = models.ForeignKey(Sala, on_delete=models.CASCADE, related_name='dispositivi')
+    tavolo = models.ForeignKey(Tavolo, on_delete=models.SET_NULL, null=True, blank=True, related_name='dispositivo')
+    
+    # Identificazione
+    mac_address = models.CharField(_('MAC Address'), max_length=17, blank=True)
+    ble_name = models.CharField(_('Nome BLE'), max_length=32, blank=True)
+    ip_address = models.GenericIPAddressField(_('IP Address'), null=True, blank=True)
+    
+    # Configurazione
+    server_url = models.CharField(_('URL Server'), max_length=200, blank=True)
+    refresh_interval = models.IntegerField(_('Interval refresh (sec)'), default=60)
+    
+    # Posizione
+    piano = models.CharField(_('Piano'), max_length=20, blank=True)
+    posizione = models.CharField(_('Posizione'), max_length=100, blank=True, help_text='Es: "Entrata", "Angolo NW"')
+    
+    # Monitoraggio
+    last_seen = models.DateTimeField(_('Ultimo contatto'), null=True, blank=True)
+    last_status = models.JSONField(_('Ultimo stato'), default=dict, blank=True)
+    errori = models.TextField(_('Errori'), blank=True)
+    
+    # Info
+    firmware_ver = models.CharField(_('Firmware'), max_length=20, blank=True)
+    note = models.TextField(_('Note'), blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = _('Dispositivo')
+        verbose_name_plural = _('Dispositivi')
+        ordering = ['sala', 'tavolo', 'nome']
+    
+    def __str__(self):
+        return f"{self.nome} ({self.tipo}) - Tavolo {self.tavolo}" if self.tavolo else self.nome
+    
+    @property
+    def is_online(self):
+        if not self.last_seen:
+            return False
+        from django.utils import timezone
+        return (timezone.now() - self.last_seen).seconds < 300
+    
+    def aggiorna_stato(self, dati):
+        """Aggiorna lo stato del dispositivo con i dati ricevuti."""
+        from django.utils import timezone
+        self.last_seen = timezone.now()
+        self.last_status = dati
+        self.stato = 'ONLINE'
+        self.errori = ''
+        self.save()
         super().save(*args, **kwargs)

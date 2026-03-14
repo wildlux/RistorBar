@@ -19,7 +19,7 @@ from rest_framework import viewsets, permissions
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 
-from .models import Sala, Tavolo, TavoloUnione, Categoria, Piatto, Prenotazione, Ordine, OrdineItem, Fattura, ImpostazioniRistorante, Sede, Contatto
+from .models import Sala, Tavolo, TavoloUnione, Categoria, Piatto, Prenotazione, Ordine, OrdineItem, Fattura, ImpostazioniRistorante, Sede, Contatto, Dispositivo
 from .serializers import (
     TavoloSerializer, PrenotazioneSerializer,
     OrdineSerializer, PiattoSerializer
@@ -1358,3 +1358,144 @@ def dev_panel(request):
         'n_prenotazioni': Prenotazione.objects.count(),
     }
     return render(request, 'dev/panel.html', ctx)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  CENTRO DI CONTROLLO DISPOSITIVI
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@login_required
+def centro_controllo(request):
+    """Dashboard centralizzata per la gestione di tutti i dispositivi."""
+    sale = Sala.objects.filter(attiva=True).prefetch_related('dispositivi')
+    dispositivi = Dispositivo.objects.select_related('sala', 'tavolo').all()
+    
+    # Statistiche
+    stats = {
+        'totali': dispositivi.count(),
+        'online': dispositivi.filter(stato='ONLINE').count(),
+        'offline': dispositivi.filter(stato='OFFLINE').count(),
+        'errori': dispositivi.filter(stato='ERROR').count(),
+        'wifi': dispositivi.filter(modalita='WIFI').count(),
+        'ble': dispositivi.filter(modalita='BLE').count(),
+        'combined': dispositivi.filter(modalita='COMBINED').count(),
+    }
+    
+    # Raggruppa per piano
+    piani = {}
+    for disp in dispositivi:
+        piano = disp.piano or 'Non assegnato'
+        if piano not in piani:
+            piani[piano] = {'online': 0, 'offline': 0, 'dispositivi': []}
+        piani[piano]['dispositivi'].append(disp)
+        if disp.stato == 'ONLINE':
+            piani[piano]['online'] += 1
+        else:
+            piani[piano]['offline'] += 1
+    
+    return render(request, 'sala/centro_controllo.html', {
+        'dispositivi': dispositivi,
+        'sale': sale,
+        'stats': stats,
+        'piani': piani,
+    })
+
+
+@login_required
+def dispositivo_dettaglio(request, dispositivo_id):
+    """Dettaglio singolo dispositivo."""
+    disp = get_object_or_404(Dispositivo, pk=dispositivo_id)
+    return render(request, 'sala/dispositivo_dettaglio.html', {'dispositivo': disp})
+
+
+@login_required
+@require_POST
+def dispositivo_aggiungi(request):
+    """Aggiungi nuovo dispositivo."""
+    nome = request.POST.get('nome')
+    tipo = request.POST.get('tipo')
+    modalita = request.POST.get('modalita', 'WIFI')
+    sala_id = request.POST.get('sala')
+    tavolo_id = request.POST.get('tavolo')
+    piano = request.POST.get('piano', '')
+    posizione = request.POST.get('posizione', '')
+    
+    sala = get_object_or_404(Sala, pk=sala_id)
+    tavolo = Tavolo.objects.get(pk=tavolo_id) if tavolo_id else None
+    
+    disp = Dispositivo.objects.create(
+        nome=nome,
+        tipo=tipo,
+        modalita=modalita,
+        sala=sala,
+        tavolo=tavolo,
+        piano=piano,
+        posizione=posizione,
+        stato='OFFLINE',
+    )
+    return redirect('centro_controllo')
+
+
+@login_required
+@require_POST
+def dispositivo_aggiorna(request, dispositivo_id):
+    """Aggiorna configurazione dispositivo."""
+    disp = get_object_or_404(Dispositivo, pk=dispositivo_id)
+    disp.modalita = request.POST.get('modalita', disp.modalita)
+    disp.refresh_interval = int(request.POST.get('refresh_interval', 60))
+    disp.piano = request.POST.get('piano', '')
+    disp.posizione = request.POST.get('posizione', '')
+    disp.note = request.POST.get('note', '')
+    disp.save()
+    return redirect('dispositivo_dettaglio', dispositivo_id)
+
+
+@login_required
+@require_POST
+def dispositivo_rimuovi(request, dispositivo_id):
+    """Rimuovi dispositivo."""
+    disp = get_object_or_404(Dispositivo, pk=dispositivo_id)
+    disp.delete()
+    return redirect('centro_controllo')
+
+
+@api_view(['POST'])
+@permission_classes([permissions.AllowAny])
+def api_dispositivo_status(request):
+    """API per ricevere stato da dispositivo."""
+    mac = request.data.get('mac')
+    stato = request.data.get('stato', {})
+    errores = request.data.get('error', '')
+    
+    disp = Dispositivo.objects.filter(mac_address=mac).first()
+    if disp:
+        disp.aggiorna_stato(stato)
+        if errores:
+            disp.errori = errores
+            disp.stato = 'ERROR'
+            disp.save()
+        return Response({'ok': True, 'dispositivo_id': disp.id})
+    
+    return Response({'ok': False, 'errore': 'Dispositivo non registrato'}, status=404)
+
+
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def api_dispositivo_config(request, dispositivo_id):
+    """API per richiedere configurazione."""
+    mac = request.GET.get('mac')
+    disp = Dispositivo.objects.filter(mac_address=mac).first()
+    
+    if disp:
+        return Response({
+            'id': disp.id,
+            'nome': disp.nome,
+            'modalita': disp.modalita,
+            'sala_id': disp.sala_id,
+            'tavolo_id': disp.tavolo_id,
+            'server_url': disp.server_url,
+            'refresh_interval': disp.refresh_interval,
+            'stato': disp.last_status,
+        })
+    
+    return Response({'errore': 'Non trovato'}, status=404)

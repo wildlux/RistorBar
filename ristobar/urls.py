@@ -80,6 +80,13 @@ urlpatterns = [
     # Capo area / Titolare — dashboard completa
     path('sala/capo/',               views.dashboard,        name='dashboard'),
     path('sala/capo/sala/<int:sala_id>/', views.mappa_sala,  name='mappa_sala'),
+    
+    # Centro di controllo dispositivi hardware
+    path('sala/dispositivi/',              views.centro_controllo,     name='centro_controllo'),
+    path('sala/dispositivi/aggiungi/',      views.dispositivo_aggiungi, name='dispositivo_aggiungi'),
+    path('sala/dispositivi/<int:dispositivo_id>/', views.dispositivo_dettaglio, name='dispositivo_dettaglio'),
+    path('sala/dispositivi/<int:dispositivo_id>/aggiorna/', views.dispositivo_aggiorna, name='dispositivo_aggiorna'),
+    path('sala/dispositivi/<int:dispositivo_id>/rimuovi/', views.dispositivo_rimuovi, name='dispositivo_rimuovi'),
 
     # Aggiorna stato tavolo (usato da cameriere e capo area)
     path('sala/tavolo/<int:tavolo_id>/stato/', views.aggiorna_stato_tavolo, name='aggiorna_stato_tavolo'),
@@ -126,6 +133,9 @@ urlpatterns = [
     # ESP32 (WiFi direct)
     path('api/esp32/tavolo/<int:sala_id>/<int:numero_tavolo>/', views.api_esp32_tavolo, name='api_esp32_tavolo'),
     path('api/esp32/sala/<int:sala_id>/',                     views.api_esp32_sala,     name='api_esp32_sala'),
+    # Centro di controllo dispositivi
+    path('api/dispositivo/status/', views.api_dispositivo_status, name='api_dispositivo_status'),
+    path('api/dispositivo/config/<int:dispositivo_id>/', views.api_dispositivo_config, name='api_dispositivo_config'),
     path('api/', include(router.urls)),
 ]
 

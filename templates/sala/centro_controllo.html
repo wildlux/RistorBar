@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+{% load i18n static %}
+
+{% block title %}{% trans "Centro di Controllo" %} - RistoBAR{% endblock %}
+
+{% block content %}
+<div class="cc-wrap">
+    
+    <!-- Header -->
+    <div class="cc-header">
+        <h1>🎛️ {% trans "Centro di Controllo Dispositivi" %}</h1>
+        <div class="cc-stats">
+            <div class="stat stat-online">
+                <span class="stat-num">{{ stats.online }}</span>
+                <span class="stat-label">{% trans "Online" %}</span>
+            </div>
+            <div class="stat stat-offline">
+                <span class="stat-num">{{ stats.offline }}</span>
+                <span class="stat-label">{% trans "Offline" %}</span>
+            </div>
+            <div class="stat stat-error">
+                <span class="stat-num">{{ stats.errori }}</span>
+                <span class="stat-label">{% trans "Errori" %}</span>
+            </div>
+            <div class="stat stat-total">
+                <span class="stat-num">{{ stats.totali }}</span>
+                <span class="stat-label">{% trans "Totali" %}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="cc-toolbar">
+        <button class="btn btn-primary" onclick="openModal('modal-aggiungi')">➕ {% trans "Aggiungi Dispositivo" %}</button>
+        
+        <div class="filter-group">
+            <label>{% trans "Modalità" %}:</label>
+            <select id="filter-modo" onchange="filterDispositivi()">
+                <option value="">{% trans "Tutti" %}</option>
+                <option value="WIFI">WiFi</option>
+                <option value="BLE">Bluetooth</option>
+                <option value="COMBINED">{% trans "Combinato" %}</option>
+            </select>
+        </div>
+        
+        <div class="filter-group">
+            <label>{% trans "Stato" %}:</label>
+            <select id="filter-stato" onchange="filterDispositivi()">
+                <option value="">{% trans "Tutti" %}</option>
+                <option value="ONLINE">{% trans "Online" %}</option>
+                <option value="OFFLINE">{% trans "Offline" %}</option>
+                <option value="ERROR">{% trans "Errore" %}</option>
+            </select>
+        </div>
+        
+        <button class="btn btn-outline" onclick="refreshStatus()">🔄 {% trans "Aggiorna" %}</button>
+    </div>
+
+    <!-- Piani / Sale -->
+    {% for piano, data in piani.items %}
+    <div class="piano-section">
+        <div class="piano-header">
+            <h2>🏢 {{ piano }}</h2>
+            <div class="piano-stats">
+                <span class="online">✓ {{ data.online }}</span>
+                <span class="offline">○ {{ data.offline }}</span>
+            </div>
+        </div>
+        
+        <div class="dispositivi-grid">
+            {% for disp in data.dispositivi %}
+            <div class="disp-card disp-{{ disp.stato|lower }}" data-modo="{{ disp.modalita }}" data-stato="{{ disp.stato }}">
+                <div class="disp-header">
+                    <span class="disp-status-dot"></span>
+                    <span class="disp-nome">{{ disp.nome }}</span>
+                </div>
+                <div class="disp-info">
+                    <div class="disp-tipo">{{ disp.get_tipo_display }}</div>
+                    <div class="disp-modo">{{ disp.get_modalita_display }}</div>
+                    {% if disp.tavolo %}
+                    <div class="disp-tavolo">Tavolo {{ disp.tavolo.numero }}</div>
+                    {% endif %}
+                    <div class="disp-sala">{{ disp.sala.nome }}</div>
+                </div>
+                <div class="disp-footer">
+                    {% if disp.last_seen %}
+                    <div class="disp-last">{% trans "Ultimo contatto" %}: {{ disp.last_seen|timesince }}</div>
+                    {% else %}
+                    <div class="disp-last">{% trans "Mai contattato" %}</div>
+                    {% endif %}
+                </div>
+                <div class="disp-actions">
+                    <a href="{% url 'dispositivo_dettaglio disp.id %}" class="btn btn-sm">{% trans "Dettagli" %}</a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+
+    {% if not piani %}
+    <div class="empty-state">
+        <p>{% trans "Nessun dispositivo configurato" %}</p>
+        <button class="btn btn-primary" onclick="openModal('modal-aggiungi')">➕ {% trans "Aggiungi il primo dispositivo" %}</button>
+    </div>
+    {% endif %}
+
+</div>
+
+<!-- Modal Aggiungi -->
+<div class="modal" id="modal-aggiungi" style="display:none">
+    <div class="modal-content">
+        <h3>➕ {% trans "Aggiungi Dispositivo" %}</h3>
+        <form method="post" action="{% url 'dispositivo_aggiungi' %}">
+            {% csrf_token %}
+            <div class="form-group">
+                <label>{% trans "Nome" %}</label>
+                <input type="text" name="nome" class="input" required placeholder="Es: Tavolo 1 Ingresso">
+            </div>
+            <div class="form-group">
+                <label>{% trans "Tipo" %}</label>
+                <select name="tipo" class="input" required>
+                    <option value="ESP32_MULTI">ESP32 (Multi-mode)</option>
+                    <option value="ESP32_WIFI">ESP32 (WiFi)</option>
+                    <option value="ESP32_BLE">ESP32 (BLE)</option>
+                    <option value="ARDUINO_ESP01">Arduino + ESP-01</option>
+                    <option value="STM32_BLE">STM32 (BLE)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>{% trans "Modalità" %}</label>
+                <select name="modalita" class="input">
+                    <option value="WIFI">WiFi only</option>
+                    <option value="BLE">Bluetooth only</option>
+                    <option value="COMBINED">WiFi + Bluetooth</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>{% trans "Sala" %}</label>
+                <select name="sala" class="input" required>
+                    {% for sala in sale %}
+                    <option value="{{ sala.id }}">{{ sala.nome }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>{% trans "Tavolo" %}</label>
+                <select name="tavolo" class="input">
+                    <option value="">-- {% trans "Nessuno" %} --</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>{% trans "Piano" %}</label>
+                <input type="text" name="piano" class="input" placeholder="Es: Piano Terra">
+            </div>
+            <div class="form-group">
+                <label>{% trans "Posizione" %}</label>
+                <input type="text" name="posizione" class="input" placeholder="Es: Ingresso, Angolo NW">
+            </div>
+            <div class="modal-footer">
+                <button type="button" onclick="chiudiModal('modal-aggiungi')" class="btn btn-outline">{% trans "Annulla" %}</button>
+                <button type="submit" class="btn btn-primary">{% trans "Aggiungi" %}</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.cc-wrap { padding: 1rem; }
+.cc-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem; }
+.cc-header h1 { margin: 0; }
+.cc-stats { display: flex; gap: 1rem; }
+.stat { padding: 0.5rem 1rem; border-radius: 8px; text-align: center; min-width: 80px; }
+.stat-online { background: #d4edda; color: #155724; }
+.stat-offline { background: #f8d7da; color: #721c24; }
+.stat-error { background: #fff3cd; color: #856404; }
+.stat-total { background: #e2e3e5; color: #383d41; }
+.stat-num { font-size: 1.5rem; font-weight: bold; display: block; }
+.stat-label { font-size: 0.75rem; }
+
+.cc-toolbar { display: flex; gap: 1rem; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; }
+.filter-group { display: flex; align-items: center; gap: 0.5rem; }
+.filter-group label { font-size: 0.85rem; }
+
+.piano-section { margin-bottom: 2rem; }
+.piano-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding: 0.5rem 1rem; background: #f8f9fa; border-radius: 8px; }
+.piano-header h2 { margin: 0; font-size: 1.2rem; }
+.piano-stats { display: flex; gap: 1rem; }
+.piano-stats .online { color: #28a745; }
+.piano-stats .offline { color: #dc3545; }
+
+.dispositivi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem; }
+.disp-card { background: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 1rem; transition: all 0.2s; }
+.disp-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+.disp-card.disp-online { border-left: 4px solid #28a745; }
+.disp-card.disp-offline { border-left: 4px solid #dc3545; }
+.disp-card.disp-error { border-left: 4px solid #ffc107; }
+
+.disp-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; }
+.disp-status-dot { width: 10px; height: 10px; border-radius: 50%; background: #6c757d; }
+.disp-online .disp-status-dot { background: #28a745; }
+.disp-offline .disp-status-dot { background: #dc3545; }
+.disp-error .disp-status-dot { background: #ffc107; }
+.disp-nome { font-weight: bold; }
+
+.disp-info { font-size: 0.85rem; color: #6c757d; }
+.disp-tipo, .disp-modo, .disp-tavolo, .disp-sala { margin-bottom: 0.25rem; }
+
+.disp-footer { font-size: 0.75rem; color: #adb5bd; margin-top: 0.5rem; }
+.disp-actions { margin-top: 0.5rem; }
+
+.empty-state { text-align: center; padding: 3rem; }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+function chiudiModal(id) { document.getElementById(id).style.display = 'none'; }
+
+function filterDispositivi() {
+    const modo = document.getElementById('filter-modo').value;
+    const stato = document.getElementById('filter-stato').value;
+    document.querySelectorAll('.disp-card').forEach(card => {
+        let show = true;
+        if (modo && card.dataset.modo !== modo) show = false;
+        if (stato && card.dataset.stato !== stato) show = false;
+        card.style.display = show ? '' : 'none';
+    });
+}
+
+function refreshStatus() {
+    fetch('/api/dispositivi/refresh/', {method: 'POST', headers: {'X-CSRFToken': '{{ csrf_token }}'}})
+        .then(() => location.reload());
+}
+</script>
+{% endblock %}

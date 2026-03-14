@@ -122,6 +122,32 @@ Display e-ink con Arduino classico + modulo ESP-01S. Ideale per: progetti econom
 
 ---
 
+## Centro di Controllo
+
+RistoBAR include un **Centro di Controllo** per gestire tutti i dispositivi hardware dalla dashboard Django.
+
+### Accesso
+
+- URL: `/sala/dispositivi/`
+- Richiede login (capo area / titolare)
+
+### Funzionalità
+
+- Visualizzazione di tutti i dispositivi per piano/sala
+- Statistiche online/offline
+- Aggiunta/rimozione dispositivi
+- Configurazione individuale
+- Storico last seen e stati
+
+### API Centro di Controllo
+
+| Endpoint | Descrizione |
+|----------|-------------|
+| `POST /api/dispositivo/status/` | Dispositivo invia il proprio stato |
+| `GET /api/dispositivo/config/<id>/` | Richiedi configurazione |
+
+---
+
 ## Riepilogo endpoint API
 
 | Dispositivo | Endpoint | Formato |
@@ -130,3 +156,29 @@ Display e-ink con Arduino classico + modulo ESP-01S. Ideale per: progetti econom
 | ESP32/Arduino | `/api/esp32/sala/<sala>/` | Array |
 | STM32 | `/api/tavolo/<sala>/<num>/` | Compresso |
 | STM32 | `/api/sala/<sala>/` | Array |
+| Dispositivo | `/api/dispositivo/status/` | Status update |
+
+---
+
+## Modalità di funzionamento
+
+### ESP32 Multi-Mode
+
+Il firmware `tavolo_multimode` supporta tre modalità:
+
+| Modalità | Descrizione | Uso |
+|----------|-------------|-----|
+| `WIFI_ONLY` | Solo WiFi, fetch periodico | Ristoranti con WiFi stabile |
+| `BLE_ONLY` | Solo Bluetooth, dati da server/bridge | Basso consumo, no WiFi |
+| `COMBINED` | Entrambi attivi | Ridondanza, massima affidabilità |
+
+### Configurazione BLE
+
+I dispositivi BLE usano:
+- Service UUID: `6e400001-b5a3-f393-e0a9-e50e24dcca9e`
+- Characteristic: `6e400003-b5a3-f393-e0a9-e50e24dcca9e` (notify)
+
+La configurazione avviene via BLE characteristic scrivendo:
+```
+SET:mode=2;ssid=MioWifi;pass=mypassword;server=192.168.1.100;sala=1;tavolo=1;refresh=60
+```
