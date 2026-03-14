@@ -84,3 +84,49 @@ Display e-ink connessi via Bluetooth Low Energy. Ideale per: basso consumo, tavo
 ## Sleep
 
 Il firmware usa deep sleep per risparmiare energia. Wakeup ogni 60 secondi (configurabile).
+
+### 3. Arduino + ESP-01S (WiFi)
+
+Display e-ink con Arduino classico + modulo ESP-01S. Ideale per: progetti economici, espansione display esistenti.
+
+**Endpoint API:**
+- `/api/esp32/tavolo/<sala_id>/<numero>/` (stesso formato ESP32)
+
+**Firmware:** `firmware/arduino/tavolo_display/`
+
+**Hardware consigliato:**
+- Arduino UNO o Mega
+- Modulo ESP-01S (WiFi)
+- Display Waveshare e-paper 2.9"
+
+**Wiring Arduino ↔ ESP-01S:**
+
+| Arduino | ESP-01S |
+|---------|---------|
+| D10 (TX) | RX |
+| D11 (TX) | TX |
+| 3.3V | VCC |
+| GND | GND |
+| GND | GPIO0 (per flash) |
+
+**Configurazione:**
+1. Carica sketch su Arduino
+2. Collega ESP-01S come da tabella
+3. Configura SSID/Password WiFi nel codice
+4. Imposta indirizzo server Django
+
+**Note:**
+- Usa SoftwareSerial per comunicare con ESP-01S
+- L'ESP-01S deve avere firmware AT compatibile
+- Refresh ogni 60 secondi
+
+---
+
+## Riepilogo endpoint API
+
+| Dispositivo | Endpoint | Formato |
+|--------------|----------|---------|
+| ESP32/Arduino | `/api/esp32/tavolo/<sala>/<num>/` | Completo |
+| ESP32/Arduino | `/api/esp32/sala/<sala>/` | Array |
+| STM32 | `/api/tavolo/<sala>/<num>/` | Compresso |
+| STM32 | `/api/sala/<sala>/` | Array |
