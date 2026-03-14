@@ -118,10 +118,14 @@ urlpatterns = [
     path('webhooks/telegram/', views.telegram_webhook, name='telegram_webhook'),
 
     # ══════════════════════════════════════════════════════════
-    #  API — STM32 + REST
+    #  API — STM32 + ESP32 + REST
     # ══════════════════════════════════════════════════════════
+    # STM32 (BLE -> HTTP bridge)
     path('api/tavolo/<int:sala_id>/<int:numero_tavolo>/', views.api_stato_tavolo, name='api_stato_tavolo'),
     path('api/sala/<int:sala_id>/',                        views.api_sala_completa, name='api_sala_completa'),
+    # ESP32 (WiFi direct)
+    path('api/esp32/tavolo/<int:sala_id>/<int:numero_tavolo>/', views.api_esp32_tavolo, name='api_esp32_tavolo'),
+    path('api/esp32/sala/<int:sala_id>/',                     views.api_esp32_sala,     name='api_esp32_sala'),
     path('api/', include(router.urls)),
 ]
 

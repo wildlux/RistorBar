@@ -619,6 +619,106 @@ def api_sala_completa(request, sala_id):
     ])
 
 
+# ─── API per ESP32 (display e-ink WiFi) ───────────────────────────────────────
+
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def api_esp32_tavolo(request, sala_id, numero_tavolo):
+    """
+    API per display e-ink ESP32 via WiFi.
+    Più verbose di quella STM32 per sfruttare la memoria disponibile.
+    """
+    try:
+        tavolo = Tavolo.objects.get(sala_id=sala_id, numero=numero_tavolo)
+        sala = tavolo.sala
+        
+        prenotazione_attiva = tavolo.prenotazioni.filter(
+            stato=Prenotazione.STATO_CONFERMATA,
+            data_ora__date=timezone.now().date()
+        ).first()
+        
+        ordine_attivo = tavolo.ordini.filter(
+            stato__in=[Ordine.STATO_IN_ATTESA, Ordine.STATO_IN_CUCINA]
+        ).prefetch_related('items__piatto').first()
+        
+        items = []
+        if ordine_attivo:
+            for item in ordine_attivo.items.all():
+                items.append({
+                    'n': item.piatto.nome[:20],
+                    'q': item.quantita,
+                    's': item.stato,
+                })
+        
+        stato_testi = {
+            'L': 'LIBERO',
+            'P': 'PRENOTATO',
+            'O': 'OCCUPATO',
+            'C': 'CONTO',
+        }
+        
+        return Response({
+            'tavolo': tavolo.numero,
+            'sala': sala.nome[:15],
+            'stato': tavolo.stato,
+            'stato_testo': stato_testi.get(tavolo.stato, '?'),
+            'posti': tavolo.capacita,
+            'prenotato': {
+                'nome': prenotazione_attiva.nome_cliente[:20] if prenotazione_attiva else '',
+                'persone': prenotazione_attiva.num_persone if prenotazione_attiva else 0,
+                'ora': prenotazione_attiva.data_ora.strftime('%H:%M') if prenotazione_attiva else '',
+            } if prenotazione_attiva else None,
+            'ordine': {
+                'id': ordine_attivo.id,
+                'items': items,
+                'note': ordine_attivo.note[:50] if ordine_attivo.note else '',
+            } if ordine_attivo else None,
+            'timestamp': timezone.now().isoformat(),
+        })
+    except Tavolo.DoesNotExist:
+        return Response({'errore': 'Tavolo non trovato'}, status=404)
+
+
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def api_esp32_sala(request, sala_id):
+    """
+    API bulk per ESP32 - tutti i tavoli della sala.
+    Ideale per dashboard e-ink multipli.
+    """
+    try:
+        sala = Sala.objects.get(pk=sala_id)
+        tavoli = Tavolo.objects.filter(sala=sala, attivo=True).prefetch_related(
+            'prenotazioni',
+            'ordini'
+        )
+        
+        stati = {'L': 'Libero', 'P': 'Prenotato', 'O': 'Occupato', 'C': 'Conto'}
+        
+        return Response({
+            'sala': sala.nome,
+            'tavoli': [
+                {
+                    'numero': t.numero,
+                    'stato': t.stato,
+                    'stato_testo': stati.get(t.stato, '?'),
+                    'posti': t.capacita,
+                    'prenotato': t.prenotazioni.filter(
+                        stato=Prenotazione.STATO_CONFERMATA,
+                        data_ora__date=timezone.now().date()
+                    ).exists(),
+                    'ordine_attivo': t.ordini.filter(
+                        stato__in=[Ordine.STATO_IN_ATTESA, Ordine.STATO_IN_CUCINA]
+                    ).exists(),
+                }
+                for t in tavoli
+            ],
+            'timestamp': timezone.now().isoformat(),
+        })
+    except Sala.DoesNotExist:
+        return Response({'errore': 'Sala non trovata'}, status=404)
+
+
 # ─── Editor sala (drag & drop / unione tavoli) ────────────────────────────────
 
 @login_required
