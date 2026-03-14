@@ -9,6 +9,23 @@ DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '').split(',') if os.environ.get('ALLOWED_HOSTS') else ['localhost', '127.0.0.1']
 
+# ═══════════════════════════════════════════════════════════════
+#  SICUREZZA - Security Settings
+# ═══════════════════════════════════════════════════════════════
+SECURE_BROWSER_XSS_FILTER = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
+X_FRAME_OPTIONS = 'DENY'
+SECURE_SSL_REDIRECT = False  # True in produzione con HTTPS
+SESSION_COOKIE_SECURE = False  # True in produzione
+CSRF_COOKIE_SECURE = False  # True in produzione
+SECURE_HSTS_SECONDS = 0  # In produzione impostare a 31536000
+SECURE_HSTS_INCLUDE_SUBDOMAINS = False
+SECURE_HSTS_PRELOAD = False
+
+# CORS - limita accesso in produzione
+CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ORIGINS', '').split(',') if os.environ.get('CORS_ORIGINS') else ['http://localhost:8000', 'http://127.0.0.1:8000']
+CORS_ALLOW_CREDENTIALS = True
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',

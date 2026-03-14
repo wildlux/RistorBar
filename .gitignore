@@ -43,3 +43,6 @@ htmlcov/
 
 # Django migrations (optional - comment if you want to include them)
 # ristorante/migrations/
+
+# GitHub token (locale)
+.github_token
