@@ -60,6 +60,8 @@ class Tavolo(models.Model):
     qr_code = models.ImageField(_('QR Code'), upload_to='qrcodes/', blank=True, null=True)
     eprint_email = models.EmailField(_('Email ePrint stampante'), blank=True,
                                      help_text=_('Indirizzo email HP ePrint della stampante associata a questo tavolo'))
+    nota = models.TextField(_('Nota display'), blank=True, default='',
+                           help_text=_('Nota visibile sul display e-ink (commenti dello chef, suggerimenti, ecc.)'))
 
     class Meta:
         verbose_name = _('Tavolo')
@@ -156,6 +158,8 @@ class Piatto(models.Model):
                                        help_text=_('Es. 10 per 10% — standard ristorazione; 22 per alcol'))
     ingredienti = models.TextField(_('Ingredienti (per lista spesa)'), blank=True,
                                    help_text=_('Elenco ingredienti e quantità per porzione, usato nella lista spesa cuochi'))
+    totale_vendite = models.IntegerField(_('Totale vendite'), default=0,
+                                        help_text=_('Numero totale di volte che questo piatto è stato ordinato e pagato'))
 
     class Meta:
         verbose_name = _('Piatto')
@@ -300,6 +304,42 @@ class ImpostazioniRistorante(models.Model):
     logo      = models.ImageField(_('Logo'), upload_to='logo/', blank=True, null=True)
     note_scontrino = models.TextField(_('Note piè scontrino'), blank=True, default='Grazie e arrivederci! 🙏')
     note_fattura   = models.TextField(_('Note piè fattura'), blank=True)
+    piatto_del_giorno = models.CharField(_('Piatto del giorno'), max_length=200, blank=True,
+                                        help_text=_('Piatto speciale di oggi, mostrato ai clienti e nella chat AI'))
+    
+    # WhatsApp Business
+    whatsapp_enabled = models.BooleanField(_('WhatsApp Business attivo'), default=False)
+    whatsapp_token = models.CharField(_('WhatsApp Access Token'), max_length=500, blank=True)
+    whatsapp_phone_id = models.CharField(_('WhatsApp Phone ID'), max_length=50, blank=True)
+    whatsapp_business_id = models.CharField(_('WhatsApp Business ID'), max_length=50, blank=True)
+    whatsapp_numero = models.CharField(_('Numero WhatsApp'), max_length=20, blank=True,
+        help_text=_('Numero di telefono business es. +393491234567'))
+    whatsapp_nome = models.CharField(_('Nome visualizzato'), max_length=100, blank=True,
+        help_text=_('Nome che appare nelle chat'))
+    
+    # Telegram
+    telegram_enabled = models.BooleanField(_('Telegram attivo'), default=False)
+    telegram_bot_token = models.CharField(_('Telegram Bot Token'), max_length=100, blank=True)
+    telegram_nome_bot = models.CharField(_('Nome Bot'), max_length=100, blank=True,
+        help_text=_('Nome del bot es. LaTrattoriaBot'))
+
+    # Social Media
+    social_facebook = models.URLField(_('Facebook'), blank=True)
+    social_x = models.URLField(_('X (Twitter)'), blank=True)
+    social_pinterest = models.URLField(_('Pinterest'), blank=True)
+    social_youtube = models.URLField(_('YouTube'), blank=True)
+    social_tiktok = models.URLField(_('TikTok'), blank=True)
+    social_instagram = models.URLField(_('Instagram'), blank=True)
+
+    # Abbonamenti e costi
+    abbonamento_attivo = models.BooleanField(_('Abbonamento attivo'), default=False)
+    abbonamento_inizio = models.DateField(_('Inizio abbonamento'), null=True, blank=True)
+    abbonamento_fine = models.DateField(_('Fine abbonamento'), null=True, blank=True)
+    abbonamento_mensile_euro = models.DecimalField(_('Costo mensile (€)'), max_digits=8, decimal_places=2, default=49.90)
+    dominio = models.CharField(_('Dominio'), max_length=200, blank=True, help_text=_('es. mioristorante.it'))
+    dominio_scadenza = models.DateField(_('Scadenza dominio'), null=True, blank=True)
+    dominio_costo_annuale = models.DecimalField(_('Costo dominio annuale (€)'), max_digits=8, decimal_places=2, default=15.00)
+    note_abbonamento = models.TextField(_('Note abbonamento'), blank=True)
 
     class Meta:
         verbose_name = _('Impostazioni Ristorante')
@@ -548,6 +588,24 @@ class Fattura(models.Model):
     totale      = models.DecimalField(_('Totale'), max_digits=10, decimal_places=2, default=0)
 
     note        = models.TextField(_('Note'), blank=True)
+    
+    # Fattura Elettronica
+    fattura_elettronica = models.BooleanField(_('Fattura Elettronica'), default=False)
+    xml_contenuto = models.TextField(_('XML Fattura Elettronica'), blank=True,
+        help_text=_('Contenuto XML della fattura elettronica (formato FatturaPA)'))
+    xml_file = models.FileField(_('File XML'), upload_to='fatture_xml/', blank=True, null=True)
+    data_invio_sdi = models.DateTimeField(_('Data invio SDI'), null=True, blank=True)
+    stato_invio = models.CharField(_('Stato invio'), max_length=20, blank=True,
+        choices=[
+            ('BOZZA', 'Bozza'),
+            ('INVIATA', 'Inviata'),
+            ('ACCETTATA', 'Accettata'),
+            ('RIFIUTATA', 'Rifiutata'),
+            ('CONSEGNATA', 'Consegnata'),
+        ], default='BOZZA')
+    codice_destinatario = models.CharField(_('Codice Destinatario'), max_length=7, blank=True,
+        help_text=_('Codice SDI o PEC del destinatario'))
+    
     creata_il   = models.DateTimeField(_('Creata il'), auto_now_add=True)
     creata_da   = models.ForeignKey(User, on_delete=models.SET_NULL,
                                     null=True, blank=True, verbose_name=_('Operatore'))
@@ -614,6 +672,66 @@ class Fattura(models.Model):
         self.calcola_totali()
 
 
+class OrdineStorico(models.Model):
+    """
+    Storico ordini pagati - salvato al momento del pagamento confermato.
+    Serve per tenere traccia definitiva di cosa hanno ordinato i clienti,
+    evitando problemi di dati falsificati o incomprensioni.
+    """
+    ordine = models.OneToOneField(Ordine, on_delete=models.CASCADE, related_name='storico')
+    tavolo = models.ForeignKey(Tavolo, on_delete=models.SET_NULL, null=True, related_name='storico_ordini')
+    sala = models.ForeignKey(Sala, on_delete=models.SET_NULL, null=True)
+    
+    data_ordine = models.DateTimeField(_('Data ordine'))
+    data_pagamento = models.DateTimeField(_('Data pagamento'), auto_now_add=True)
+    
+    totale = models.DecimalField(_('Totale pagato'), max_digits=10, decimal_places=2)
+    metodo_pagamento = models.CharField(_('Metodo pagamento'), max_length=20, blank=True)
+    
+    nome_cliente = models.CharField(_('Nome cliente'), max_length=100, blank=True)
+    note_cliente = models.TextField(_('Note del cliente'), blank=True)
+    
+    items_json = models.TextField(_('Items ordinati (JSON)'),
+        help_text=_('JSON con tutti i piatti ordinati al momento del pagamento'))
+    
+    class Meta:
+        verbose_name = _('Ordine Storico')
+        verbose_name_plural = _('Ordini Storici')
+        ordering = ['-data_pagamento']
+    
+    def __str__(self):
+        return f"Ordine #{self.ordine_id} - €{self.totale} - {self.data_pagamento.strftime('%d/%m/%Y %H:%M')}"
+    
+    @classmethod
+    def crea_da_ordine(cls, ordine):
+        """Crea uno storico da un ordine esistente al momento del pagamento."""
+        items = []
+        for item in ordine.items.select_related('piatto').all():
+            items.append({
+                'piatto_id': item.piatto_id,
+                'nome': item.piatto.nome,
+                'quantita': item.quantita,
+                'prezzo_unitario': str(item.prezzo_unitario),
+                'totale': str(item.quantita * item.prezzo_unitario),
+            })
+            
+            piatto = item.piatto
+            piatto.totale_vendite = (piatto.totale_vendite or 0) + item.quantita
+            piatto.save(update_fields=['totale_vendite'])
+        
+        storico = cls.objects.create(
+            ordine=ordine,
+            tavolo=ordine.tavolo,
+            sala=ordine.tavolo.sala if ordine.tavolo else None,
+            data_ordine=ordine.data_creazione,
+            totale=ordine.totale,
+            nome_cliente=ordine.nome_cliente or '',
+            note_cliente=ordine.note or '',
+            items_json=json.dumps(items),
+        )
+        return storico
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 #  DISPOSITIVI HARDWARE - Centro di Controllo
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -663,6 +781,22 @@ class Dispositivo(models.Model):
     piano = models.CharField(_('Piano'), max_length=20, blank=True)
     posizione = models.CharField(_('Posizione'), max_length=100, blank=True, help_text='Es: "Entrata", "Angolo NW"')
     
+    # Geolocalizzazione (GPS) - se disponibile
+    latitudine = models.DecimalField(_('Latitudine'), max_digits=10, decimal_places=7, null=True, blank=True)
+    longitudine = models.DecimalField(_('Longitudine'), max_digits=10, decimal_places=7, null=True, blank=True)
+    gps_precisione = models.IntegerField(_('Precisione GPS (m)'), null=True, blank=True)
+    
+    # Posizionamento WiFi/BLE basato su tempo di risposta
+    wifi_rssi = models.IntegerField(_('RSSI WiFi'), null=True, blank=True, help_text='Potenza segnale WiFi')
+    wifi_ping_ms = models.DecimalField(_('Ping WiFi (ms)'), max_digits=6, decimal_places=2, null=True, blank=True)
+    ble_rssi = models.IntegerField(_('RSSI BLE'), null=True, blank=True, help_text='Potenza segnale BLE')
+    ble_ping_ms = models.DecimalField(_('Ping BLE (ms)'), max_digits=6, decimal_places=2, null=True, blank=True)
+    
+    # Posizione calcolata (X, Y nella mappa della sala)
+    pos_x_calcolato = models.IntegerField(_('Posizione X calcolata'), null=True, blank=True)
+    pos_y_calcolato = models.IntegerField(_('Posizione Y calcolata'), null=True, blank=True)
+    posizione_precisione = models.IntegerField(_('Precisione posizione (m)'), null=True, blank=True)
+    
     # Monitoraggio
     last_seen = models.DateTimeField(_('Ultimo contatto'), null=True, blank=True)
     last_status = models.JSONField(_('Ultimo stato'), default=dict, blank=True)
@@ -697,5 +831,476 @@ class Dispositivo(models.Model):
         self.last_status = dati
         self.stato = 'ONLINE'
         self.errori = ''
+        
+        if 'gps' in dati:
+            self.latitudine = dati['gps'].get('lat')
+            self.longitudine = dati['gps'].get('lon')
+            self.gps_precisione = dati['gps'].get('accuracy')
+        
+        if 'wifi' in dati:
+            self.wifi_rssi = dati['wifi'].get('rssi')
+            self.wifi_ping_ms = dati['wifi'].get('ping')
+        
+        if 'ble' in dati:
+            self.ble_rssi = dati['ble'].get('rssi')
+            self.ble_ping_ms = dati['ble'].get('ping')
+        
         self.save()
         super().save(*args, **kwargs)
+    
+    def calcola_distanza_da_ping(self, tipo='wifi'):
+        """
+        Calcola distanza approssimativa dal server basandosi sul tempo di ping.
+        Velocità stimata: ~200km/s per segnali radio (Wifi/BLE)
+        """
+        if tipo == 'wifi' and self.wifi_ping_ms:
+            distanza_metri = (float(self.wifi_ping_ms) / 2) * 0.0002 * 1000
+            return distanza_metri
+        elif tipo == 'ble' and self.ble_ping_ms:
+            distanza_metri = (float(self.ble_ping_ms) / 2) * 0.0003 * 1000
+            return distanza_metri
+        return None
+    
+    def calcola_posizione_xy(self, riferimenti):
+        """
+        Calcola posizione X,Y usando trilaterazione con punti di riferimento.
+        riferimenti: lista di {x, y, distanza} dei dispositivi noti (es. AP WiFi)
+        """
+        if not riferimenti:
+            return None, None
+        
+        if self.latitudine and self.longitudine:
+            return self._trilaterazione_gps(riferimenti)
+        
+        ping = float(self.wifi_ping_ms) if self.wifi_ping_ms else None
+        if ping:
+            return self._trilaterazione_ping(riferimenti, ping)
+        
+        return None, None
+    
+    def _trilaterazione_gps(self, riferimenti):
+        """Trilaterazione GPS -> coordinate sala."""
+        if not riferimenti or not riferimenti[0].get('lat'):
+            return None, None
+        
+        ref = riferimenti[0]
+        ref_lat, ref_lon = ref.get('lat', 0), ref.get('lon', 0)
+        
+        lat_diff = float(self.latitudine) - ref_lat
+        lon_diff = float(self.longitudine) - ref_lon
+        
+        METRI_PER_GRADO_LAT = 111320
+        METRI_PER_GRADO_LON = 111320 * 0.67
+        
+        x = int(lon_diff * METRI_PER_GRADO_LON)
+        y = int(lat_diff * METRI_PER_GRADO_LAT)
+        
+        return x, y
+    
+    def _trilaterazione_ping(self, riferimenti, ping):
+        """
+        Trilaterazione basata su ping.
+        Stima posizione basandosi sul tempo di risposta da diversi punti.
+        """
+        if len(riferimenti) < 1:
+            return None, None
+        
+        distanza = (ping / 2) * 0.2
+        
+        if riferimenti and riferimenti[0].get('x') is not None:
+            ref_x = riferimenti[0].get('x', 0)
+            ref_y = riferimenti[0].get('y', 0)
+            return int(ref_x + distanza), int(ref_y)
+        
+        return int(distanza), int(distanza)
+
+
+def calcola_mappa_sala(sala):
+    """
+    Calcola la mappa dei tavoli in una sala basandosi su GPS e ping di tutti i dispositivi.
+    Restituisce lista di {tavolo_id, x, y, precisione, sorgente}
+    """
+    riferimenti = [{
+        'lat': Decimal('41.9028'),
+        'lon': Decimal('12.4964'),
+        'x': 0,
+        'y': 0,
+        'nome': 'Ingresso'
+    }]
+    
+    dispositivi = Dispositivo.objects.filter(sala=sala, stato='ONLINE')
+    risultati = []
+    
+    for disp in dispositivi:
+        if not disp.tavolo:
+            continue
+        
+        x, y = None, None
+        precisione = 999
+        sorgente = 'nessuno'
+        
+        if disp.latitudine and disp.longitudine:
+            x, y = disp._trilaterazione_gps(riferimenti)
+            precisione = disp.gps_precisione or 10
+            sorgente = 'gps'
+        
+        elif disp.wifi_ping_ms:
+            x, y = disp._trilaterazione_ping(riferimenti, float(disp.wifi_ping_ms))
+            precisione = int(float(disp.wifi_ping_ms) * 2)
+            sorgente = 'wifi'
+        
+        elif disp.ble_ping_ms:
+            x, y = disp._trilaterazione_ping(riferimenti, float(disp.ble_ping_ms))
+            precisione = int(float(disp.ble_ping_ms) * 3)
+            sorgente = 'ble'
+        
+        if x is not None and y is not None:
+            disp.pos_x_calcolato = x
+            disp.pos_y_calcolato = y
+            disp.posizione_precisione = precisione
+            disp.save()
+            
+            risultati.append({
+                'tavolo_id': disp.tavolo_id,
+                'numero': disp.tavolo.numero,
+                'x': x,
+                'y': y,
+                'precisione': precisione,
+                'sorgente': sorgente,
+                'rssi': disp.wifi_rssi or disp.ble_rssi,
+            })
+    
+    return risultati
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  STATISTICHE E REPORT
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class ReportPeriodico(models.Model):
+    """
+    Report periodico generato automaticamente o manualmente.
+    """
+    TIPO_REPORT = [
+        ('SETTIMANALE', 'Settimanale'),
+        ('MENSILE', 'Mensile'),
+        ('BIMESTRALE', 'Bimestrale'),
+        ('SEMESTRALE', 'Semestrale'),
+        ('ANNUALE', 'Annuale'),
+    ]
+    
+    tipo = models.CharField(_('Tipo report'), max_length=20, choices=TIPO_REPORT)
+    data_inizio = models.DateField(_('Data inizio periodo'))
+    data_fine = models.DateField(_('Data fine periodo'))
+    
+    # Dati principali
+    totale_incassi = models.DecimalField(_('Totale incassi'), max_digits=10, decimal_places=2, default=0)
+    totale_ordini = models.IntegerField(_('Totale ordini'), default=0)
+    totale_prenotazioni = models.IntegerField(_('Totale prenotazioni'), default=0)
+    tasso_prenotazioni_confermate = models.DecimalField(_('Tasso conferme %'), max_digits=5, decimal_places=2, default=0)
+    
+    # Piatti più venduti (JSON)
+    piatti_piu_venduti = models.JSONField(_('Piatti più venduti'), default=list, blank=True)
+    
+    # Analisi AI
+    analisi_ai = models.TextField(_('Analisi AI'), blank=True)
+    suggerimenti_miglioramento = models.TextField(_('Suggerimenti'), blank=True)
+    
+    # Costo dominio/abbonamento nel periodo
+    costo_abbonamento = models.DecimalField(_('Costo abbonamento'), max_digits=10, decimal_places=2, default=0)
+    costo_dominio = models.DecimalField(_('Costo dominio'), max_digits=10, decimal_places=2, default=0)
+    
+    # Margine calcolato
+    margine_netto = models.DecimalField(_('Margine netto'), max_digits=10, decimal_places=2, default=0)
+    
+    creato_il = models.DateTimeField(auto_now_add=True)
+    creato_da = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    
+    class Meta:
+        verbose_name = _('Report Periodico')
+        verbose_name_plural = _('Report Periodici')
+        ordering = ['-data_fine']
+    
+    def __str__(self):
+        return f"{self.get_tipo_display()} - {self.data_inizio} / {self.data_fine}"
+
+
+class Promemoria(models.Model):
+    """
+    Promemoria per il titolare.
+    """
+    TIPO_PROMEMORIA = [
+        ('ABBONAMENTO', 'Abbonamento RistoBAR'),
+        ('DOMINIO', 'Scadenza dominio'),
+        ('PAGAMENTO', 'Pagamento'),
+        ('MANUTENZIONE', 'Manutenzione'),
+        ('RIUNIONE', 'Riunione'),
+        ('ALTRO', 'Altro'),
+    ]
+    
+    FREQUENZA = [
+        ('NESSUNA', 'Nessuna'),
+        ('SETTIMANALE', 'Settimanale'),
+        ('MENSILE', 'Mensile'),
+        ('BIMESTRALE', 'Bimestrale'),
+        ('SEMESTRALE', 'Semestrale'),
+        ('ANNUALE', 'Annuale'),
+    ]
+    
+    titolo = models.CharField(_('Titolo'), max_length=200)
+    descrizione = models.TextField(_('Descrizione'), blank=True)
+    tipo = models.CharField(_('Tipo'), max_length=20, choices=TIPO_PROMEMORIA, default='ALTRO')
+    
+    data_scadenza = models.DateField(_('Data scadenza'))
+    completato = models.BooleanField(_('Completato'), default=False)
+    data_completato = models.DateTimeField(_('Data completamento'), null=True, blank=True)
+    
+    # Ricorrenza
+    ricorrente = models.BooleanField(_('Ricorrente'), default=False)
+    frequenza_ricorrenza = models.CharField(_('Frequenza'), max_length=20, choices=FREQUENZA, default='NESSUNA')
+    
+    creato_il = models.DateTimeField(auto_now_add=True)
+    creato_da = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='promemoria_creati')
+    
+    class Meta:
+        verbose_name = _('Promemoria')
+        verbose_name_plural = _('Promemoria')
+        ordering = ['-data_scadenza']
+    
+    def __str__(self):
+        return f"{self.titolo} - {self.data_scadenza}"
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  QUESTIONARIO E COUPON SCONTO
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class Questionario(models.Model):
+    """
+    Questionario di feedback per clienti.
+    """
+    SESSO = [('M', 'Maschio'), ('F', 'Femmina'), ('ALTRO', 'Altro'), ('NSA', 'Preferisco non dire')]
+    
+    prenotazione = models.ForeignKey(Prenotazione, on_delete=models.CASCADE, null=True, blank=True, related_name='questionari')
+    tavolo = models.ForeignKey(Tavolo, on_delete=models.SET_NULL, null=True, blank=True)
+    
+    # Dati cliente
+    nome = models.CharField(_('Nome'), max_length=100, blank=True)
+    email = models.EmailField(_('Email'), blank=True)
+    telefono = models.CharField(_('Telefono'), max_length=20, blank=True)
+    
+    # Dati questionario
+    sesso = models.CharField(_('Sesso'), max_length=10, choices=SESSO, blank=True)
+    eta = models.IntegerField(_('Età'), null=True, blank=True)
+    
+    # Valutazioni (1-5 stelle)
+    valutazione_cibo = models.IntegerField(_('Valutazione cibo'), default=0)
+    valutazione_servizio = models.IntegerField(_('Valutazione servizio'), default=0)
+    valutazione_ambiente = models.IntegerField(_('Valutazione ambiente'), default=0)
+    valutazione_prezzo = models.IntegerField(_('Valutazione rapporto qualità/prezzo'), default=0)
+    
+    # Domande aperte generate da AI
+    risposta_aperte = models.JSONField(_('Risposte aperte'), default=list, blank=True)
+    
+    # Coupon generato
+    coupon = models.ForeignKey('CouponSconto', models.SET_NULL, null=True, blank=True)
+    
+    commenti = models.TextField(_('Commenti'), blank=True)
+    creato_il = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name = _('Questionario')
+        verbose_name_plural = _('Questionari')
+        ordering = ['-creato_il']
+    
+    def __str__(self):
+        return f"Questionario {self.id} - {self.email or 'Anonimo'}"
+
+
+class CouponSconto(models.Model):
+    """
+    Coupon sconto per cliente che ha completato il questionario.
+    """
+    codice = models.CharField(_('Codice'), max_length=20, unique=True)
+    sconto_percentuale = models.IntegerField(_('Sconto %'), default=10)
+    sconto_euro = models.DecimalField(_('Sconto fisso (€)'), max_digits=6, decimal_places=2, default=0)
+    valore_minimo_ordine = models.DecimalField(_('Valore minimo ordine'), max_digits=6, decimal_places=2, default=0)
+    
+    valido_da = models.DateField(_('Valido da'), null=True, blank=True)
+    valido_fino = models.DateField(_('Valido fino'))
+    
+    utilizzato = models.BooleanField(_('Utilizzato'), default=False)
+    utilizzato_il = models.DateTimeField(_('Utilizzato il'), null=True, blank=True)
+    ordine_utilizzo = models.ForeignKey('Ordine', on_delete=models.SET_NULL, null=True, blank=True, related_name='coupon_utilizzato')
+    
+    creato_il = models.DateTimeField(auto_now_add=True)
+    creato_da = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    
+    class Meta:
+        verbose_name = _('Coupon Sconto')
+        verbose_name_plural = _('Coupon Sconti')
+        ordering = ['-creato_il']
+    
+    def __str__(self):
+        return f"{self.codice} - {'✅ Usato' if self.utilizzato else '✅ Valido'}"
+    
+    @classmethod
+    def genera_codice(cls):
+        import random
+        import string
+        while True:
+            chars = string.ascii_uppercase + string.digits
+            codice = ''.join(random.choices(chars, k=8))
+            if not cls.objects.filter(codice=codice).exists():
+                return codice
+    
+    def è_valido(self):
+        from django.utils import timezone
+        oggi = timezone.now().date()
+        valido = not self.utilizzato
+        if self.valido_da and oggi < self.valido_da:
+            valido = False
+        if oggi > self.valido_fino:
+            valido = False
+        return valido
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  GESTIONE MAGAZZINO E SCADENZE
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class ProdottoMagazzino(models.Model):
+    """
+    Prodotti in magazzino con tracciabilità scadenze.
+    """
+    UNITA_MISURA = [
+        ('KG', 'Kg'),
+        ('LT', 'Litri'),
+        ('PZ', 'Pezzi'),
+        ('BL', 'Buste'),
+        ('BT', 'Bottiglie'),
+        ('CS', 'Cassette'),
+    ]
+    
+    nome = models.CharField(_('Nome prodotto'), max_length=200)
+    categoria = models.CharField(_('Categoria'), max_length=100, blank=True)
+    
+    # Identificazione
+    barcode = models.CharField(_('Barcode'), max_length=50, blank=True, db_index=True)
+    fornitore = models.CharField(_('Fornitore'), max_length=200, blank=True)
+    
+    # Quantità
+    quantita = models.DecimalField(_('Quantità'), max_digits=10, decimal_places=2, default=0)
+    unita_misura = models.CharField(_('Unità misura'), max_length=5, choices=UNITA_MISURA, default='PZ')
+    
+    # Scadenze
+    data_arrivo = models.DateField(_('Data arrivo'), default=date_type.today)
+    data_scadenza = models.DateField(_('Data scadenza'), null=True, blank=True)
+    data_apertura = models.DateField(_('Data apertura'), null=True, blank=True)
+    
+    # Dopo l'apertura (in giorni)
+    giorni_dopo_apertura = models.IntegerField(_('Giorni validi dopo apertura'), default=7)
+    
+    # Stato
+    STATO_CHOICES = [
+        ('DISPONIBILE', 'Disponibile'),
+        ('APERTO', 'Aperto'),
+        ('SCADUTO', 'Scaduto'),
+        ('IN_USO', 'In uso'),
+        ('ESAURITO', 'Esaurito'),
+    ]
+    stato = models.CharField(_('Stato'), max_length=15, choices=STATO_CHOICES, default='DISPONIBILE')
+    
+    # Note
+    note = models.TextField(_('Note'), blank=True)
+    
+    creato_il = models.DateTimeField(auto_now_add=True)
+    aggiornato_il = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = _('Prodotto Magazzino')
+        verbose_name_plural = _('Prodotti Magazzino')
+        ordering = ['data_scadenza', 'nome']
+    
+    def __str__(self):
+        return f"{self.nome} - {self.quantita} {self.get_unita_misura_display()}"
+    
+    def è_scaduto(self):
+        from django.utils import timezone
+        if not self.data_scadenza:
+            return False
+        return timezone.now().date() > self.data_scadenza
+    
+    def giorni_alla_scadenza(self):
+        from django.utils import timezone
+        if not self.data_scadenza:
+            return None
+        delta = self.data_scadenza - timezone.now().date()
+        return delta.days
+    
+    def è_scaduto_dopo_apertura(self):
+        if not self.data_apertura or not self.giorni_dopo_apertura:
+            return False
+        from django.utils import timezone
+        delta = timezone.now().date() - self.data_apertura
+        return delta.days > self.giorni_dopo_apertura
+    
+    def stato_attuale(self):
+        if self.quantita <= 0:
+            return 'ESAURITO'
+        if self.è_scaduto() or self.è_scaduto_dopo_apertura():
+            return 'SCADUTO'
+        if self.data_apertura:
+            return 'APERTO'
+        return 'DISPONIBILE'
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  CHIUSURA GIORNALIERA E LISTA SPESA
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class CiboRimasto(models.Model):
+    """
+    Registro del cibo rimasto a fine giornata.
+    """
+    data = models.DateField(_('Data'), default=date_type.today)
+    piatto = models.ForeignKey('Piatto', on_delete=models.CASCADE)
+    quantita = models.DecimalField(_('Quantità rimasta'), max_digits=6, decimal_places=2, default=1)
+    note = models.TextField(_('Note'), blank=True)
+    creato_il = models.DateTimeField(auto_now_add=True)
+    creato_da = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    
+    class Meta:
+        verbose_name = _('Cibo Rimasto')
+        verbose_name_plural = _('Cibi Rimasti')
+        ordering = ['-data', '-creato_il']
+    
+    def __str__(self):
+        return f"{self.data} - {self.piatto.nome}: {self.quantita}"
+
+
+class ListaSpesaGenerata(models.Model):
+    """
+    Lista della spesa generata automaticamente.
+    """
+    data_generazione = models.DateField(_('Data generazione'), default=date_type.today)
+    data_riferimento = models.DateField(_('Data riferimento'), help_text="Per quale giorno è la lista")
+    
+    # Dati calcolati
+    prodotti_json = models.JSONField(_('Prodotti necessari'), default=list)
+    cibi_rimasti_json = models.JSONField(_('Cibi rimasti'), default=list)
+    prodotti_consumati_json = models.JSONField(_('Prodotti consumati'), default=list)
+    
+    totale_stimato = models.DecimalField(_('Totale stimato'), max_digits=10, decimal_places=2, default=0)
+    note = models.TextField(_('Note'), blank=True)
+    
+    generata_da = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    generata_il = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name = _('Lista Spesa Generata')
+        verbose_name_plural = _('Liste Spesa Generate')
+        ordering = ['-data_generazione']
+    
+    def __str__(self):
+        return f"Lista spesa {self.data_riferimento} - {self.data_generazione}"

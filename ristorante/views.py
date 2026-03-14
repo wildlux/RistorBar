@@ -1,19 +1,20 @@
 import json
 import stripe
+import requests
 from datetime import date, timedelta
 from functools import wraps
 from django.conf import settings
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_POST, require_http_methods
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.utils.translation import gettext as _
 from django.utils import timezone
-from django.db.models import Sum, Q
+from django.db.models import Sum, Q, Prefetch
 from django.db import models
-from django.core.mail import send_mail, EmailMessage
+from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from rest_framework import viewsets, permissions
 from rest_framework.decorators import api_view, permission_classes
@@ -506,7 +507,7 @@ def genera_menu_telegram():
         
         menu = "*🍽️ Menu del Giorno*\n\n"
         for cat in categorie:
-            piatti = cat.piatto_set.all()
+            piatti = cat.piatto.all()  # Usa related_name 'piatti' dal modello
             if piatti:
                 menu += f"*{cat.nome}*\n"
                 for piatto in piatti:
@@ -575,6 +576,196 @@ def invia_messaggio_telegram(chat_id, testo, inline_keyboard=None):
     if inline_keyboard:
         payload['reply_markup'] = json.dumps({'inline_keyboard': inline_keyboard})
     requests.post(f"https://api.telegram.org/bot{token}/sendMessage", json=payload)
+
+
+# ─── WhatsApp Business ───────────────────────────────────────────────────────
+
+def invia_whatsapp(messaggio, destinatario, template=None):
+    """
+    Invia messaggio WhatsApp usando WhatsApp Cloud API.
+    """
+    imp = ImpostazioniRistorante.get()
+    
+    if not imp.whatsapp_enabled or not imp.whatsapp_token:
+        return False, "WhatsApp non configurato"
+    
+    url = f"https://graph.facebook.com/v18.0/{imp.whatsapp_phone_id}/messages"
+    headers = {
+        "Authorization": f"Bearer {imp.whatsapp_token}",
+        "Content-Type": "application/json"
+    }
+    
+    try:
+        if template:
+            payload = {
+                "messaging_product": "whatsapp",
+                "to": destinatario,
+                "type": "template",
+                "template": template
+            }
+        else:
+            payload = {
+                "messaging_product": "whatsapp",
+                "to": destinatario,
+                "type": "text",
+                "text": {"body": messaggio}
+            }
+        
+        response = requests.post(url, headers=headers, json=payload, timeout=30)
+        
+        if response.status_code in [200, 201]:
+            return True, response.json()
+        return False, response.text
+    except Exception as e:
+        return False, str(e)
+
+
+def whatsapp_webhook(request):
+    """
+    Webhook per WhatsApp Cloud API.
+    Riceve messaggi dai clienti e gestisce prenotazioni/richieste.
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    try:
+        data = json.loads(request.body)
+        entry = data.get('entry', [])
+        if not entry:
+            return HttpResponse(status=200)
+        
+        changes = entry[0].get('changes', [])
+        if not changes:
+            return HttpResponse(status=200)
+        
+        value = changes[0].get('value', {})
+        messages = value.get('messages', [])
+        
+        if messages:
+            msg = messages[0]
+            from_id = msg.get('from')
+            msg_type = msg.get('type')
+            
+            if msg_type == 'text':
+                testo = msg['text'].get('body', '').strip()
+                gestisci_whatsapp_richiesta(from_id, testo)
+            elif msg_type == 'interactive':
+                button_id = msg.get('interactive', {}).get('button_reply', {}).get('id', '')
+                gestisci_whatsapp_callback(from_id, button_id)
+                
+    except Exception as e:
+        logger.error(f"Errore webhook WhatsApp: {e}")
+    
+    return HttpResponse(status=200)
+
+
+def gestisci_whatsapp_richiesta(numero, testo):
+    """Gestisce messaggio in ingresso da WhatsApp."""
+    imp = ImpostazioniRistorante.get()
+    
+    testo_lower = testo.lower()
+    
+    if any(x in testo_lower for x in ['ciao', 'buongiorno', 'buonasera', 'menu', 'ciao']):
+        menu = genera_menu_telegram()
+        invia_whatsapp(f"👋 Ciao da {imp.nome}!\n\n{menu}", numero)
+    
+    elif any(x in testo_lower for x in ['prenota', 'prenotazione', 'tavolo']):
+        invia_whatsapp(
+            f"📅 Per prenotare un tavolo, clicca qui:\n{imp.sito}prenota/1/1\n\n"
+            f"Oppure chiamaci al {imp.telefono}",
+            numero
+        )
+    
+    elif any(x in testo_lower for x in ['ordine', 'conto', 'pagare']):
+        invia_whatsapp(
+            "Per il conto, puoi chiedere al cameriere oppure scansiona il QR code al tuo tavolo.",
+            numero
+        )
+    
+    else:
+        invia_whatsapp(
+            f"Grazie per il messaggio! 👨‍🍳\n\n"
+            f"Per prenotare: {imp.sito}prenota/1/1\n"
+            f"Per vedere il menu: {imp.sito}menu/1/1\n\n"
+            f"Oppure chiamaci: {imp.telefono}",
+            numero
+        )
+
+
+def gestisci_whatsapp_callback(numero, button_id):
+    """Gestisce callback da bottoni interattivi WhatsApp."""
+    if button_id.startswith('conferma_'):
+        prenotazione_id = int(button_id.split('_')[1])
+        Prenotazione.objects.filter(pk=prenotazione_id).update(
+            stato=Prenotazione.STATO_CONFERMATA
+        )
+        invia_whatsapp("✅ Prenotazione confermata!", numero)
+    
+    elif button_id.startswith('rifiuta_'):
+        prenotazione_id = int(button_id.split('_')[1])
+        Prenotazione.objects.filter(pk=prenotazione_id).update(
+            stato=Prenotazione.STATO_ANNULLATA
+        )
+        invia_whatsapp("❌ Prenotazione annullata.", numero)
+
+
+# ─── Notifiche unificate (Telegram + WhatsApp) ─────────────────────────────────
+
+def notifica_cliente(canale, destinazione, messaggio, inline_keyboard=None):
+    """
+    Invia notifica al cliente tramite canale preferito.
+    canale: 'telegram' o 'whatsapp'
+    """
+    if canale == 'telegram':
+        try:
+            invia_messaggio_telegram(destinazione, messaggio, inline_keyboard)
+            return True
+        except:
+            return False
+    elif canale == 'whatsapp':
+        return invia_whatsapp(messaggio, destinazione)[0]
+    return False
+
+
+def notifica_prenotazione(prenotazione, evento):
+    """
+    Invia notifica di prenotazione al cliente.
+    evento: 'nuova', 'confermata', 'annullata'
+    """
+    imp = ImpostazioniRistorante.get()
+    
+    if evento == 'nuova':
+        messaggio = f"📅 Nuova prenotazione!\n\n"
+        messaggio += f"👤 Cliente: {prenotazione.nome_cliente}\n"
+        messaggio += f"👥 Persone: {prenotazione.num_persone}\n"
+        messaggio += f"🕐 Data: {prenotazione.data_ora.strftime('%d/%m/%Y alle %H:%M')}\n"
+        if prenotazione.tavolo:
+            messaggio += f"🪑 Tavolo: {prenotazione.tavolo.numero}"
+        
+        keyboard = [
+            [{"text": "✅ Conferma", "callback_data": f"conferma_{prenotazione.pk}"},
+             {"text": "❌ Rifiuta", "callback_data": f"rifiuta_{prenotazione.pk}"}]
+        ]
+        
+        if imp.telegram_enabled and imp.telegram_bot_token:
+            invia_messaggio_telegram(prenotazione.telegram_chat_id, messaggio, keyboard)
+        
+        if imp.whatsapp_enabled and prenotazione.telefono:
+            template = {
+                "name": "reservation_confirmation",
+                "language": {"code": "it_IT"},
+                "components": [
+                    {
+                        "type": "body",
+                        "parameters": [
+                            {"type": "text", "parameter_name": "customer_name", "text": prenotazione.nome_cliente},
+                            {"type": "text", "parameter_name": "date", "text": prenotazione.data_ora.strftime('%d/%m/%Y')},
+                            {"type": "text", "parameter_name": "time", "text": prenotazione.data_ora.strftime('%H:%M')}
+                        ]
+                    }
+                ]
+            }
+            invia_whatsapp("", prenotazione.telefono, template)
 
 
 # ─── API per dispositivi STM32 (display e-paper) ─────────────────────────────
@@ -657,6 +848,8 @@ def api_esp32_tavolo(request, sala_id, numero_tavolo):
             'C': 'CONTO',
         }
         
+        base_url = request.build_absolute_uri('/')[:-1]
+        
         return Response({
             'tavolo': tavolo.numero,
             'sala': sala.nome[:15],
@@ -673,6 +866,9 @@ def api_esp32_tavolo(request, sala_id, numero_tavolo):
                 'items': items,
                 'note': ordine_attivo.note[:50] if ordine_attivo.note else '',
             } if ordine_attivo else None,
+            'nota': tavolo.nota[:100] if tavolo.nota else '',
+            'qr_url': f"{base_url}{tavolo.qr_code.url}" if tavolo.qr_code else '',
+            'site_url': base_url,
             'timestamp': timezone.now().isoformat(),
         })
     except Tavolo.DoesNotExist:
@@ -687,10 +883,24 @@ def api_esp32_sala(request, sala_id):
     Ideale per dashboard e-ink multipli.
     """
     try:
+        oggi = timezone.now().date()
         sala = Sala.objects.get(pk=sala_id)
+        
+        # Prefetch con query ottimizzate
         tavoli = Tavolo.objects.filter(sala=sala, attivo=True).prefetch_related(
-            'prenotazioni',
-            'ordini'
+            Prefetch(
+                'prenotazioni',
+                queryset=Prenotazione.objects.filter(
+                    stato=Prenotazione.STATO_CONFERMATA,
+                    data_ora__date=oggi
+                )
+            ),
+            Prefetch(
+                'ordini',
+                queryset=Ordine.objects.filter(
+                    stato__in=[Ordine.STATO_IN_ATTESA, Ordine.STATO_IN_CUCINA]
+                )
+            )
         )
         
         stati = {'L': 'Libero', 'P': 'Prenotato', 'O': 'Occupato', 'C': 'Conto'}
@@ -703,13 +913,8 @@ def api_esp32_sala(request, sala_id):
                     'stato': t.stato,
                     'stato_testo': stati.get(t.stato, '?'),
                     'posti': t.capacita,
-                    'prenotato': t.prenotazioni.filter(
-                        stato=Prenotazione.STATO_CONFERMATA,
-                        data_ora__date=timezone.now().date()
-                    ).exists(),
-                    'ordine_attivo': t.ordini.filter(
-                        stato__in=[Ordine.STATO_IN_ATTESA, Ordine.STATO_IN_CUCINA]
-                    ).exists(),
+                    'prenotato': t.prenotazioni.exists(),
+                    'ordine_attivo': t.ordini.exists(),
                 }
                 for t in tavoli
             ],
@@ -717,6 +922,33 @@ def api_esp32_sala(request, sala_id):
         })
     except Sala.DoesNotExist:
         return Response({'errore': 'Sala non trovata'}, status=404)
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+@require_http_methods(["POST"])
+def api_tavolo_nota(request, tavolo_id):
+    """
+    Imposta la nota di un tavolo per il display e-ink.
+    Accesso: cuoco, capo_area, titolare.
+    """
+    if not ha_ruolo(request.user, RUOLO_CUOCO, RUOLO_CAPO_AREA, RUOLO_TITOLARE):
+        return Response({'errore': 'Non autorizzato'}, status=403)
+    
+    try:
+        tavolo = Tavolo.objects.get(pk=tavolo_id)
+    except Tavolo.DoesNotExist:
+        return Response({'errore': 'Tavolo non trovato'}, status=404)
+    
+    nota = request.data.get('nota', '')[:200]
+    tavolo.nota = nota
+    tavolo.save(update_fields=['nota'])
+    
+    return Response({
+        'ok': True,
+        'tavolo': tavolo.numero,
+        'nota': tavolo.nota,
+    })
 
 
 # ─── Editor sala (drag & drop / unione tavoli) ────────────────────────────────
@@ -899,21 +1131,8 @@ class PiattoViewSet(viewsets.ModelViewSet):
 
 # ─── Lista Spesa Cuochi ──────────────────────────────────────────────────────
 
-@ruolo_richiesto(RUOLO_CUOCO, RUOLO_CAPO_AREA, RUOLO_TITOLARE)
-def lista_spesa(request):
-    """Aggrega le voci ordinate in un intervallo di date per creare la lista spesa."""
-    oggi = date.today()
-    data_da_str = request.GET.get('da', str(oggi))
-    data_a_str  = request.GET.get('a',  str(oggi + timedelta(days=1)))
-
-    try:
-        data_da = date.fromisoformat(data_da_str)
-        data_a  = date.fromisoformat(data_a_str)
-    except ValueError:
-        data_da = oggi
-        data_a  = oggi + timedelta(days=1)
-
-    # Aggrega OrdineItem per piatto nel periodo selezionato
+def aggrega_lista_spesa(data_da, data_a):
+    """Helper: aggrega OrdineItem per categoria nella lista spesa."""
     voci = (
         OrdineItem.objects
         .filter(ordine__creato_il__date__range=[data_da, data_a])
@@ -928,17 +1147,30 @@ def lista_spesa(request):
         .annotate(totale_qty=Sum('quantita'))
         .order_by('piatto__categoria__ordine', 'piatto__nome')
     )
-
-    # Raggruppa per categoria
     categorie_spesa = {}
     for v in voci:
         cat_nome = v['piatto__categoria__nome']
         if cat_nome not in categorie_spesa:
-            categorie_spesa[cat_nome] = {
-                'icona': v['piatto__categoria__icona'],
-                'voci': [],
-            }
+            categorie_spesa[cat_nome] = {'icona': v['piatto__categoria__icona'], 'voci': []}
         categorie_spesa[cat_nome]['voci'].append(v)
+    return categorie_spesa, voci
+
+
+@ruolo_richiesto(RUOLO_CUOCO, RUOLO_CAPO_AREA, RUOLO_TITOLARE)
+def lista_spesa(request):
+    """Aggrega le voci ordinate in un intervallo di date per creare la lista spesa."""
+    oggi = date.today()
+    data_da_str = request.GET.get('da', str(oggi))
+    data_a_str  = request.GET.get('a',  str(oggi + timedelta(days=1)))
+
+    try:
+        data_da = date.fromisoformat(data_da_str)
+        data_a  = date.fromisoformat(data_a_str)
+    except ValueError:
+        data_da = oggi
+        data_a  = oggi + timedelta(days=1)
+
+    categorie_spesa, voci = aggrega_lista_spesa(data_da, data_a)
 
     # Recupera email di invio dal settings (fallback)
     email_default = getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@ristobar.it')
@@ -970,24 +1202,7 @@ def invia_lista_spesa_email(request):
         data_da = date.today()
         data_a  = date.today() + timedelta(days=1)
 
-    voci = (
-        OrdineItem.objects
-        .filter(ordine__creato_il__date__range=[data_da, data_a])
-        .values(
-            'piatto__nome', 'piatto__ingredienti',
-            'piatto__categoria__nome', 'piatto__categoria__icona',
-            'piatto__categoria__ordine',
-        )
-        .annotate(totale_qty=Sum('quantita'))
-        .order_by('piatto__categoria__ordine', 'piatto__nome')
-    )
-
-    categorie_spesa = {}
-    for v in voci:
-        cat_nome = v['piatto__categoria__nome']
-        if cat_nome not in categorie_spesa:
-            categorie_spesa[cat_nome] = {'icona': v['piatto__categoria__icona'], 'voci': []}
-        categorie_spesa[cat_nome]['voci'].append(v)
+    categorie_spesa, voci = aggrega_lista_spesa(data_da, data_a)
 
     corpo_html = render_to_string('sala/lista_spesa_email.html', {
         'categorie_spesa': categorie_spesa,
@@ -1042,7 +1257,12 @@ def gestione_eprint(request):
 @require_POST
 def eprint_ordine(request, ordine_id):
     """Invia l'ordine/comanda via email alla stampante ePrint del tavolo."""
-    ordine = get_object_or_404(Ordine, pk=ordine_id)
+    ordine = get_object_or_404(
+        Ordine.objects.prefetch_related(
+            'items__piatto'
+        ),
+        pk=ordine_id
+    )
     tavolo = ordine.tavolo
 
     if not tavolo.eprint_email:
@@ -1163,17 +1383,60 @@ def gestione_contatti(request):
 
 @ruolo_richiesto(RUOLO_CAPO_AREA, RUOLO_TITOLARE)
 def impostazioni_ristorante(request):
-    """Form per i dati fiscali del ristorante (usati in scontrini e fatture)."""
+    """Form per i dati fiscali del ristorante e impostazioni display e-ink."""
+    from datetime import date as date_type
+    
     imp = ImpostazioniRistorante.get()
     messaggio = None
     if request.method == 'POST':
         campi = [
             'nome', 'slogan', 'indirizzo', 'cap', 'citta', 'provincia',
             'telefono', 'email', 'sito', 'piva', 'cf', 'regime_fiscale',
-            'iban', 'note_scontrino', 'note_fattura',
+            'iban', 'note_scontrino', 'note_fattura', 'piatto_del_giorno',
+            # WhatsApp
+            'whatsapp_numero', 'whatsapp_nome',
+            # Telegram
+            'telegram_nome_bot',
+            # Social
+            'social_facebook', 'social_x', 'social_pinterest',
+            'social_youtube', 'social_tiktok', 'social_instagram',
+            # Abbonamento
+            'dominio', 'note_abbonamento',
         ]
         for c in campi:
             setattr(imp, c, request.POST.get(c, '').strip())
+        
+        # Boolean fields
+        imp.whatsapp_enabled = request.POST.get('whatsapp_enabled') == 'on'
+        imp.whatsapp_token = request.POST.get('whatsapp_token', '').strip()
+        imp.whatsapp_phone_id = request.POST.get('whatsapp_phone_id', '').strip()
+        imp.whatsapp_business_id = request.POST.get('whatsapp_business_id', '').strip()
+        
+        imp.telegram_enabled = request.POST.get('telegram_enabled') == 'on'
+        imp.telegram_bot_token = request.POST.get('telegram_bot_token', '').strip()
+        
+        imp.abbonamento_attivo = request.POST.get('abbonamento_attivo') == 'on'
+        
+        # Date fields
+        for field in ['abbonamento_inizio', 'abbonamento_fine', 'dominio_scadenza']:
+            val = request.POST.get(field, '').strip()
+            if val:
+                try:
+                    setattr(imp, field, date_type.fromisoformat(val))
+                except ValueError:
+                    setattr(imp, field, None)
+            else:
+                setattr(imp, field, None)
+        
+        # Decimal fields
+        for field in ['abbonamento_mensile_euro', 'dominio_costo_annuale']:
+            val = request.POST.get(field, '').strip().replace(',', '.')
+            if val:
+                try:
+                    setattr(imp, field, Decimal(val))
+                except ValueError:
+                    pass
+        
         if 'logo' in request.FILES:
             imp.logo = request.FILES['logo']
         imp.save()
@@ -1499,3 +1762,799 @@ def api_dispositivo_config(request, dispositivo_id):
         })
     
     return Response({'errore': 'Non trovato'}, status=404)
+
+
+# ─── Chat AI Chef ────────────────────────────────────────────────────────────
+
+def chef_chat_view(request):
+    """
+    Pagina di chat con lo Chef AI per consigli sul piatto del giorno.
+    Accessibile a tutti i clienti senza login.
+    """
+    impostazioni = ImpostazioniRistorante.get()
+    piatto_giorno = impostazioni.piatto_del_giorno
+    
+    categorie = Categoria.objects.filter(
+        piatti__disponibile=True
+    ).distinct().prefetch_related('piatti')
+    
+    piatti = []
+    for cat in categorie:
+        for p in cat.piatti.filter(disponibile=True):
+            piatti.append({
+                'nome': p.nome,
+                'descrizione': p.descrizione or '',
+                'prezzo': p.prezzo,
+                'categoria': cat.nome,
+            })
+    
+    return render(request, 'ristorante/chef_chat.html', {
+        'impostazioni': impostazioni,
+        'piatto_giorno': piatto_giorno,
+        'piatti': piatti,
+    })
+
+
+@require_POST
+def chef_chat_message(request):
+    """
+    API per inviare un messaggio allo Chef AI e ricevere una risposta.
+    Usa Ollama con modello multilingua.
+    """
+    messaggio = request.POST.get('messaggio', '').strip()
+    impostazioni = ImpostazioniRistorante.get()
+    piatto_giorno = impostazioni.piatto_del_giorno
+    nome_ristorante = impostazioni.nome
+    
+    categorie = Categoria.objects.filter(
+        piatti__disponibile=True
+    ).distinct().prefetch_related('piatti')
+    
+    menu_testo = ""
+    for cat in categorie:
+        menu_testo += f"\n{cat.nome}:\n"
+        for p in cat.piatti.filter(disponibile=True):
+            menu_testo += f"  - {p.nome}: €{p.prezzo}"
+            if p.descrizione:
+                menu_testo += f" ({p.descrizione[:50]}...)"
+            menu_testo += "\n"
+    
+    risposta = genera_risposta_ollama(messaggio, piatto_giorno, menu_testo, nome_ristorante)
+    
+    return JsonResponse({'risposta': risposta})
+
+
+def genera_risposta_ollama(messaggio, piatto_giorno, menu, nome_ristorante):
+    """
+    Genera risposta usando Ollama API con modello multilingua.
+    """
+    if not messaggio:
+        return "Scrivi un messaggio per parlare con lo chef!"
+    
+    system_prompt = f"""Sei lo chef di {nome_ristorante}, un ristorante italiano. 
+Rispondi SEMPRE nella stessa lingua in cui ti scrivono.
+Se ti scrivono in italiano, rispondi in italiano.
+Se ti scrivono in inglese, rispondi in inglese.
+Se ti scrivono in francese, rispondi in francese.
+E così via per tutte le lingue.
+
+Il piatto del giorno è: {piatto_giorno if piatto_giorno else "Nessuno specifico oggi"}
+
+Ecco il menu completo:
+{menu}
+
+Regole:
+1. Rispondi in modo cordiale e professionale
+2. Consiglia i piatti del giorno quando appropriato
+3. Se non capisci, chiedi di ripetere
+4. Non inventare piatti che non sono nel menu
+5. Per prenotazioni, indirizza a /prenota/
+6. Usa emoji appropriate per rendere la conversazione più vivace
+7. Tieni le risposte brevi e concise (max 2-3 frasi)
+8. Se il cliente chiede di ordinare, spiegagli che può farlo tramite il cameriere o scannerizzando il QR code al tavolo"""
+
+    try:
+        response = requests.post(
+            'http://localhost:11434/api/generate',
+            json={
+                'model': 'llama3.2:3b-instruct-q4_K_M',
+                'prompt': f"{system_prompt}\n\nCliente: {messaggio}\nChef:",
+                'stream': False,
+                'options': {
+                    'temperature': 0.7,
+                    'num_predict': 200,
+                }
+            },
+            timeout=30
+        )
+        if response.status_code == 200:
+            return response.json().get('response', '').strip()
+    except Exception as e:
+        pass
+    
+    return generazione_risposta_chef_fallback(messaggio, piatto_giorno, menu, nome_ristorante)
+
+
+def generazione_risposta_chef_fallback(messaggio, piatto_giorno, menu, nome_ristorante):
+    """
+    Logica di risposta dello Chef AI di fallback (se Ollama non è disponibile).
+    """
+    if not messaggio:
+        return "Scrivi un messaggio per parlare con lo chef!"
+    
+    if any(word in messaggio for word in ['ciao', 'buongiorno', 'buonasera', 'salve', 'hello', 'hi']):
+        if piatto_giorno:
+            return f"Benvenuto da {nome_ristorante}! 🍳 Oggi il nostro piatto del giorno è: **{piatto_giorno}**! Posso suggerirti qualcosa di specifico dal nostro menu?"
+        return f"Benvenuto da {nome_ristorante}! 🍳 Sono lo chef. Cosa vorresti mangiare oggi?"
+    
+    if any(word in messaggio for word in ['piatto del giorno', 'speciale', 'oggi', 'del giorno']):
+        if piatto_giorno:
+            return f"⭐ Il piatto del giorno è: **{piatto_giorno}**! Un nostro classico, preparato con ingredienti freschi. Te lo consiglio!"
+        return "Oggi non abbiamo un piatto del giorno specifico, ma puoi scegliere dal nostro menu completo!"
+    
+    if any(word in messaggio for word in ['pesce', 'pescado', 'fish']):
+        for riga in menu.split('\n'):
+            if 'pesce' in riga.lower() or 'pescada' in riga.lower() or 'salmone' in riga.lower() or 'branzino' in riga.lower():
+                return f"🐟 Ti consiglio: {riga.strip()}"
+        return "Mi dispiace, oggi non abbiamo piatti di pesce disponibili. Vuoi vedere le altre proposte?"
+    
+    if any(word in messaggio for word in ['carne', 'bistecca', 'manzo', 'pollo']):
+        for riga in menu.split('\n'):
+            if 'carne' in riga.lower() or 'bistecca' in riga.lower() or 'manzo' in riga.lower() or 'pollo' in riga.lower():
+                return f"🥩 Ti consiglio: {riga.strip()}"
+        return "Guarda il nostro menu, ci sono ottime proposte di carne!"
+    
+    if any(word in messaggio for word in ['vegetariano', 'veg', 'verdura']):
+        for riga in menu.split('\n'):
+            if 'insalata' in riga.lower() or 'verdura' in riga.lower() or 'vegetariano' in riga.lower():
+                return f"🥗 Ti consiglio: {riga.strip()}"
+        return "Abbiamo diverse opzioni fresche e leggere. Chiedimi del menu completo!"
+    
+    if any(word in messaggio for word in ['menu', 'cosa avete', 'elenco', 'lista']):
+        risposta = f"Ecco il nostro menu di {nome_ristorante}:\n{menu}"
+        if piatto_giorno:
+            risposta += f"\n⭐ *Piatto del giorno: {piatto_giorno}*"
+        return risposta
+    
+    if any(word in messaggio for word in ['prezzo', 'quanto', 'costa']):
+        return "I prezzi sono indicati nel menu. Hai un piatto specifico di cui vuoi sapere il prezzo?"
+    
+    if any(word in messaggio for word in ['allergen', 'intolleranz', 'gluten', 'lattosio']):
+        return "Per informazioni sugli allergeni, ti consiglio di chiedere direttamente al cameriere. Possiamo preparare piatti adatti alle tue esigenze!"
+    
+    if any(word in messaggio for word in ['prenot', 'tavolo', 'prenota']):
+        return "Per prenotare un tavolo, vai su /prenota/ oppure chiedi al cameriere di assisterti!"
+    
+    if any(word in messaggio for word in ['grazie', 'grazie mille', 'thanks']):
+        return "Prego! 🍽️ Se hai altre domande, sono qui!"
+    
+    if piatto_giorno:
+        return f"Non sono sicuro di aver capito. Vuoi provare il nostro piatto del giorno? ⭐ **{piatto_giorno}**"
+    
+    return "Non sono sicuro di aver capito. Vuoi vedere il nostro menu completo? Chiedimi di mostrartelo!"
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  STATISTICHE E REPORT
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@ruolo_richiesto(RUOLO_CAPO_AREA, RUOLO_TITOLARE)
+def statistiche_view(request):
+    """Dashboard statistiche per il titolare."""
+    oggi = date.today()
+    
+    # Statistiche oggi
+    ordini_oggi = Ordine.objects.filter(creato_il__date=oggi)
+    incassi_oggi = ordini_oggi.aggregate(totale=Sum('totale'))['totale'] or Decimal('0')
+    
+    prenotazioni_oggi = Prenotazione.objects.filter(data_ora__date=oggi)
+    prenotazioni_confermate = prenotazioni_oggi.filter(stato=Prenotazione.STATO_CONFERMATA).count()
+    
+    # Ultimi 7 giorni
+    ultima_settimana = [oggi - timedelta(days=i) for i in range(7)]
+    dati_settimana = []
+    for g in reversed(ultima_settimana):
+        ordini_giorno = Ordine.objects.filter(creato_il__date=g)
+        dati_settimana.append({
+            'giorno': g.strftime('%a'),
+            'ordini': ordini_giorno.count(),
+            'incassi': float(ordini_giorno.aggregate(t=Sum('totale'))['t'] or 0),
+        })
+    
+    # Piatti più venduti (ultimi 30 giorni)
+    trenta_giorni_fa = oggi - timedelta(days=30)
+    piatti_venduti = list(
+        OrdineItem.objects
+        .filter(ordine__creato_il__date__gte=trenta_giorni_fa)
+        .values('piatto__nome')
+        .annotate(totale=Sum('quantita'))
+        .order_by('-totale')[:10]
+    )
+    
+    # Promemoria in scadenza
+    promemoria_attivi = Promemoria.objects.filter(
+        completato=False,
+        data_scadenza__lte=oggi + timedelta(days=30)
+    ).order_by('data_scadenza')[:10]
+    
+    # Report recenti
+    report_recenti = ReportPeriodico.objects.all()[:5]
+    
+    return render(request, 'sala/statistiche.html', {
+        'incassi_oggi': incassi_oggi,
+        'ordini_oggi': ordini_oggi.count(),
+        'prenotazioni_confermate': prenotazioni_confermate,
+        'dati_settimana': dati_settimana,
+        'piatti_venduti': piatti_venduti,
+        'promemoria_attivi': promemoria_attivi,
+        'report_recenti': report_recenti,
+    })
+
+
+@ruolo_richiesto(RUOLO_CAPO_AREA, RUOLO_TITOLARE)
+def genera_report(request):
+    """Genera un report periodico con analisi AI."""
+    if request.method == 'POST':
+        tipo = request.POST.get('tipo', 'MENSILE')
+        data_da = date.fromisoformat(request.POST.get('data_da'))
+        data_a = date.fromisoformat(request.POST.get('data_a'))
+        
+        # Calcola statistiche
+        ordini_periodo = Ordine.objects.filter(creato_il__date__range=[data_da, data_a])
+        totale_incassi = ordini_periodo.aggregate(t=Sum('totale'))['t'] or Decimal('0')
+        
+        prenotazioni_periodo = Prenotazione.objects.filter(data_ora__date__range=[data_da, data_a])
+        tot_pren = prenotazioni_periodo.count()
+        pren_confermate = prenotazioni_periodo.filter(stato=Prenotazione.STATO_CONFERMATA).count()
+        tasso_conferma = (pren_confermate / tot_pren * 100) if tot_pren > 0 else 0
+        
+        # Piatti più venduti
+        piatti = list(
+            OrdineItem.objects
+            .filter(ordine__creato_il__date__range=[data_da, data_a])
+            .values('piatto__nome')
+            .annotate(totale=Sum('quantita'))
+            .order_by('-totale')[:10]
+        )
+        
+        # Costi
+        imp = ImpostazioniRistorante.get()
+        if tipo == 'SETTIMANALE':
+            costo_abb = imp.abbonamento_mensile_euro / 4
+        elif tipo == 'MENSILE':
+            costo_abb = imp.abbonamento_mensile_euro
+        elif tipo == 'BIMESTRALE':
+            costo_abb = imp.abbonamento_mensile_euro * 2
+        elif tipo == 'SEMESTRALE':
+            costo_abb = imp.abbonamento_mensile_euro * 6
+        else:
+            costo_abb = imp.abbonamento_mensile_euro * 12
+        
+        costo_dom = imp.dominio_costo_annuale / 12 if tipo == 'MENSILE' else imp.dominio_costo_annuale
+        if tipo == 'BIMESTRALE':
+            costo_dom *= 2
+        elif tipo == 'SEMESTRALE':
+            costo_dom *= 6
+        elif tipo == 'ANNUALE':
+            costo_dom = imp.dominio_costo_annuale
+        
+        margine = totale_incassi - costo_abb - costo_dom
+        
+        # Crea report
+        report = ReportPeriodico.objects.create(
+            tipo=tipo,
+            data_inizio=data_da,
+            data_fine=data_a,
+            totale_incassi=totale_incassi,
+            totale_ordini=ordini_periodo.count(),
+            totale_prenotazioni=tot_pren,
+            tasso_prenotazioni_confermate=tasso_conferma,
+            piatti_piu_venduti=piatti,
+            costo_abbonamento=costo_abb,
+            costo_dominio=costo_dom,
+            margine_netto=margine,
+            creato_da=request.user,
+        )
+        
+        # Analisi AI
+        analisi = genera_analisi_ai(report, imp)
+        report.analisi_ai = analisi['analisi']
+        report.suggerimenti_miglioramento = analisi['suggerimenti']
+        report.save()
+        
+        return redirect('statistiche')
+    
+    return redirect('statistiche')
+
+
+def genera_analisi_ai(report, imp):
+    """Genera analisi AI del report usando Ollama."""
+    
+    prompt = f"""Sei un esperto consulente di ristorazione. Analizza questi dati e fornisci:
+1. Una breve analisi della situazione
+2. Suggerimenti concreti per migliorare
+
+DATI DEL PERIODO {report.data_inizio} / {report.data_fine}:
+- Totale ordini: {report.totale_ordini}
+- Totale incassi: €{report.totale_incassi}
+- Prenotazioni totali: {report.totale_prenotazioni}
+- Tasso conferma prenotazioni: {report.tasso_prenotazioni_confermate}%
+- Costo abbonamento software: €{report.costo_abbonamento}
+- Costo dominio: €{report.costo_dominio}
+- Margine netto: €{report.margine_netto}
+
+PIATTI PIÙ VENDUTI:
+{chr(10).join([f"- {p['piatto__nome']}: {p['totale']} porzioni" for p in report.piatti_piu_venduti[:5]])}
+
+Rispondi in italiano in modo human e concreto. Non inventare dati."""
+
+    try:
+        response = requests.post(
+            'http://localhost:11434/api/generate',
+            json={
+                'model': 'llama3.2:3b-instruct-q4_K_M',
+                'prompt': prompt,
+                'stream': False,
+                'options': {'temperature': 0.7, 'num_predict': 500}
+            },
+            timeout=60
+        )
+        if response.status_code == 200:
+            result = response.json().get('response', '')
+            # Separa analisi e suggerimenti
+            if 'Suggerimenti' in result or 'suggerimenti' in result.lower():
+                parts = result.split('Suggerimenti')
+                analisi = parts[0].strip()
+                suggerimenti = 'Suggerimenti' + parts[1] if len(parts) > 1 else ''
+            else:
+                analisi = result
+                suggerimenti = ''
+            
+            return {'analisi': analisi[:2000], 'suggerimenti': suggerimenti[:2000]}
+    except:
+        pass
+    
+    return {
+        'analisi': f"Periodo {report.data_inizio} - {report.data_fine}: {report.totale_ordini} ordini, €{report.totale_incassi} incassi.",
+        'suggerimenti': 'Analisi non disponibile. Verifica che Ollama sia attivo.'
+    }
+
+
+@ruolo_richiesto(RUOLO_CAPO_AREA, RUOLO_TITOLARE)
+def promemoria_view(request):
+    """Gestione promemoria."""
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        
+        if action == 'aggiungi':
+            Promemoria.objects.create(
+                titolo=request.POST.get('titolo'),
+                descrizione=request.POST.get('descrizione', ''),
+                tipo=request.POST.get('tipo', 'ALTRO'),
+                data_scadenza=date.fromisoformat(request.POST.get('data_scadenza')),
+                ricorrente=request.POST.get('ricorrente') == 'on',
+                frequenza_ricorrenza=request.POST.get('frequenza_ricorrenza', 'NESSUNA'),
+                creato_da=request.user,
+            )
+        elif action == 'completato':
+            prom = Promemoria.objects.get(pk=request.POST.get('id'))
+            prom.completato = True
+            prom.save()
+        elif action == 'elimina':
+            Promemoria.objects.get(pk=request.POST.get('id')).delete()
+    
+    promemoria = Promemoria.objects.all()[:50]
+    return render(request, 'sala/promemoria.html', {'promemoria': promemoria})
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  QUESTIONARIO FEEDBACK
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def questionario_view(request, tavolo_id=None):
+    """
+    Pagina questionario feedback accessibile via QR code sul tavolo.
+    """
+    tavolo = None
+    if tavolo_id:
+        tavolo = get_object_or_404(Tavolo, pk=tavolo_id)
+    
+    imp = ImpostazioniRistorante.get()
+    
+    if request.method == 'POST':
+        q = Questionario()
+        if tavolo:
+            q.tavolo = tavolo
+        
+        q.nome = request.POST.get('nome', '').strip()
+        q.email = request.POST.get('email', '').strip()
+        q.telefono = request.POST.get('telefono', '').strip()
+        q.sesso = request.POST.get('sesso', '')
+        
+        eta = request.POST.get('eta', '').strip()
+        if eta:
+            try:
+                q.eta = int(eta)
+            except:
+                pass
+        
+        q.valutazione_cibo = int(request.POST.get('valutazione_cibo', 0))
+        q.valutazione_servizio = int(request.POST.get('valutazione_servizio', 0))
+        q.valutazione_ambiente = int(request.POST.get('valutazione_ambiente', 0))
+        q.valutazione_prezzo = int(request.POST.get('valutazione_prezzo', 0))
+        q.commenti = request.POST.get('commenti', '').strip()
+        
+        q.save()
+        
+        # Genera coupon
+        coupon = CouponSconto.objects.create(
+            codice=CouponSconto.genera_codice(),
+            sconto_percentuale=10,
+            valido_fino=date.today() + timedelta(days=90),
+            creato_da=request.user if request.user.is_authenticated else None,
+        )
+        q.coupon = coupon
+        q.save()
+        
+        # Invia email con coupon
+        if q.email:
+            try:
+                send_mail(
+                    subject=f"🎁 Coupon sconto da {imp.nome}!",
+                    message=f"Grazie per il tuo feedback!\n\n"
+                            f"Ecco il tuo coupon sconto:\n"
+                            f"Codice: {coupon.codice}\n"
+                            f"Sconto: {coupon.sconto_percentuale}%\n"
+                            f"Valido fino al: {coupon.valido_fino.strftime('%d/%m/%Y')}\n\n"
+                            f"Ci rivideremo presto!",
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[q.email],
+                )
+            except:
+                pass
+        
+        return render(request, 'ristorante/questionario_grazie.html', {
+            'coupon': coupon,
+            'imp': imp,
+        })
+    
+    return render(request, 'ristorante/questionario.html', {
+        'tavolo': tavolo,
+        'imp': imp,
+    })
+
+
+def genera_domande_ai():
+    """
+    Genera domande personalizzate per il questionario usando Ollama.
+    """
+    prompt = """Genera 3 domande brevi di feedback per un ristorante italiano.
+Formato JSON array:
+[
+  {"domanda": "...", "tipo": "stelle" o "testo"},
+  ...
+]
+Rispondi solo in JSON, niente altro."""
+    
+    try:
+        response = requests.post(
+            'http://localhost:11434/api/generate',
+            json={
+                'model': 'llama3.2:3b-instruct-q4_K_M',
+                'prompt': prompt,
+                'stream': False,
+                'options': {'temperature': 0.7, 'num_predict': 200}
+            },
+            timeout=30
+        )
+        if response.status_code == 200:
+            result = response.json().get('response', '')
+            import json
+            try:
+                return json.loads(result)
+            except:
+                pass
+    except:
+        pass
+    
+    return [
+        {"domanda": "Cosa ti è piaciuto di più?", "tipo": "testo"},
+        {"domanda": "Cosa potremmo migliorare?", "tipo": "testo"},
+        {"domanda": "Torneresti a trovarci?", "tipo": "stelle"},
+    ]
+
+
+def attiva_questionario_telegram(chat_id, prenotazione=None):
+    """
+    Invia messaggio per attivare questionario via Telegram.
+    """
+    imp = ImpostazioniRistorante.get()
+    messaggio = (
+        "🍽️ Grazie per aver prenotato da " + imp.nome + "!\n\n"
+        "Vuoi avere uno sconto per il tuo prossimo pasto?\n"
+        "Rispondi al nostro questionario e ricevi un coupon!\n\n"
+        "➡️ Compila qui: " + imp.sito + "questionario/"
+    )
+    keyboard = [[{"text": "📝 Compila questionario", "url": imp.sito + "questionario/"}]]
+    invia_messaggio_telegram(chat_id, messaggio, keyboard)
+
+
+def attiva_questionario_whatsapp(telefono, prenotazione=None):
+    """
+    Invia messaggio per attivare questionario via WhatsApp.
+    """
+    imp = ImpostazioniRistorante.get()
+    messaggio = (
+        "🍽️ Grazie per aver prenotato da " + imp.nome + "!\n\n"
+        "Vuoi avere uno sconto per il tuo prossimo pasto?\n"
+        "Rispondi al nostro questionario e ricevi un coupon!\n\n"
+        "Compila qui: " + imp.sito + "questionario/"
+    )
+    invia_whatsapp(messaggio, telefono)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  GESTIONE MAGAZZINO E SCADENZE
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@ruolo_richiesto(RUOLO_CUOCO, RUOLO_CAPO_AREA, RUOLO_TITOLARE)
+def magazzino_view(request):
+    """
+    Dashboard magazzino con lista scadenze.
+    """
+    oggi = date.today()
+    
+    # Prodotti scaduti
+    scaduti = ProdottoMagazzino.objects.filter(
+        data_scadenza__lt=oggi,
+        quantita__gt=0
+    ).order_by('data_scadenza')
+    
+    # In scadenza prossima settimana
+    prossima_settimana = oggi + timedelta(days=7)
+    in_scadenza = ProdottoMagazzino.objects.filter(
+        data_scadenza__gte=oggi,
+        data_scadenza__lte=prossima_settimana,
+        quantita__gt=0
+    ).order_by('data_scadenza')
+    
+    # Aperti (da consumare)
+    aperti = ProdottoMagazzino.objects.filter(
+        data_apertura__isnull=False,
+        quantita__gt=0
+    ).order_by('data_apertura')
+    
+    # Tutti i prodotti
+    tutti = ProdottoMagazzino.objects.all()[:50]
+    
+    # Statistiche
+    stats = {
+        'scaduti': scaduti.count(),
+        'in_scadenza': in_scadenza.count(),
+        'aperti': aperti.count(),
+        'totali': ProdottoMagazzino.objects.count(),
+    }
+    
+    return render(request, 'sala/magazzino.html', {
+        'scaduti': scaduti,
+        'in_scadenza': in_scadenza,
+        'aperti': aperti,
+        'tutti': tutti,
+        'stats': stats,
+        'oggi': oggi,
+    })
+
+
+@ruolo_richiesto(RUOLO_CUOCO, RUOLO_CAPO_AREA, RUOLO_TITOLARE)
+def magazzino_aggiungi(request):
+    """
+    Aggiungi nuovo prodotto al magazzino.
+    Supporta scansione barcode via camera.
+    """
+    if request.method == 'POST':
+        barcode = request.POST.get('barcode', '').strip()
+        
+        # Cerca prodotto esistente con stesso barcode
+        prodotto_esistente = None
+        if barcode:
+            prodotto_esistente = ProdottoMagazzino.objects.filter(barcode=barcode).first()
+        
+        if prodotto_esistente:
+            # Aggiorna quantità
+            qta = request.POST.get('quantita', '').replace(',', '.')
+            try:
+                prodotto_esistente.quantita += Decimal(qta)
+            except:
+                prodotto_esistente.quantita += 1
+            prodotto_esistente.data_arrivo = date.today()
+            prodotto_esistente.save()
+            messaggio = f"Aggiornato: {prodotto_esistente.nome}"
+        else:
+            # Crea nuovo
+            nome = request.POST.get('nome', '').strip()
+            if not nome:
+                nome = f"Prodotto {barcode}" if barcode else "Nuovo prodotto"
+            
+            qta = request.POST.get('quantita', '').replace(',', '.')
+            try:
+                quantita = Decimal(qta) if qta else Decimal('1')
+            except:
+                quantita = Decimal('1')
+            
+            data_scad = request.POST.get('data_scadenza', '').strip()
+            data_scadenza = None
+            if data_scad:
+                try:
+                    data_scadenza = date.fromisoformat(data_scad)
+                except:
+                    pass
+            
+            giorni_dopo = request.POST.get('giorni_dopo_apertura', '7').strip()
+            
+            prodotto = ProdottoMagazzino.objects.create(
+                nome=nome,
+                barcode=barcode,
+                quantita=quantita,
+                unita_misura=request.POST.get('unita_misura', 'PZ'),
+                data_scadenza=data_scadenza,
+                giorni_dopo_apertura=int(giorni_dopo) if giorni_dopo.isdigit() else 7,
+                fornitore=request.POST.get('fornitore', '').strip(),
+                categoria=request.POST.get('categoria', '').strip(),
+                note=request.POST.get('note', '').strip(),
+            )
+            messaggio = f"Aggiunto: {prodotto.nome}"
+        
+        return JsonResponse({'ok': True, 'messaggio': messaggio})
+    
+    return JsonResponse({'ok': False})
+
+
+@ruolo_richiesto(RUOLO_CUOCO, RUOLO_CAPO_AREA, RUOLO_TITOLARE)
+def magazzino_apri(request, prodotto_id):
+    """
+    Segna un prodotto come aperto (inizia il conto alla rovescia per il consumo).
+    """
+    prodotto = get_object_or_404(ProdottoMagazzino, pk=prodotto_id)
+    prodotto.data_apertura = date.today()
+    prodotto.save()
+    return JsonResponse({'ok': True})
+
+
+@ruolo_richiesto(RUOLO_CUOCO, RUOLO_CAPO_AREA, RUOLO_TITOLARE)
+def magazzino_elimina(request, prodotto_id):
+    """
+    Elimina un prodotto dal magazzino.
+    """
+    prodotto = get_object_or_404(ProdottoMagazzino, pk=prodotto_id)
+    prodotto.delete()
+    return JsonResponse({'ok': True})
+
+
+@ruolo_richiesto(RUOLO_CUOCO, RUOLO_CAPO_AREA, RUOLO_TITOLARE)
+def magazzino_cerca_barcode(request):
+    """
+    Cerca prodotto per barcode.
+    """
+    barcode = request.GET.get('barcode', '').strip()
+    prodotto = ProdottoMagazzino.objects.filter(barcode=barcode).first()
+    
+    if prodotto:
+        return JsonResponse({
+            'ok': True,
+            'prodotto': {
+                'id': prodotto.id,
+                'nome': prodotto.nome,
+                'quantita': float(prodotto.quantita),
+                'unita_misura': prodotto.unita_misura,
+                'data_scadenza': prodotto.data_scadenza.isoformat() if prodotto.data_scadenza else None,
+                'giorni_dopo_apertura': prodotto.giorni_dopo_apertura,
+            }
+        })
+    
+    return JsonResponse({'ok': False})
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  CHIUSURA GIORNALIERA E LISTA SPESA
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@ruolo_richiesto(RUOLO_CAPO_AREA, RUOLO_TITOLARE)
+def chiusura_giornaliera(request):
+    """
+    Pagina per la chiusura giornaliera - inserisci cibo rimasto.
+    """
+    oggi = date.today()
+    
+    if request.method == 'POST':
+        piatti = Piatto.objects.filter(disponibile=True)
+        for piatto in piatti:
+            qta_rimasta = request.POST.get(f'rimasto_{piatto.id}', '').strip()
+            if qta_rimasta:
+                try:
+                    qta = float(qta_rimasta)
+                    if qta > 0:
+                        CiboRimasto.objects.create(
+                            data=oggi,
+                            piatto=piatto,
+                            quantita=qta,
+                            note=request.POST.get(f'note_{piatto.id}', '').strip(),
+                            creato_da=request.user,
+                        )
+                except:
+                    pass
+        
+        return redirect('genera_lista_spesa')
+    
+    piatti = Piatto.objects.filter(disponibile=True).select_related('categoria')
+    gia_registrati = CiboRimasto.objects.filter(data=oggi).values_list('piatto_id', flat=True)
+    
+    return render(request, 'sala/chiusura_giornaliera.html', {
+        'piatti': piatti,
+        'gia_registrati': list(gia_registrati),
+        'oggi': oggi,
+    })
+
+
+@ruolo_richiesto(RUOLO_CAPO_AREA, RUOLO_TITOLARE)
+def genera_lista_spesa(request):
+    """
+    Genera la lista della spesa basata su cibi rimasti e consumati.
+    """
+    oggi = date.today()
+    ieri = oggi - timedelta(days=1)
+    
+    cibi_rimasti = CiboRimasto.objects.filter(data=ieri).select_related('piatto')
+    
+    consumati = {}
+    ordini_ieri = Ordine.objects.filter(creato_il__date=ieri)
+    for ordine in ordini_ieri:
+        for item in ordine.items.select_related('piatto').all():
+            piatto_nome = item.piatto.nome
+            if piatto_nome not in consumati:
+                consumati[piatto_nome] = {'nome': piatto_nome, 'quantita': 0, 'piatto': item.piatto}
+            consumati[piatto_nome]['quantita'] += item.quantita
+    
+    prodotti_servono = []
+    for nome, data in consumati.items():
+        qta_consumata = data['quantita']
+        qta_rimasta = 0
+        for rimasto in cibi_rimasti:
+            if rimasto.piatto.nome == nome:
+                qta_rimasta = float(rimasto.quantita)
+                break
+        
+        qta_da_comprare = qta_consumata - qta_rimasta
+        if qta_da_comprare > 0:
+            prodotti_servono.append({'nome': nome, 'quantita': qta_da_comprare, 'note': ''})
+    
+    domani = oggi + timedelta(days=1)
+    lista = ListaSpesaGenerata.objects.create(
+        data_generazione=oggi,
+        data_riferimento=domani,
+        prodotti_json=prodotti_servono,
+        cibi_rimasti_json=[{'nome': r.piatto.nome, 'quantita': float(r.quantita)} for r in cibi_rimasti],
+        prodotti_consumati_json=[{'nome': v['nome'], 'quantita': v['quantita']} for v in consumati.values()],
+        generata_da=request.user,
+    )
+    
+    return render(request, 'sala/lista_spesa_generata.html', {
+        'lista': lista,
+        'prodotti_servono': prodotti_servono,
+        'cibi_rimasti': cibi_rimasti,
+        'consumati': consumati,
+        'domani': domani,
+    })
+
+
+@ruolo_richiesto(RUOLO_CAPO_AREA, RUOLO_TITOLARE)
+def lista_spesa_view(request):
+    """Mostra le liste spesa generate."""
+    liste = ListaSpesaGenerata.objects.all()[:10]
+    return render(request, 'sala/liste_spesa.html', {'liste': liste})
+
+
+@ruolo_richiesto(RUOLO_CAPO_AREA, RUOLO_TITOLARE)
+def lista_spesa_dettaglio(request, lista_id):
+    """Mostra dettaglio lista spesa."""
+    lista = get_object_or_404(ListaSpesaGenerata, pk=lista_id)
+    return render(request, 'sala/lista_spesa_dettaglio.html', {'lista': lista})

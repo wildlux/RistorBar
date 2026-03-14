@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% load i18n static %}
+
+{% block title %}{% trans "Chiusura Giornaliera" %} - RistoBAR{% endblock %}
+
+{% block content %}
+<style>
+    .chiusura-container { max-width: 900px; margin: 0 auto; padding: 20px; }
+    .chiusura-header { text-align: center; margin-bottom: 30px; }
+    .piatto-item { 
+        background: white; 
+        padding: 15px; 
+        margin-bottom: 10px; 
+        border-radius: 10px; 
+        display: flex; 
+        align-items: center; 
+        gap: 15px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .piatto-item.registered { border-left: 4px solid #2ecc71; }
+    .piatto-nome { flex: 1; font-weight: 600; }
+    .piatto-categoria { color: #666; font-size: 0.85rem; }
+    .piatto-input { width: 80px; padding: 8px; border: 1px solid #ddd; border-radius: 5px; }
+    .btn-chiudi { 
+        width: 100%; 
+        padding: 20px; 
+        background: #e74c3c; 
+        color: white; 
+        font-size: 1.2rem; 
+        border: none; 
+        border-radius: 10px; 
+        cursor: pointer; 
+    }
+    .btn-chiudi:hover { background: #c0392b; }
+    .info-box { 
+        background: #f8f9fa; 
+        padding: 15px; 
+        border-radius: 10px; 
+        margin-bottom: 20px; 
+        border-left: 4px solid #3498db;
+    }
+</style>
+
+<div class="chiusura-container">
+    <div class="chiusura-header">
+        <h1>🔒 Chiusura Giornaliera</h1>
+        <p>Data: {{ oggi|date:"d/m/Y" }}</p>
+    </div>
+
+    <div class="info-box">
+        <h3>📝 Istruzioni</h3>
+        <p>Per ogni piatto, indica <strong>quante porzioni sono avanzate</strong>.</p>
+        <p>Il sistema calcolerà automaticamente cosa devi acquistare domani.</p>
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+        
+        {% for piatto in piatti %}
+        <div class="piatto-item {% if piatto.id in gia_registrati %}registered{% endif %}">
+            <div>
+                <div class="piatto-nome">{{ piatto.nome }}</div>
+                <div class="piatto-categoria">{{ piatto.categoria.nome }}</div>
+            </div>
+            <div>
+                <input type="number" 
+                       name="rimasto_{{ piatto.id }}" 
+                       class="piatto-input" 
+                       min="0" 
+                       step="0.5" 
+                       placeholder="0"
+                       value="">
+                <span>porzioni</span>
+            </div>
+            <div>
+                <input type="text" 
+                       name="note_{{ piatto.id }}" 
+                       placeholder="note (opzionale)"
+                       style="width: 150px; padding: 8px; border: 1px solid #ddd; border-radius: 5px;">
+            </div>
+            {% if piatto.id in gia_registrati %}
+            <span style="color: #2ecc71">✅ Registrato</span>
+            {% endif %}
+        </div>
+        {% empty %}
+        <p style="text-align: center; color: #999;">Nessun piatto disponibile nel menu.</p>
+        {% endfor %}
+
+        <button type="submit" class="btn-chiudi">
+            ➡️ Genera Lista Spesa per Domani
+        </button>
+    </form>
+</div>
+{% endblock %}

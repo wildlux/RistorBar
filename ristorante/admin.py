@@ -10,10 +10,10 @@ class SalaAdmin(admin.ModelAdmin):
 
 @admin.register(Tavolo)
 class TavoloAdmin(admin.ModelAdmin):
-    list_display = ['numero', 'sala', 'forma', 'capacita', 'stato', 'attivo', 'eprint_email']
-    list_editable = ['stato', 'attivo']
+    list_display = ['numero', 'sala', 'forma', 'capacita', 'stato', 'attivo', 'eprint_email', 'nota']
+    list_editable = ['stato', 'attivo', 'nota']
     list_filter = ['sala', 'stato', 'forma']
-    search_fields = ['numero', 'eprint_email']
+    search_fields = ['numero', 'eprint_email', 'nota']
 
 
 @admin.register(Categoria)

@@ -62,7 +62,15 @@ urlpatterns = [
     path('prenota/conferma/<int:prenotazione_id>/', views.conferma_prenotazione, name='conferma_prenotazione'),
     path('prenota/caparra/<int:prenotazione_id>/',  views.pagamento_caparra,     name='pagamento_caparra'),
 
-    # ══════════════════════════════════════════════════════════
+    # Chat AI Chef
+    path('chef/',                                    views.chef_chat_view,        name='chef_chat'),
+    path('chef/message/',                            views.chef_chat_message,    name='chef_chat_message'),
+
+    # Questionario feedback
+    path('questionario/', views.questionario_view, name='questionario'),
+    path('questionario/<int:tavolo_id>/', views.questionario_view, name='questionario_tavolo'),
+
+    # ═══════════════════════════════════════════════════════════════════════════════
     #  AREA STAFF — /sala/
     # ══════════════════════════════════════════════════════════
 
@@ -111,6 +119,24 @@ urlpatterns = [
     # Contatti ristorante + sedi
     path('sala/capo/contatti/', views.gestione_contatti, name='gestione_contatti'),
 
+    # Statistiche e Report
+    path('sala/capo/statistiche/', views.statistiche_view, name='statistiche'),
+    path('sala/capo/statistiche/genera/', views.genera_report, name='genera_report'),
+    path('sala/capo/promemoria/', views.promemoria_view, name='promemoria'),
+
+    # Magazzino e scadenze
+    path('sala/capo/magazzino/', views.magazzino_view, name='magazzino'),
+    path('sala/capo/magazzino/aggiungi/', views.magazzino_aggiungi, name='magazzino_aggiungi'),
+    path('sala/capo/magazzino/cerca/', views.magazzino_cerca_barcode, name='magazzino_cerca_barcode'),
+    path('sala/capo/magazzino/<int:prodotto_id>/apri/', views.magazzino_apri, name='magazzino_apri'),
+    path('sala/capo/magazzino/<int:prodotto_id>/elimina/', views.magazzino_elimina, name='magazzino_elimina'),
+
+    # Chiusura giornaliera e Lista spesa
+    path('sala/capo/chiusura/', views.chiusura_giornaliera, name='chiusura_giornaliera'),
+    path('sala/capo/lista-spesa/genera/', views.genera_lista_spesa, name='genera_lista_spesa'),
+    path('sala/capo/lista-spesa/', views.lista_spesa_view, name='lista_spesa'),
+    path('sala/capo/lista-spesa/<int:lista_id>/', views.lista_spesa_dettaglio, name='lista_spesa_dettaglio'),
+
     # Documenti fiscali — scontrino / fattura / ricevuta
     path('sala/capo/impostazioni/',                views.impostazioni_ristorante, name='impostazioni_ristorante'),
     path('sala/ordine/<int:ordine_id>/scontrino/', views.scontrino_view,          name='scontrino'),
@@ -123,6 +149,7 @@ urlpatterns = [
     # ══════════════════════════════════════════════════════════
     path('webhooks/stripe/',   views.stripe_webhook,   name='stripe_webhook'),
     path('webhooks/telegram/', views.telegram_webhook, name='telegram_webhook'),
+    path('webhooks/whatsapp/', views.whatsapp_webhook, name='whatsapp_webhook'),
 
     # ══════════════════════════════════════════════════════════
     #  API — STM32 + ESP32 + REST
@@ -136,6 +163,8 @@ urlpatterns = [
     # Centro di controllo dispositivi
     path('api/dispositivo/status/', views.api_dispositivo_status, name='api_dispositivo_status'),
     path('api/dispositivo/config/<int:dispositivo_id>/', views.api_dispositivo_config, name='api_dispositivo_config'),
+    # Note display e-ink
+    path('api/tavolo/nota/<int:tavolo_id>/', views.api_tavolo_nota, name='api_tavolo_nota'),
     path('api/', include(router.urls)),
 ]
 

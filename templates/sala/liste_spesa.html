@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% load i18n static %}
+
+{% block title %}{% trans "Liste Spesa" %} - RistoBAR{% endblock %}
+
+{% block content %}
+<style>
+    .liste-container { max-width: 800px; margin: 0 auto; padding: 20px; }
+    .lista-item { 
+        background: white; 
+        padding: 15px; 
+        margin-bottom: 10px; 
+        border-radius: 10px; 
+        display: flex; 
+        justify-content: space-between;
+        align-items: center;
+    }
+    .btn { padding: 10px 20px; border-radius: 8px; text-decoration: none; }
+    .btn-primary { background: #3498db; color: white; }
+</style>
+
+<div class="liste-container">
+    <h1>📋 Liste Spesa Generate</h1>
+    
+    {% for lista in liste %}
+    <div class="lista-item">
+        <div>
+            <strong>Per: {{ lista.data_riferimento|date:"d/m/Y" }}</strong>
+            <br>
+            <small>Generata: {{ lista.data_generazione|date:"d/m/Y H:i" }}</small>
+        </div>
+        <a href="{% url 'lista_spesa_dettaglio lista.id %}" class="btn btn-primary">
+            👁️ Vedi
+        </a>
+    </div>
+    {% empty %}
+    <p style="text-align: center; color: #999;">
+        Nessuna lista generata. <br>
+        <a href="{% url 'chiusura_giornaliera' %}">Inizia la chiusura giornaliera</a>
+    </p>
+    {% endfor %}
+</div>
+{% endblock %}

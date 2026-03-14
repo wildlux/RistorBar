@@ -28,11 +28,25 @@ Display e-ink connessi via WiFi. Ideale per: tavoli singoli, menu digitali, segn
     "ora": "20:00"
   },
   "ordine": null,
+  "nota": "Oggi specials: Risotto ai funghi porcini!",
+  "qr_url": "http://192.168.1.100:8000/media/qrcodes/tavolo_1_1.png",
+  "site_url": "http://192.168.1.100:8000",
   "timestamp": "2026-03-14T12:00:00Z"
 }
 ```
 
-**Firmware:** `firmware/esp32/tavolo_display/`
+**Nota display:** Il campo `nota` contiene commenti/suggerimenti impostati dal capo ristorante o dallo chef, visibili sul display e-ink.
+
+**API per impostare nota:**
+```
+POST /api/tavolo/nota/<tavolo_id>/
+Authorization: Bearer <token>
+Content-Type: application/json
+{"nota": "Oggi specials: Risotto ai funghi!"}
+```
+Accesso: cuoco, capo_area, titolare
+
+**Firmware:** `CORE_Tavoli_Eink/esp32/tavolo_display/`
 
 **Hardware consigliato:**
 - ESP32-WROOM-32
@@ -92,7 +106,7 @@ Display e-ink con Arduino classico + modulo ESP-01S. Ideale per: progetti econom
 **Endpoint API:**
 - `/api/esp32/tavolo/<sala_id>/<numero>/` (stesso formato ESP32)
 
-**Firmware:** `firmware/arduino/tavolo_display/`
+**Firmware:** `CORE_Tavoli_Eink/arduino/tavolo_display/`
 
 **Hardware consigliato:**
 - Arduino UNO o Mega
@@ -152,10 +166,11 @@ RistoBAR include un **Centro di Controllo** per gestire tutti i dispositivi hard
 
 | Dispositivo | Endpoint | Formato |
 |--------------|----------|---------|
-| ESP32/Arduino | `/api/esp32/tavolo/<sala>/<num>/` | Completo |
+| ESP32/Arduino | `/api/esp32/tavolo/<sala>/<num>/` | Completo (+ nota + qr_url) |
 | ESP32/Arduino | `/api/esp32/sala/<sala>/` | Array |
 | STM32 | `/api/tavolo/<sala>/<num>/` | Compresso |
 | STM32 | `/api/sala/<sala>/` | Array |
+| Staff/Capo | `POST /api/tavolo/nota/<id>/` | Imposta nota display |
 | Dispositivo | `/api/dispositivo/status/` | Status update |
 
 ---

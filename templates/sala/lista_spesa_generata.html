@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% load i18n static %}
+
+{% block title %}{% trans "Lista Spesa" %} - RistoBAR{% endblock %}
+
+{% block content %}
+<style>
+    .lista-container { max-width: 800px; margin: 0 auto; padding: 20px; }
+    .lista-header { text-align: center; margin-bottom: 30px; }
+    .section { margin-bottom: 30px; }
+    .section h3 { border-bottom: 2px solid #eee; padding-bottom: 10px; }
+    .prodotto-item { 
+        background: white; 
+        padding: 15px; 
+        margin-bottom: 8px; 
+        border-radius: 8px; 
+        display: flex; 
+        justify-content: space-between;
+        align-items: center;
+    }
+    .prodotto-item.da-comprare { border-left: 4px solid #e74c3c; }
+    .prodotto-item.rimasto { border-left: 4px solid #2ecc71; }
+    .prodotto-item.consumato { border-left: 4px solid #3498db; }
+    .print-btn { 
+        width: 100%; 
+        padding: 15px; 
+        background: #3498db; 
+        color: white; 
+        border: none; 
+        border-radius: 10px; 
+        font-size: 1.1rem; 
+        cursor: pointer;
+        margin-bottom: 20px;
+    }
+    @media print {
+        .no-print { display: none; }
+        .prodotto-item { border: 1px solid #ccc; }
+    }
+</style>
+
+<div class="lista-container">
+    <div class="lista-header">
+        <h1>🛒 Lista della Spesa</h1>
+        <p>Per: <strong>{{ domani|date:"d/m/Y" }}</strong></p>
+        <p>Generata il: {{ lista.data_generazione|date:"d/m/Y" }}</p>
+    </div>
+
+    <button class="print-btn no-print" onclick="window.print()">
+        🖨️ Stampa Lista
+    </button>
+
+    <!-- Prodotti da comprare -->
+    <div class="section">
+        <h3>🛒 Prodotti da Comprare</h3>
+        {% if prodotti_servono %}
+            {% for p in prodotti_servono %}
+            <div class="prodotto-item da-comprare">
+                <span>{{ p.nome }}</span>
+                <strong>{{ p.quantita }} porzioni</strong>
+            </div>
+            {% endfor %}
+        {% else %}
+            <p style="color: #2ecc71; text-align: center;">✅ Non serve nulla!</p>
+        {% endif %}
+    </div>
+
+    <!-- Cibi avanzati -->
+    <div class="section">
+        <h3>🍽️ Cibi Avanzati (già consumati)</h3>
+        {% if cibi_rimasti %}
+            {% for r in cibi_rimasti %}
+            <div class="prodotto-item rimasto">
+                <span>{{ r.piatto.nome }}</span>
+                <span>{{ r.quantita }} porzioni</span>
+            </div>
+            {% endfor %}
+        {% else %}
+            <p style="color: #999;">Nessun avanzamento registrato.</p>
+        {% endif %}
+    </div>
+
+    <!-- Consumi totali -->
+    <div class="section">
+        <h3>📊 Consumi della Giornata</h3>
+        {% for nome, data in consumati.items %}
+        <div class="prodotto-item consumato">
+            <span>{{ nome }}</span>
+            <span>{{ data.quantita }} porzioni</span>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

@@ -140,6 +140,164 @@
       </div>
     </div>
 
+    <div class="ir-card" style="border-color:#9b59b6">
+      <h3>📱 Display e-ink (tavoli)</h3>
+      <div class="ir-grid">
+        <div class="ir-full">
+          <label class="ir-label">🍳 Piatto del giorno</label>
+          <input class="ir-input" type="text" name="piatto_del_giorno" value="{{ imp.piatto_del_giorno|default:'' }}" placeholder="Es: Risotto ai funghi porcini">
+          <div class="ir-hint">Questo piatto verrà mostrato automaticamente sui display e-ink di tutti i tavoli.</div>
+        </div>
+      </div>
+      <div style="margin-top:1rem">
+        <a href="/sala/dispositivi/" class="btn btn-outline" style="font-size:0.85rem">
+          📟 Gestisci Display e-ink
+        </a>
+        <span style="font-size:0.78rem;color:#888;margin-left:0.5rem">Configura singoli tavoli e note personalizzate.</span>
+      </div>
+    </div>
+
+    <!-- WhatsApp Business -->
+    <div class="ir-card" style="border-color:#25D366">
+      <h3>💬 WhatsApp Business</h3>
+      <div class="ir-grid">
+        <div>
+          <label class="ir-label">
+            <input type="checkbox" name="whatsapp_enabled" {% if imp.whatsapp_enabled %}checked{% endif %}>
+            Attivo
+          </label>
+        </div>
+        <div class="ir-full">
+          <label class="ir-label">Numero di telefono</label>
+          <input class="ir-input" type="text" name="whatsapp_numero" value="{{ imp.whatsapp_numero|default:'' }}" placeholder="+393491234567">
+          <div class="ir-hint">Numero WhatsApp Business con prefisso internazionale</div>
+        </div>
+        <div class="ir-full">
+          <label class="ir-label">Nome visualizzato</label>
+          <input class="ir-input" type="text" name="whatsapp_nome" value="{{ imp.whatsapp_nome|default:'' }}" placeholder="La Trattoria">
+        </div>
+        <div>
+          <label class="ir-label">WhatsApp Access Token</label>
+          <input class="ir-input" type="password" name="whatsapp_token" value="{{ imp.whatsapp_token|default:'' }}" placeholder="EA...">
+        </div>
+        <div>
+          <label class="ir-label">Phone ID</label>
+          <input class="ir-input" type="text" name="whatsapp_phone_id" value="{{ imp.whatsapp_phone_id|default:'' }}" placeholder="123456789012345">
+        </div>
+        <div>
+          <label class="ir-label">Business ID</label>
+          <input class="ir-input" type="text" name="whatsapp_business_id" value="{{ imp.whatsapp_business_id|default:'' }}" placeholder="123456789012345">
+        </div>
+      </div>
+      <div class="ir-hint" style="margin-top:0.5rem">
+        Per configurare: <a href="https://developers.facebook.com/docs/whatsapp/cloud-api" target="_blank">WhatsApp Cloud API</a>
+      </div>
+    </div>
+
+    <!-- Telegram -->
+    <div class="ir-card" style="border-color:#0088cc">
+      <h3>✈️ Telegram</h3>
+      <div class="ir-grid">
+        <div>
+          <label class="ir-label">
+            <input type="checkbox" name="telegram_enabled" {% if imp.telegram_enabled %}checked{% endif %}>
+            Attivo
+          </label>
+        </div>
+        <div class="ir-full">
+          <label class="ir-label">Nome Bot</label>
+          <input class="ir-input" type="text" name="telegram_nome_bot" value="{{ imp.telegram_nome_bot|default:'' }}" placeholder="LaTrattoriaBot">
+          <div class="ir-hint">Il nome del tuo bot su Telegram</div>
+        </div>
+        <div class="ir-full">
+          <label class="ir-label">Bot Token</label>
+          <input class="ir-input" type="password" name="telegram_bot_token" value="{{ imp.telegram_bot_token|default:'' }}" placeholder="123456789:ABCdefGHIjklMNOpqrsTUVwxyz">
+        </div>
+      </div>
+      <div class="ir-hint" style="margin-top:0.5rem">
+        Per configurare: cerca @BotFather su Telegram e crea un nuovo bot con /newbot
+      </div>
+    </div>
+
+    <!-- Social Media -->
+    <div class="ir-card" style="border-color:#E1306C">
+      <h3>📱 Social Media</h3>
+      <div class="ir-grid">
+        <div>
+          <label class="ir-label">Facebook</label>
+          <input class="ir-input" type="url" name="social_facebook" value="{{ imp.social_facebook|default:'' }}" placeholder="https://facebook.com/ristorante">
+        </div>
+        <div>
+          <label class="ir-label">X (Twitter)</label>
+          <input class="ir-input" type="url" name="social_x" value="{{ imp.social_x|default:'' }}" placeholder="https://x.com/ristorante">
+        </div>
+        <div>
+          <label class="ir-label">Instagram</label>
+          <input class="ir-input" type="url" name="social_instagram" value="{{ imp.social_instagram|default:'' }}" placeholder="https://instagram.com/ristorante">
+        </div>
+        <div>
+          <label class="ir-label">Pinterest</label>
+          <input class="ir-input" type="url" name="social_pinterest" value="{{ imp.social_pinterest|default:'' }}" placeholder="https://pinterest.com/ristorante">
+        </div>
+        <div>
+          <label class="ir-label">YouTube</label>
+          <input class="ir-input" type="url" name="social_youtube" value="{{ imp.social_youtube|default:'' }}" placeholder="https://youtube.com/@ristorante">
+        </div>
+        <div>
+          <label class="ir-label">TikTok</label>
+          <input class="ir-input" type="url" name="social_tiktok" value="{{ imp.social_tiktok|default:'' }}" placeholder="https://tiktok.com/@ristorante">
+        </div>
+      </div>
+    </div>
+
+    <!-- Abbonamento e Costi -->
+    <div class="ir-card" style="border-color:#f39c12">
+      <h3>💳 Abbonamento RistoBAR</h3>
+      <div class="ir-grid">
+        <div>
+          <label class="ir-label">
+            <input type="checkbox" name="abbonamento_attivo" {% if imp.abbonamento_attivo %}checked{% endif %}>
+            Abbonamento attivo
+          </label>
+        </div>
+        <div>
+          <label class="ir-label">Costo mensile (€)</label>
+          <input class="ir-input" type="number" step="0.01" name="abbonamento_mensile_euro" value="{{ imp.abbonamento_mensile_euro|default:'49.90' }}">
+        </div>
+        <div>
+          <label class="ir-label">Inizio abbonamento</label>
+          <input class="ir-input" type="date" name="abbonamento_inizio" value="{{ imp.abbonamento_inizio|default:'' }}">
+        </div>
+        <div>
+          <label class="ir-label">Fine abbonamento</label>
+          <input class="ir-input" type="date" name="abbonamento_fine" value="{{ imp.abbonamento_fine|default:'' }}">
+        </div>
+      </div>
+    </div>
+
+    <!-- Dominio -->
+    <div class="ir-card" style="border-color:#3498db">
+      <h3>🌐 Dominio</h3>
+      <div class="ir-grid">
+        <div>
+          <label class="ir-label">Dominio</label>
+          <input class="ir-input" type="text" name="dominio" value="{{ imp.dominio|default:'' }}" placeholder="mioristorante.it">
+        </div>
+        <div>
+          <label class="ir-label">Costo annuale (€)</label>
+          <input class="ir-input" type="number" step="0.01" name="dominio_costo_annuale" value="{{ imp.dominio_costo_annuale|default:'15.00' }}">
+        </div>
+        <div>
+          <label class="ir-label">Scadenza dominio</label>
+          <input class="ir-input" type="date" name="dominio_scadenza" value="{{ imp.dominio_scadenza|default:'' }}">
+        </div>
+      </div>
+      <div class="ir-full" style="margin-top:1rem">
+        <label class="ir-label">Note abbonamento</label>
+        <textarea class="ir-input" name="note_abbonamento" rows="3" placeholder="Note aggiuntive sull'abbonamento...">{{ imp.note_abbonamento|default:'' }}</textarea>
+      </div>
+    </div>
+
     <div class="ir-save">
       <button type="submit" class="btn btn-primary">💾 Salva impostazioni</button>
       <a href="/sala/capo/" class="btn btn-secondary">Annulla</a>
