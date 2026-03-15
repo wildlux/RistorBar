@@ -27,6 +27,50 @@
       <span id="zoom-label">100%</span>
       <button class="btn btn-sm" onclick="zoom(+0.15)">🔍+</button>
       <button class="btn btn-primary btn-sm" onclick="salvaLayout()">💾 Salva layout</button>
+      <button class="btn btn-sm" id="btn-help" onclick="toggleHelp()" title="Come si usa">❓</button>
+    </div>
+  </div>
+
+  <!-- Pannello aiuto flottante (destra) -->
+  <div id="help-panel" class="help-panel" style="display:none">
+    <div class="help-panel-header">
+      <strong>❓ Come si usa</strong>
+      <button onclick="toggleHelp()" class="help-close">✕</button>
+    </div>
+    <div class="help-panel-body">
+      <div class="help-device">
+        <div class="help-icon">🖥️💻</div>
+        <strong>Computer (mouse)</strong>
+        <ul>
+          <li>Trascina una forma dalla sidebar sul canvas per aggiungere un tavolo</li>
+          <li>Trascina un tavolo per spostarlo — si salva automaticamente</li>
+          <li>Click su un tavolo per selezionarlo</li>
+          <li>Shift+click per selezionare più tavoli</li>
+          <li>Con un tavolo selezionato: ↑↓←→ o WASD = 1px, Shift = 10px</li>
+          <li>🔄 Forma: cambia la forma del tavolo selezionato (o tasto F)</li>
+          <li>✏️ Modifica numero/posti &nbsp;·&nbsp; 🗑️ Elimina</li>
+          <li>🔗 Unisci 2+ tavoli selezionati (per gruppi/matrimoni)</li>
+        </ul>
+      </div>
+      <div class="help-device">
+        <div class="help-icon">📱</div>
+        <strong>Tablet / Smartphone (touch)</strong>
+        <ul>
+          <li>Tieni premuto su una forma e trascinala sul canvas</li>
+          <li>Tieni premuto un tavolo esistente e trascinalo per spostarlo</li>
+          <li>Tocca brevemente un tavolo per selezionarlo</li>
+          <li>Usa il D-pad ▲▼◄► nella sidebar per spostamenti precisi</li>
+        </ul>
+      </div>
+      <div class="help-device">
+        <div class="help-icon">💡</div>
+        <strong>Suggerimenti</strong>
+        <ul>
+          <li>La griglia aiuta ad allineare i tavoli</li>
+          <li>🔍− / 🔍+ per ridimensionare la vista</li>
+          <li>Ctrl+S salva il layout manualmente</li>
+        </ul>
+      </div>
     </div>
   </div>
 
@@ -63,47 +107,6 @@
           <p class="dpad-hint">↑↓←→ oppure WASD &nbsp;·&nbsp; Shift = ×10</p>
         </div>
       </div>
-      <!-- Istruzioni -->
-      <div class="side-section side-help">
-        <h4 style="cursor:pointer;user-select:none" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">
-          ❓ Come si usa <small style="color:var(--muted);font-weight:400">▾</small>
-        </h4>
-        <div id="help-body">
-          <div class="help-device">
-            <div class="help-icon">🖥️💻</div>
-            <strong>Computer (mouse)</strong>
-            <ul>
-              <li>Trascina una forma qui sotto sul canvas per aggiungere un tavolo</li>
-              <li>Trascina un tavolo sul canvas per spostarlo — la posizione si salva automaticamente</li>
-              <li>Click su un tavolo per selezionarlo</li>
-              <li>Shift+click per selezionare più tavoli</li>
-              <li>Con un tavolo selezionato: ↑↓←→ o WASD per spostarlo di 1px, Shift+freccia = 10px</li>
-              <li>Usa ✏️ per modificare numero/posti, 🗑️ per eliminare</li>
-              <li>🔗 Unisci seleziona 2+ tavoli e li unisce (matrimoni, gruppi)</li>
-            </ul>
-          </div>
-          <div class="help-device">
-            <div class="help-icon">📱🖥️</div>
-            <strong>Tablet / Smartphone (touch)</strong>
-            <ul>
-              <li>Tieni premuto su una forma e trascinala sul canvas</li>
-              <li>Tieni premuto su un tavolo esistente e trascinalo per spostarlo</li>
-              <li>Tocca brevemente un tavolo per selezionarlo</li>
-              <li>Usa la toolbar in alto per le altre azioni</li>
-            </ul>
-          </div>
-          <div class="help-device">
-            <div class="help-icon">💡</div>
-            <strong>Suggerimenti</strong>
-            <ul>
-              <li>La griglia aiuta ad allineare i tavoli — disattivala per posizione libera</li>
-              <li>🔍− / 🔍+ per rimpicciolire/ingrandire il canvas</li>
-              <li>💾 Salva layout salva tutte le posizioni (il drag le salva in automatico)</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-
       <div class="side-section">
         <h4>Forme</h4>
         <p style="font-size:0.75rem;color:var(--muted);margin:-4px 0 8px">Trascina sul canvas</p>
@@ -637,6 +640,12 @@ function zoom(delta) {
 }
 
 function setTool(t) { currentTool = t; }
+
+function toggleHelp() {
+  const p = document.getElementById('help-panel');
+  p.style.display = p.style.display === 'none' ? 'block' : 'none';
+  document.getElementById('btn-help').classList.toggle('btn-primary', p.style.display !== 'none');
+}
 
 // ═══════════════════════════════════════════════════════
 //  MODAL helpers
