@@ -1,14 +1,62 @@
 from django.contrib import admin
+from django.contrib.admin import AdminSite
 from .models import Sala, Tavolo, Categoria, Piatto, Prenotazione, Ordine, OrdineItem, Fattura, ImpostazioniRistorante, Sede, Contatto
 
 
-@admin.register(Sala)
+# ─── Admin site personalizzato con sezioni ────────────────────────────────────
+
+SEZIONI = [
+    {'name': '🏠 Sala & Tavoli',  'modelli': ['Sala', 'Tavolo']},
+    {'name': '🍽️ Menu',           'modelli': ['Categoria', 'Piatto']},
+    {'name': '📅 Prenotazioni',   'modelli': ['Prenotazione']},
+    {'name': '🧾 Ordini',         'modelli': ['Ordine']},
+    {'name': '💶 Contabilità',    'modelli': ['Fattura']},
+    {'name': '⚙️ Configurazione', 'modelli': ['ImpostazioniRistorante', 'Sede', 'Contatto']},
+]
+
+
+class RistobarAdminSite(AdminSite):
+    site_header = "RistoBAR — Amministrazione"
+    site_title = "RistoBAR"
+    index_title = "Pannello di controllo"
+
+    def get_app_list(self, request, app_label=None):
+        original = super().get_app_list(request, app_label)
+
+        modelli_index = {}
+        auth_apps = []
+        for app in original:
+            if app['app_label'] == 'ristorante':
+                for model in app['models']:
+                    modelli_index[model['object_name']] = model
+            else:
+                auth_apps.append(app)
+
+        sezioni_admin = []
+        for sezione in SEZIONI:
+            modelli = [modelli_index[n] for n in sezione['modelli'] if n in modelli_index]
+            if modelli:
+                sezioni_admin.append({
+                    'name': sezione['name'],
+                    'app_label': f"ristorante_{sezione['name']}",
+                    'app_url': '',
+                    'has_module_perms': True,
+                    'models': modelli,
+                })
+
+        return auth_apps + sezioni_admin
+
+
+admin_site = RistobarAdminSite(name='admin')
+
+
+# ─── ModelAdmin classes ───────────────────────────────────────────────────────
+
 class SalaAdmin(admin.ModelAdmin):
     list_display = ['nome', 'attiva']
     list_editable = ['attiva']
 
 
-@admin.register(Tavolo)
 class TavoloAdmin(admin.ModelAdmin):
     list_display = ['numero', 'sala', 'forma', 'capacita', 'stato', 'attivo', 'eprint_email', 'nota']
     list_editable = ['stato', 'attivo', 'nota']
@@ -16,22 +64,20 @@ class TavoloAdmin(admin.ModelAdmin):
     search_fields = ['numero', 'eprint_email', 'nota']
 
 
-@admin.register(Categoria)
 class CategoriaAdmin(admin.ModelAdmin):
     list_display = ['nome', 'icona', 'ordine']
     list_editable = ['ordine']
 
 
-@admin.register(Piatto)
 class PiattoAdmin(admin.ModelAdmin):
     list_display = ['nome', 'categoria', 'prezzo', 'disponibile']
     list_editable = ['prezzo', 'disponibile']
     list_filter = ['categoria', 'disponibile']
     search_fields = ['nome']
     fieldsets = [
-        (None,            {'fields': ['categoria', 'nome', 'descrizione', 'prezzo', 'immagine', 'disponibile', 'allergeni']}),
-        ('Lista Spesa',   {'fields': ['ingredienti'], 'classes': ['collapse'],
-                           'description': 'Ingredienti per porzione usati nella lista spesa cuochi'}),
+        (None,          {'fields': ['categoria', 'nome', 'descrizione', 'prezzo', 'immagine', 'disponibile', 'allergeni']}),
+        ('Lista Spesa', {'fields': ['ingredienti'], 'classes': ['collapse'],
+                         'description': 'Ingredienti per porzione usati nella lista spesa cuochi'}),
     ]
 
 
@@ -40,7 +86,6 @@ class OrdineItemInline(admin.TabularInline):
     extra = 0
 
 
-@admin.register(Prenotazione)
 class PrenotazioneAdmin(admin.ModelAdmin):
     list_display = ['nome_cliente', 'tavolo', 'data_ora', 'num_persone', 'stato', 'caparra_pagata']
     list_filter = ['stato', 'caparra_pagata', 'data_ora']
@@ -48,7 +93,6 @@ class PrenotazioneAdmin(admin.ModelAdmin):
     list_editable = ['stato']
 
 
-@admin.register(Ordine)
 class OrdineAdmin(admin.ModelAdmin):
     list_display = ['pk', 'tavolo', 'stato', 'totale', 'creato_il']
     list_filter = ['stato', 'creato_il']
@@ -79,14 +123,13 @@ class ContattoSedeInline(admin.TabularInline):
     verbose_name_plural = 'Contatti sede'
 
 
-@admin.register(ImpostazioniRistorante)
 class ImpostazioniAdmin(admin.ModelAdmin):
     inlines = [SedeInline, ContattoRistoranteInline]
+
     def has_add_permission(self, request):
         return not ImpostazioniRistorante.objects.exists()
 
 
-@admin.register(Sede)
 class SedeAdmin(admin.ModelAdmin):
     list_display = ['nome', 'tipo', 'indirizzo', 'citta', 'principale', 'attiva']
     list_editable = ['principale', 'attiva']
@@ -94,7 +137,6 @@ class SedeAdmin(admin.ModelAdmin):
     inlines = [ContattoSedeInline]
 
 
-@admin.register(Contatto)
 class ContattoAdmin(admin.ModelAdmin):
     list_display  = ['get_icona', 'tipo', 'etichetta', 'valore', 'proprietario_nome', 'pubblico', 'principale', 'ordine']
     list_editable = ['pubblico', 'principale', 'ordine']
@@ -110,9 +152,22 @@ class ContattoAdmin(admin.ModelAdmin):
         return obj.proprietario_nome
 
 
-@admin.register(Fattura)
 class FatturaAdmin(admin.ModelAdmin):
     list_display = ['numero', 'tipo', 'data', 'ordine', 'cliente_nome', 'totale', 'creata_da']
     list_filter  = ['tipo', 'data']
     search_fields = ['numero', 'cliente_nome', 'cliente_piva']
     readonly_fields = ['numero', 'imponibile', 'iva_importo', 'totale', 'creata_il']
+
+
+# ─── Registrazione ────────────────────────────────────────────────────────────
+
+admin_site.register(Sala,                   SalaAdmin)
+admin_site.register(Tavolo,                 TavoloAdmin)
+admin_site.register(Categoria,              CategoriaAdmin)
+admin_site.register(Piatto,                 PiattoAdmin)
+admin_site.register(Prenotazione,           PrenotazioneAdmin)
+admin_site.register(Ordine,                 OrdineAdmin)
+admin_site.register(ImpostazioniRistorante, ImpostazioniAdmin)
+admin_site.register(Sede,                   SedeAdmin)
+admin_site.register(Contatto,               ContattoAdmin)
+admin_site.register(Fattura,                FatturaAdmin)

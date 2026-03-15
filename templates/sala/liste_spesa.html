@@ -29,7 +29,7 @@
             <br>
             <small>Generata: {{ lista.data_generazione|date:"d/m/Y H:i" }}</small>
         </div>
-        <a href="{% url 'lista_spesa_dettaglio lista.id %}" class="btn btn-primary">
+        <a href="{% url 'lista_spesa_dettaglio' lista.id %}" class="btn btn-primary">
             👁️ Vedi
         </a>
     </div>
