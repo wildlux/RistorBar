@@ -13,7 +13,8 @@ if [ ! -f "$TOKEN_FILE" ]; then
     exit 1
 fi
 
-TOKEN=$(cat "$TOKEN_FILE")
+# Legge solo la prima riga non vuota e non commentata
+TOKEN=$(grep -v '^\s*#' "$TOKEN_FILE" | grep -v '^\s*$' | head -1 | tr -d '[:space:]')
 
 # Configura remote con token (una tantum)
 git remote set-url origin "https://wildlux:${TOKEN}@github.com/wildlux/RistorBar.git" 2>/dev/null || \
