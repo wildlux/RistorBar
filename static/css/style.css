@@ -270,7 +270,7 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
                    color: var(--muted); margin-bottom: 0.6rem; border-bottom: 1px solid var(--border); padding-bottom: 0.3rem; }
 .legenda-item { display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; margin-bottom: 0.3rem; }
 .dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; display: inline-block; }
-.shape-legend { display: grid; grid-template-columns: 40px 1fr; gap: 0.3rem 0.5rem; align-items: center; font-size: 0.8rem; }
+.shape-legend { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.8rem; }
 #info-panel p { font-size: 0.8rem; line-height: 1.6; }
 
 .editor-canvas-wrap {
