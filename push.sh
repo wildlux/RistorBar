@@ -22,10 +22,16 @@ git remote add origin "https://wildlux:${TOKEN}@github.com/wildlux/RistorBar.git
 # Messaggio di commit
 MSG="${1:-Aggiornamento RistoBAR}"
 
+# Co-autori AI
+COAUTHORS="Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+Co-Authored-By: opencode (qwen3.5) <opencode[bot]@users.noreply.github.com>"
+
 # Push
 echo "📦 Commit: $MSG"
 git add -A
-git commit -m "$MSG"
+git commit -m "$MSG
+
+$COAUTHORS"
 git push origin master
 
 echo "✅ Push completato!"
