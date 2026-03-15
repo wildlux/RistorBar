@@ -138,3 +138,25 @@
   .ordine-menu { max-height: 50vh; }
   .staff-tavoli { grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); }
 }
+
+/* ── Tablet (≤900px) ─────────────────────────────────────── */
+@media (max-width: 900px) {
+  .staff-header { padding: 0.6rem 1rem; }
+  .staff-header h1 { font-size: 1.1rem; }
+  .kds-grid { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+}
+
+/* ── Smartphone (≤600px) ─────────────────────────────────── */
+@media (max-width: 600px) {
+  .staff-header { padding: 0.5rem 0.75rem; }
+  .staff-header h1 { font-size: 1rem; }
+  .staff-nav a { font-size: 0.75rem; padding: 0.3rem 0.5rem; }
+  .staff-tavoli { grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 0.5rem; }
+  .tavolo-card { padding: 0.5rem; font-size: 0.8rem; }
+  .kds-grid { grid-template-columns: 1fr; }
+  .kds-card { min-width: unset; }
+  .ordine-layout { grid-template-columns: 1fr; }
+  .ordine-menu { max-height: 40vh; }
+  .comanda-azioni { grid-template-columns: 1fr; }
+  .ir-tabs { overflow-x: auto; flex-wrap: nowrap; }
+}

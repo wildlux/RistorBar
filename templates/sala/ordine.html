@@ -85,9 +85,15 @@
         <button class="btn-azione-grande verde" onclick="inviaCucina()">
           👨‍🍳 Invia in cucina
         </button>
+        {% if ha_cassa %}
         <button class="btn-azione-grande blue" onclick="chiediConto()">
           🧾 Chiedi il conto
         </button>
+        {% else %}
+        <button class="btn-azione-grande" style="background:#555;color:#aaa;cursor:not-allowed" title="Accesso riservato ai camerieri senior (cassa)" disabled>
+          🔒 Conto (solo cassa)
+        </button>
+        {% endif %}
       </div>
       {% if tavolo.eprint_email %}
       <div style="margin-top:0.5rem">
@@ -96,7 +102,7 @@
         </button>
       </div>
       {% endif %}
-      {% if ordine %}
+      {% if ordine and ha_cassa %}
       <div style="margin-top:0.5rem;display:grid;grid-template-columns:1fr 1fr;gap:0.4rem">
         <a href="/sala/ordine/{{ ordine.id }}/scontrino/" target="_blank"
            class="btn-azione-grande" style="background:#27ae60;color:white;display:block;text-align:center;text-decoration:none;padding:0.75rem;border-radius:10px;font-weight:700">
@@ -106,6 +112,10 @@
            class="btn-azione-grande" style="background:#6c3483;color:white;display:block;text-align:center;text-decoration:none;padding:0.75rem;border-radius:10px;font-weight:700">
           📑 Fattura
         </a>
+      </div>
+      {% elif ordine %}
+      <div style="margin-top:0.5rem;padding:0.6rem;background:rgba(0,0,0,0.2);border-radius:8px;text-align:center;font-size:0.78rem;color:#aaa">
+        🔒 Scontrino e fattura — solo camerieri senior (cassa)
       </div>
       {% endif %}
     </div>

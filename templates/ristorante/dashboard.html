@@ -1,149 +1,799 @@
-{% extends "base.html" %}
-{% load i18n %}
+{% load i18n static %}
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard — RistoBAR</title>
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  <style>
+    :root {
+      --c-libero:    #27ae60;
+      --c-occupato:  #e74c3c;
+      --c-prenotato: #f39c12;
+      --c-conto:     #3498db;
+      --sidebar-w: 220px;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #f0f2f5; font-family: 'Segoe UI', system-ui, sans-serif; }
 
-{% block title %}{% trans "Dashboard" %} - RistoBAR{% endblock %}
+    /* ── TOP NAV ─────────────────────────────────── */
+    .d-nav {
+      background: #1a1a2e; color: white;
+      padding: 0 1.5rem; height: 56px;
+      display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 200;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.25);
+    }
+    .d-nav-brand { font-size: 1.1rem; font-weight: 800; letter-spacing: -0.3px; display: flex; align-items: center; gap: 0.5rem; }
+    .d-nav-links { display: flex; align-items: center; gap: 0.25rem; }
+    .d-nav-links a {
+      color: rgba(255,255,255,0.75); text-decoration: none; padding: 0.4rem 0.75rem;
+      border-radius: 6px; font-size: 0.82rem; transition: background 0.15s, color 0.15s;
+    }
+    .d-nav-links a:hover { background: rgba(255,255,255,0.1); color: white; }
+    .d-nav-links a.active { background: rgba(255,255,255,0.12); color: white; }
+    .d-nav-right { display: flex; align-items: center; gap: 0.75rem; font-size: 0.82rem; color: rgba(255,255,255,0.6); }
+    .d-nav-right a { color: rgba(255,255,255,0.5); text-decoration: none; font-size: 0.8rem; }
+    .d-nav-right a:hover { color: white; }
 
-{% block content %}
-<div class="dashboard">
-    <h1>{% trans "Dashboard Ristorante" %}</h1>
+    /* ── LAYOUT ──────────────────────────────────── */
+    .d-wrap { max-width: 1600px; margin: 0 auto; padding: 1.5rem; }
 
-    <!-- Azioni rapide capo -->
-    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1.25rem">
-      <a href="{% url 'gestione_eprint' %}" class="btn btn-outline">🖨️ Gestione ePrint</a>
-      <a href="{% url 'lista_spesa' %}" class="btn btn-outline">🛒 Lista Spesa Cucina</a>
-      <a href="{% url 'elenco_documenti' %}" class="btn btn-outline">📋 Documenti Fiscali</a>
-      <a href="{% url 'gestione_contatti' %}" class="btn btn-outline">📇 Contatti</a>
-      <a href="{% url 'impostazioni_ristorante' %}" class="btn btn-outline">⚙️ Impostazioni</a>
+    /* ── STATS STRIP ─────────────────────────────── */
+    .stats-strip { display: flex; gap: 0.75rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+    .stat-chip {
+      flex: 1; min-width: 110px; background: white; border-radius: 10px;
+      padding: 0.85rem 1rem; display: flex; align-items: center; gap: 0.75rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    .sc-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+    .sc-val { font-size: 1.6rem; font-weight: 800; line-height: 1; }
+    .sc-lbl { font-size: 0.72rem; color: #888; margin-top: 0.1rem; }
+    .sc-totale { background: #1a1a2e; color: white; }
+    .sc-totale .sc-lbl { color: rgba(255,255,255,0.6); }
+
+    /* ── SALA SEZIONE ─────────────────────────────── */
+    .sala-block { background: white; border-radius: 14px; margin-bottom: 1.5rem; box-shadow: 0 2px 12px rgba(0,0,0,0.07); overflow: hidden; }
+    .sala-head {
+      padding: 1rem 1.25rem; display: flex; align-items: center; gap: 0.75rem;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .sala-title { font-size: 1.05rem; font-weight: 800; flex: 1; }
+    .sala-mini-stats { display: flex; gap: 0.5rem; font-size: 0.75rem; }
+    .sala-mini-stat {
+      padding: 0.2rem 0.6rem; border-radius: 20px; font-weight: 700;
+      background: #f5f5f5; color: #555;
+    }
+    .sala-head-actions { display: flex; gap: 0.5rem; }
+    .btn-sm {
+      padding: 0.3rem 0.7rem; border-radius: 7px; font-size: 0.78rem; font-weight: 600;
+      border: 1px solid #ddd; background: white; cursor: pointer; text-decoration: none;
+      color: #333; transition: background 0.15s;
+      display: inline-flex; align-items: center; gap: 0.3rem;
+    }
+    .btn-sm:hover { background: #f5f5f5; }
+    .btn-sm.primary { background: #1a1a2e; color: white; border-color: #1a1a2e; }
+    .btn-sm.primary:hover { background: #2a2a4e; }
+    .btn-sm.danger { border-color: #e74c3c; color: #e74c3c; }
+    .btn-sm.danger:hover { background: #fff0ee; }
+
+    /* ── TAVOLI GRIGLIA ──────────────────────────── */
+    .tavoli-wrap { padding: 1.25rem; }
+    .tavoli-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      gap: 1rem;
+    }
+
+    /* ── SINGOLA CARD TAVOLO ─────────────────────── */
+    .t-card {
+      background: #f8f9fb; border: 2px solid #e0e0e0; border-radius: 12px;
+      padding: 0.85rem 0.65rem 0.65rem; text-align: center; cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+      position: relative; user-select: none;
+    }
+    .t-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.12); }
+    .t-card.stato-L { border-color: var(--c-libero);    background: #f0faf4; }
+    .t-card.stato-O { border-color: var(--c-occupato);  background: #fff5f5; }
+    .t-card.stato-P { border-color: var(--c-prenotato); background: #fffbf0; }
+    .t-card.stato-C { border-color: var(--c-conto);     background: #f0f7ff; }
+
+    /* forma SVG */
+    .t-shape-wrap { width: 64px; height: 64px; margin: 0 auto 0.5rem; display: flex; align-items: center; justify-content: center; }
+    .t-shape-wrap svg { overflow: visible; }
+
+    .t-num { font-size: 1rem; font-weight: 800; color: #1a1a2e; }
+    .t-cap { font-size: 0.72rem; color: #888; margin: 0.15rem 0; }
+    .t-stato-lbl {
+      font-size: 0.68rem; font-weight: 700; padding: 0.15rem 0.5rem;
+      border-radius: 20px; display: inline-block; margin-top: 0.25rem;
+    }
+    .t-card.stato-L .t-stato-lbl { background: rgba(39,174,96,0.15);  color: var(--c-libero); }
+    .t-card.stato-O .t-stato-lbl { background: rgba(231,76,60,0.15);  color: var(--c-occupato); }
+    .t-card.stato-P .t-stato-lbl { background: rgba(243,156,18,0.15); color: var(--c-prenotato); }
+    .t-card.stato-C .t-stato-lbl { background: rgba(52,152,219,0.15); color: var(--c-conto); }
+
+    /* pulsante rapido stato in alto a destra */
+    .t-quick-badge {
+      position: absolute; top: 6px; right: 6px;
+      width: 9px; height: 9px; border-radius: 50%;
+    }
+    .stato-L .t-quick-badge { background: var(--c-libero); }
+    .stato-O .t-quick-badge { background: var(--c-occupato); }
+    .stato-P .t-quick-badge { background: var(--c-prenotato); }
+    .stato-C .t-quick-badge { background: var(--c-conto); }
+
+    /* add-card */
+    .t-card.add-card {
+      border-style: dashed; background: transparent; color: #aaa;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 0.3rem; min-height: 130px;
+      border-color: #ccc;
+    }
+    .t-card.add-card:hover { border-color: #1a1a2e; color: #1a1a2e; background: #f5f5ff; }
+    .add-plus { font-size: 1.8rem; line-height: 1; }
+
+    /* ── MODAL ───────────────────────────────────── */
+    .modal-bg {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 999; padding: 1rem; opacity: 0; pointer-events: none;
+      transition: opacity 0.2s;
+    }
+    .modal-bg.open { opacity: 1; pointer-events: auto; }
+    .modal {
+      background: white; border-radius: 16px; width: 100%; max-width: 480px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+      transform: scale(0.95); transition: transform 0.2s;
+    }
+    .modal-bg.open .modal { transform: scale(1); }
+    .modal-head {
+      padding: 1.1rem 1.25rem 0.9rem; border-bottom: 1px solid #f0f0f0;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .modal-title { font-size: 1rem; font-weight: 800; }
+    .modal-close { background: none; border: none; font-size: 1.3rem; cursor: pointer; color: #999; padding: 0 0.25rem; }
+    .modal-close:hover { color: #333; }
+    .modal-body { padding: 1.25rem; }
+    .modal-footer { padding: 0.9rem 1.25rem; border-top: 1px solid #f0f0f0; display: flex; gap: 0.5rem; justify-content: flex-end; }
+
+    /* form inside modal */
+    .mf-row { margin-bottom: 1rem; }
+    .mf-row label { display: block; font-size: 0.78rem; font-weight: 700; color: #555; margin-bottom: 0.35rem; }
+    .mf-input, .mf-select {
+      width: 100%; padding: 0.55rem 0.75rem;
+      border: 1px solid #ddd; border-radius: 8px;
+      font-size: 0.9rem; transition: border-color 0.15s;
+    }
+    .mf-input:focus, .mf-select:focus { outline: none; border-color: #1a1a2e; }
+    .mf-hint { font-size: 0.72rem; color: #999; margin-top: 0.25rem; }
+
+    /* forma picker */
+    .forma-picker { display: flex; gap: 0.5rem; }
+    .forma-opt {
+      flex: 1; padding: 0.65rem 0.5rem; border: 2px solid #e0e0e0;
+      border-radius: 10px; cursor: pointer; text-align: center;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .forma-opt:hover { border-color: #aaa; background: #f8f8f8; }
+    .forma-opt.selected { border-color: #1a1a2e; background: #f0f0ff; }
+    .forma-opt input { display: none; }
+    .forma-svg { display: block; margin: 0 auto 0.3rem; }
+    .forma-lbl { font-size: 0.72rem; font-weight: 700; color: #555; }
+
+    /* stato selector nel modal */
+    .stato-picker { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+    .stato-opt {
+      padding: 0.5rem; border: 2px solid #e0e0e0; border-radius: 8px;
+      cursor: pointer; font-size: 0.78rem; font-weight: 700; text-align: center;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .stato-opt:hover { filter: brightness(0.95); }
+    .stato-opt.sel-L { border-color: var(--c-libero);    background: #f0faf4; color: var(--c-libero); }
+    .stato-opt.sel-O { border-color: var(--c-occupato);  background: #fff5f5; color: var(--c-occupato); }
+    .stato-opt.sel-P { border-color: var(--c-prenotato); background: #fffbf0; color: var(--c-prenotato); }
+    .stato-opt.sel-C { border-color: var(--c-conto);     background: #f0f7ff; color: var(--c-conto); }
+    .stato-opt.unsel { border-color: #e0e0e0; background: #f8f8f8; color: #aaa; }
+    .stato-opt input { display: none; }
+
+    /* ── PRENOTAZIONI ─────────────────────────────── */
+    .section-block { background: white; border-radius: 14px; padding: 1.25rem; box-shadow: 0 2px 12px rgba(0,0,0,0.07); margin-bottom: 1.5rem; }
+    .section-title { font-size: 1rem; font-weight: 800; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+    .section-title .badge { font-size: 0.7rem; background: #f0f0f0; color: #555; padding: 0.15rem 0.5rem; border-radius: 20px; font-weight: 700; }
+
+    .pren-list { display: flex; flex-direction: column; gap: 0.5rem; }
+    .pren-row {
+      display: flex; align-items: center; gap: 0.75rem;
+      padding: 0.65rem 0.85rem; border-radius: 10px; border: 1px solid #f0f0f0;
+      background: #fafafa;
+    }
+    .pren-ora { font-weight: 800; font-size: 0.95rem; min-width: 40px; color: #1a1a2e; }
+    .pren-nome { font-weight: 700; flex: 1; }
+    .pren-info { font-size: 0.78rem; color: #888; }
+    .pren-caparra { font-size: 0.75rem; padding: 0.15rem 0.5rem; border-radius: 20px; font-weight: 700; }
+    .cap-ok   { background: rgba(39,174,96,0.12); color: var(--c-libero); }
+    .cap-pend { background: rgba(243,156,18,0.12); color: var(--c-prenotato); }
+
+    /* toast */
+    .toast {
+      position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 9999;
+      background: #1a1a2e; color: white; padding: 0.65rem 1.1rem;
+      border-radius: 10px; font-size: 0.82rem; font-weight: 600;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.3); opacity: 0; transform: translateY(8px);
+      transition: opacity 0.2s, transform 0.2s; pointer-events: none;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.ok   { border-left: 4px solid var(--c-libero); }
+    .toast.err  { border-left: 4px solid var(--c-occupato); }
+
+    @media (max-width: 700px) {
+      .d-nav-links { display: none; }
+      .tavoli-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 0.65rem; }
+      .stats-strip { gap: 0.5rem; }
+      .stat-chip { min-width: 80px; padding: 0.65rem 0.75rem; }
+      .sc-val { font-size: 1.3rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── NAV ──────────────────────────────────────────────────── -->
+<nav class="d-nav">
+  <div class="d-nav-brand">🍽️ RistoBAR <span style="font-size:0.65rem;background:rgba(255,255,255,0.12);padding:0.1rem 0.5rem;border-radius:20px;margin-left:0.25rem">CAPO</span></div>
+  <div class="d-nav-links">
+    <a href="{% url 'dashboard' %}" class="active">🏠 Dashboard</a>
+    <a href="{% url 'cameriere' %}">🍽️ Camerieri</a>
+    <a href="{% url 'cucina_kds' %}">👨‍🍳 Cucina</a>
+    <a href="{% url 'elenco_documenti' %}">📋 Documenti</a>
+    <a href="{% url 'statistiche' %}">📊 Statistiche</a>
+    <a href="{% url 'impostazioni_ristorante' %}">⚙️ Impostazioni</a>
+  </div>
+  <div class="d-nav-right">
+    <span>{{ request.user.get_full_name|default:request.user.username }}</span>
+    <a href="{% url 'logout' %}">Esci →</a>
+  </div>
+</nav>
+
+<div class="d-wrap">
+
+  <!-- ── STATS STRIP ─────────────────────────────────────────── -->
+  <div class="stats-strip">
+    <div class="stat-chip sc-totale">
+      <div>
+        <div class="sc-val">{{ stats.totale }}</div>
+        <div class="sc-lbl">Tavoli totali</div>
+      </div>
+    </div>
+    <div class="stat-chip">
+      <div class="sc-dot" style="background:var(--c-libero)"></div>
+      <div>
+        <div class="sc-val" style="color:var(--c-libero)">{{ stats.liberi }}</div>
+        <div class="sc-lbl">Liberi</div>
+      </div>
+    </div>
+    <div class="stat-chip">
+      <div class="sc-dot" style="background:var(--c-occupato)"></div>
+      <div>
+        <div class="sc-val" style="color:var(--c-occupato)">{{ stats.occupati }}</div>
+        <div class="sc-lbl">Occupati</div>
+      </div>
+    </div>
+    <div class="stat-chip">
+      <div class="sc-dot" style="background:var(--c-prenotato)"></div>
+      <div>
+        <div class="sc-val" style="color:var(--c-prenotato)">{{ stats.prenotati }}</div>
+        <div class="sc-lbl">Prenotati</div>
+      </div>
+    </div>
+    <div class="stat-chip">
+      <div class="sc-dot" style="background:var(--c-conto)"></div>
+      <div>
+        <div class="sc-val" style="color:var(--c-conto)">{{ stats.conto }}</div>
+        <div class="sc-lbl">Conto</div>
+      </div>
+    </div>
+    <div class="stat-chip">
+      <div class="sc-dot" style="background:#9b59b6"></div>
+      <div>
+        <div class="sc-val" style="color:#9b59b6">{{ prenotazioni_oggi.count }}</div>
+        <div class="sc-lbl">Pren. oggi</div>
+      </div>
+    </div>
+    <div class="stat-chip">
+      <div class="sc-dot" style="background:#e67e22"></div>
+      <div>
+        <div class="sc-val" style="color:#e67e22">{{ ordini_aperti.count }}</div>
+        <div class="sc-lbl">Ordini aperti</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SALE ───────────────────────────────────────────────── -->
+  {% for sala in sale %}
+  {% with tavoli=sala.tavoli.all %}
+  <div class="sala-block">
+    <div class="sala-head">
+      <div class="sala-title">{{ sala.nome }}</div>
+      <div class="sala-mini-stats">
+        <span class="sala-mini-stat" style="background:#eafaf1;color:var(--c-libero)">
+          {{ tavoli|length }} tavoli
+        </span>
+      </div>
+      <div class="sala-head-actions">
+        <a href="{% url 'pianta_locale' sala.id %}" class="btn-sm">🏠 Pianta</a>
+        <a href="{% url 'editor_sala' sala.id %}" class="btn-sm">✏️ Editor</a>
+        <button class="btn-sm primary" onclick="openAddModal({{ sala.id }})">＋ Tavolo</button>
+      </div>
     </div>
 
-    <!-- Statistiche rapide -->
-    <div class="stats-grid">
-        <div class="stat-card">
-            <span class="stat-icon">📅</span>
-            <div class="stat-value">{{ prenotazioni_oggi.count }}</div>
-            <div class="stat-label">{% trans "Prenotazioni oggi" %}</div>
+    <div class="tavoli-wrap">
+      <div class="tavoli-grid" id="grid-sala-{{ sala.id }}">
+        {% for t in tavoli %}
+        <div class="t-card stato-{{ t.stato }}"
+             id="tcard-{{ t.id }}"
+             onclick="openEditModal({{ t.id }}, {{ t.numero }}, '{{ t.forma }}', {{ t.capacita }}, '{{ t.stato }}', {{ sala.id }})"
+             title="Clicca per modificare">
+          <div class="t-quick-badge"></div>
+          <div class="t-shape-wrap">
+            {% if t.forma == 'R' %}
+            <svg width="56" height="56" viewBox="0 0 56 56">
+              <circle cx="28" cy="28" r="24"
+                fill="{% if t.stato == 'L' %}#eafaf1{% elif t.stato == 'O' %}#fdecea{% elif t.stato == 'P' %}#fef9e7{% else %}#eaf4fb{% endif %}"
+                stroke="{% if t.stato == 'L' %}#27ae60{% elif t.stato == 'O' %}#e74c3c{% elif t.stato == 'P' %}#f39c12{% else %}#3498db{% endif %}"
+                stroke-width="2.5"/>
+              <text x="28" y="33" text-anchor="middle" font-size="14" font-weight="800"
+                fill="{% if t.stato == 'L' %}#27ae60{% elif t.stato == 'O' %}#e74c3c{% elif t.stato == 'P' %}#f39c12{% else %}#3498db{% endif %}">
+                {{ t.numero }}
+              </text>
+            </svg>
+            {% elif t.forma == 'Q' %}
+            <svg width="56" height="56" viewBox="0 0 56 56">
+              <rect x="6" y="6" width="44" height="44" rx="6"
+                fill="{% if t.stato == 'L' %}#eafaf1{% elif t.stato == 'O' %}#fdecea{% elif t.stato == 'P' %}#fef9e7{% else %}#eaf4fb{% endif %}"
+                stroke="{% if t.stato == 'L' %}#27ae60{% elif t.stato == 'O' %}#e74c3c{% elif t.stato == 'P' %}#f39c12{% else %}#3498db{% endif %}"
+                stroke-width="2.5"/>
+              <text x="28" y="33" text-anchor="middle" font-size="14" font-weight="800"
+                fill="{% if t.stato == 'L' %}#27ae60{% elif t.stato == 'O' %}#e74c3c{% elif t.stato == 'P' %}#f39c12{% else %}#3498db{% endif %}">
+                {{ t.numero }}
+              </text>
+            </svg>
+            {% else %}{# rettangolare #}
+            <svg width="72" height="44" viewBox="0 0 72 44">
+              <rect x="3" y="3" width="66" height="38" rx="5"
+                fill="{% if t.stato == 'L' %}#eafaf1{% elif t.stato == 'O' %}#fdecea{% elif t.stato == 'P' %}#fef9e7{% else %}#eaf4fb{% endif %}"
+                stroke="{% if t.stato == 'L' %}#27ae60{% elif t.stato == 'O' %}#e74c3c{% elif t.stato == 'P' %}#f39c12{% else %}#3498db{% endif %}"
+                stroke-width="2.5"/>
+              <text x="36" y="27" text-anchor="middle" font-size="14" font-weight="800"
+                fill="{% if t.stato == 'L' %}#27ae60{% elif t.stato == 'O' %}#e74c3c{% elif t.stato == 'P' %}#f39c12{% else %}#3498db{% endif %}">
+                {{ t.numero }}
+              </text>
+            </svg>
+            {% endif %}
+          </div>
+          <div class="t-cap">👤 {{ t.capacita }} posti · {{ t.get_forma_display }}</div>
+          <div class="t-stato-lbl">{{ t.get_stato_display }}</div>
         </div>
-        <div class="stat-card">
-            <span class="stat-icon">🍽️</span>
-            <div class="stat-value">{{ ordini_aperti.count }}</div>
-            <div class="stat-label">{% trans "Ordini aperti" %}</div>
+        {% endfor %}
+
+        <!-- Add button -->
+        <div class="t-card add-card" onclick="openAddModal({{ sala.id }})">
+          <div class="add-plus">＋</div>
+          <div style="font-size:0.75rem;font-weight:700">Nuovo tavolo</div>
         </div>
+      </div>
     </div>
+  </div>
+  {% endwith %}
+  {% endfor %}
 
-    <!-- Sale e mappa tavoli -->
-    {% for sala in sale %}
-    <section class="sala-section">
-        <h2>
-            {{ sala.nome }}
-            <a href="{% url 'mappa_sala' sala.id %}"  class="btn btn-outline">{% trans "Mappa" %}</a>
-            <a href="{% url 'editor_sala' sala.id %}" class="btn btn-outline">🗺️ {% trans "Editor" %}</a>
-        </h2>
-        <div class="tavoli-grid">
-            {% for tavolo in sala.tavoli.all %}
-            <div class="tavolo-card tavolo-{{ tavolo.forma|lower }}"
-                 style="border-color: {{ tavolo.colore_stato }}"
-                 data-tavolo-id="{{ tavolo.id }}"
-                 data-stato="{{ tavolo.stato }}">
-                <div class="tavolo-numero">{{ tavolo.numero }}</div>
-                <div class="tavolo-posti">👤 {{ tavolo.capacita }}</div>
-                <div class="tavolo-stato" style="color: {{ tavolo.colore_stato }}">
-                    {{ tavolo.get_stato_display }}
-                </div>
-                <div class="tavolo-azioni">
-                    <select class="stato-select" onchange="cambiaStato({{ tavolo.id }}, this.value)">
-                        <option value="L" {% if tavolo.stato == 'L' %}selected{% endif %}>🟢 {% trans "Libero" %}</option>
-                        <option value="P" {% if tavolo.stato == 'P' %}selected{% endif %}>🟡 {% trans "Prenotato" %}</option>
-                        <option value="O" {% if tavolo.stato == 'O' %}selected{% endif %}>🔴 {% trans "Occupato" %}</option>
-                        <option value="C" {% if tavolo.stato == 'C' %}selected{% endif %}>🔵 {% trans "Conto" %}</option>
-                    </select>
-                </div>
-            </div>
-            {% empty %}
-            <p>{% trans "Nessun tavolo in questa sala." %}</p>
-            {% endfor %}
+  <!-- ── PRENOTAZIONI OGGI ─────────────────────────────────── -->
+  <div class="section-block">
+    <div class="section-title">
+      📅 Prenotazioni di oggi
+      <span class="badge">{{ prenotazioni_oggi.count }}</span>
+    </div>
+    {% if prenotazioni_oggi %}
+    <div class="pren-list">
+      {% for p in prenotazioni_oggi %}
+      <div class="pren-row">
+        <div class="pren-ora">{{ p.data_ora|time:"H:i" }}</div>
+        <div class="pren-nome">{{ p.nome_cliente }}</div>
+        <div class="pren-info">👤 {{ p.num_persone }} persone{% if p.tavolo %} · Tavolo {{ p.tavolo }}{% endif %}</div>
+        <div class="pren-caparra {% if p.caparra_pagata %}cap-ok{% else %}cap-pend{% endif %}">
+          {% if p.caparra_pagata %}✅ €{{ p.caparra_importo }}{% else %}⏳ In attesa{% endif %}
         </div>
-    </section>
-    {% endfor %}
+        <span style="font-size:0.72rem;padding:0.15rem 0.5rem;border-radius:20px;background:#f0f0f0;color:#555;font-weight:700">{{ p.get_stato_display }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p style="color:#aaa;font-size:0.9rem;text-align:center;padding:1rem 0">Nessuna prenotazione per oggi.</p>
+    {% endif %}
+  </div>
 
-    <!-- Prenotazioni di oggi -->
-    <section class="prenotazioni-section">
-        <h2>{% trans "Prenotazioni di oggi" %}</h2>
-        {% if prenotazioni_oggi %}
-        <div class="table-responsive">
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>{% trans "Ora" %}</th>
-                        <th>{% trans "Cliente" %}</th>
-                        <th>{% trans "Tavolo" %}</th>
-                        <th>{% trans "Persone" %}</th>
-                        <th>{% trans "Caparra" %}</th>
-                        <th>{% trans "Stato" %}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for p in prenotazioni_oggi %}
-                    <tr>
-                        <td>{{ p.data_ora|time:"H:i" }}</td>
-                        <td>{{ p.nome_cliente }}</td>
-                        <td>{{ p.tavolo }}</td>
-                        <td>{{ p.num_persone }}</td>
-                        <td>
-                            {% if p.caparra_pagata %}
-                                ✅ €{{ p.caparra_importo }}
-                            {% else %}
-                                ⏳ {% trans "In attesa" %}
-                            {% endif %}
-                        </td>
-                        <td>
-                            <span class="badge badge-{{ p.stato }}">
-                                {{ p.get_stato_display }}
-                            </span>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+</div><!-- /d-wrap -->
+
+<!-- ── MODAL MODIFICA TAVOLO ─────────────────────────────────── -->
+<div class="modal-bg" id="modal-edit">
+  <div class="modal">
+    <div class="modal-head">
+      <span class="modal-title" id="modal-edit-title">Modifica Tavolo</span>
+      <button class="modal-close" onclick="closeModal('modal-edit')">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="edit-tavolo-id">
+      <input type="hidden" id="edit-sala-id">
+
+      <div class="mf-row">
+        <label>Numero tavolo</label>
+        <input type="number" id="edit-numero" class="mf-input" min="1" max="999">
+      </div>
+
+      <div class="mf-row">
+        <label>Forma del tavolo</label>
+        <div class="forma-picker">
+          <label class="forma-opt" id="fp-R" onclick="selForma('R')">
+            <input type="radio" name="edit-forma" value="R">
+            <svg class="forma-svg" width="36" height="36" viewBox="0 0 36 36">
+              <circle cx="18" cy="18" r="15" fill="#f0f0f0" stroke="#999" stroke-width="2"/>
+            </svg>
+            <div class="forma-lbl">Rotondo</div>
+          </label>
+          <label class="forma-opt" id="fp-Q" onclick="selForma('Q')">
+            <input type="radio" name="edit-forma" value="Q">
+            <svg class="forma-svg" width="36" height="36" viewBox="0 0 36 36">
+              <rect x="4" y="4" width="28" height="28" rx="4" fill="#f0f0f0" stroke="#999" stroke-width="2"/>
+            </svg>
+            <div class="forma-lbl">Quadrato</div>
+          </label>
+          <label class="forma-opt" id="fp-T" onclick="selForma('T')">
+            <input type="radio" name="edit-forma" value="T">
+            <svg class="forma-svg" width="52" height="28" viewBox="0 0 52 28">
+              <rect x="2" y="4" width="48" height="20" rx="4" fill="#f0f0f0" stroke="#999" stroke-width="2"/>
+            </svg>
+            <div class="forma-lbl">Rettangolare</div>
+          </label>
         </div>
-        {% else %}
-        <p class="text-muted">{% trans "Nessuna prenotazione per oggi." %}</p>
-        {% endif %}
-    </section>
+      </div>
+
+      <div class="mf-row">
+        <label>Capacità (numero ospiti)</label>
+        <input type="number" id="edit-capacita" class="mf-input" min="1" max="30" placeholder="es. 4">
+        <div class="mf-hint">Quante persone può sedere a questo tavolo</div>
+      </div>
+
+      <div class="mf-row">
+        <label>Stato attuale</label>
+        <div class="stato-picker">
+          <label class="stato-opt" id="sp-L" onclick="selStato('L')">
+            <input type="radio" name="edit-stato" value="L">🟢 Libero
+          </label>
+          <label class="stato-opt" id="sp-P" onclick="selStato('P')">
+            <input type="radio" name="edit-stato" value="P">🟡 Prenotato
+          </label>
+          <label class="stato-opt" id="sp-O" onclick="selStato('O')">
+            <input type="radio" name="edit-stato" value="O">🔴 Occupato
+          </label>
+          <label class="stato-opt" id="sp-C" onclick="selStato('C')">
+            <input type="radio" name="edit-stato" value="C">🔵 Conto
+          </label>
+        </div>
+      </div>
+    </div>
+      <!-- Sposta ospiti — visibile solo se tavolo occupato/prenotato/conto -->
+      <div id="sposta-section" style="display:none;margin-top:0.5rem">
+        <div style="border-top:1px solid #f0f0f0;padding-top:1rem">
+          <label style="display:block;font-size:0.78rem;font-weight:700;color:#555;margin-bottom:0.35rem">
+            🔀 Sposta ospiti a un altro tavolo
+          </label>
+          <div style="font-size:0.72rem;color:#999;margin-bottom:0.5rem">
+            Trasferisce ordine e prenotazione al tavolo scelto. Il tavolo attuale torna libero.
+          </div>
+          <div style="display:flex;gap:0.5rem;align-items:center">
+            <select id="sposta-dest" class="mf-select" style="flex:1">
+              <option value="">— Scegli tavolo libero —</option>
+            </select>
+            <button class="btn-sm primary" onclick="spostaOspiti()" style="white-space:nowrap">
+              🔀 Sposta
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-sm danger" id="btn-elimina-tavolo" onclick="eliminaTavolo()">🗑 Elimina</button>
+      <button class="btn-sm" onclick="closeModal('modal-edit')">Annulla</button>
+      <button class="btn-sm primary" onclick="salvaModifica()">✓ Salva modifiche</button>
+    </div>
+  </div>
 </div>
-{% endblock %}
 
-{% block extra_js %}
+<!-- ── MODAL AGGIUNGI TAVOLO ─────────────────────────────────── -->
+<div class="modal-bg" id="modal-add">
+  <div class="modal">
+    <div class="modal-head">
+      <span class="modal-title">＋ Nuovo Tavolo</span>
+      <button class="modal-close" onclick="closeModal('modal-add')">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="add-sala-id">
+
+      <div class="mf-row">
+        <label>Numero tavolo</label>
+        <input type="number" id="add-numero" class="mf-input" min="1" max="999" placeholder="es. 11">
+        <div class="mf-hint">Deve essere univoco all'interno della sala</div>
+      </div>
+
+      <div class="mf-row">
+        <label>Forma del tavolo</label>
+        <div class="forma-picker">
+          <label class="forma-opt selected" id="afp-R" onclick="selFormaAdd('R')">
+            <input type="radio" name="add-forma" value="R">
+            <svg class="forma-svg" width="36" height="36" viewBox="0 0 36 36">
+              <circle cx="18" cy="18" r="15" fill="#f0f0f0" stroke="#999" stroke-width="2"/>
+            </svg>
+            <div class="forma-lbl">Rotondo</div>
+          </label>
+          <label class="forma-opt" id="afp-Q" onclick="selFormaAdd('Q')">
+            <input type="radio" name="add-forma" value="Q">
+            <svg class="forma-svg" width="36" height="36" viewBox="0 0 36 36">
+              <rect x="4" y="4" width="28" height="28" rx="4" fill="#f0f0f0" stroke="#999" stroke-width="2"/>
+            </svg>
+            <div class="forma-lbl">Quadrato</div>
+          </label>
+          <label class="forma-opt" id="afp-T" onclick="selFormaAdd('T')">
+            <input type="radio" name="add-forma" value="T">
+            <svg class="forma-svg" width="52" height="28" viewBox="0 0 52 28">
+              <rect x="2" y="4" width="48" height="20" rx="4" fill="#f0f0f0" stroke="#999" stroke-width="2"/>
+            </svg>
+            <div class="forma-lbl">Rettangolare</div>
+          </label>
+        </div>
+      </div>
+
+      <div class="mf-row">
+        <label>Capacità (numero ospiti)</label>
+        <div style="display:flex;gap:0.5rem;align-items:center">
+          <input type="range" id="add-capacita-range" min="1" max="20" value="4"
+            style="flex:1" oninput="document.getElementById('add-cap-val').textContent=this.value">
+          <span id="add-cap-val" style="font-weight:800;font-size:1.1rem;min-width:24px;text-align:center;color:#1a1a2e">4</span>
+          <span style="font-size:0.78rem;color:#888">posti</span>
+        </div>
+        <div style="display:flex;gap:0.5rem;margin-top:0.5rem;flex-wrap:wrap">
+<button type="button" class="btn-sm" style="flex:1;justify-content:center" onclick="setCapAdd(2)">2</button>
+          <button type="button" class="btn-sm" style="flex:1;justify-content:center" onclick="setCapAdd(4)">4</button>
+          <button type="button" class="btn-sm" style="flex:1;justify-content:center" onclick="setCapAdd(6)">6</button>
+          <button type="button" class="btn-sm" style="flex:1;justify-content:center" onclick="setCapAdd(8)">8</button>
+          <button type="button" class="btn-sm" style="flex:1;justify-content:center" onclick="setCapAdd(10)">10</button>
+          <button type="button" class="btn-sm" style="flex:1;justify-content:center" onclick="setCapAdd(12)">12</button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-sm" onclick="closeModal('modal-add')">Annulla</button>
+      <button class="btn-sm primary" onclick="salvaAdd()">＋ Crea tavolo</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
 <script>
-function cambiaStato(tavoloId, nuovoStato) {
-    fetch(`/tavolo/${tavoloId}/stato/`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCookie('csrftoken'),
-        },
-        body: JSON.stringify({stato: nuovoStato}),
-    })
-    .then(r => r.json())
-    .then(data => {
-        if (data.successo) {
-            // Aggiorna colore in tempo reale senza ricaricare la pagina
-            const card = document.querySelector(`[data-tavolo-id="${tavoloId}"]`);
-            if (card) {
-                card.style.borderColor = data.colore;
-                card.querySelector('.tavolo-stato').style.color = data.colore;
-                card.querySelector('.tavolo-stato').textContent = data.stato;
-            }
-        }
+const CSRF = '{{ csrf_token }}';
+
+/* ── HELPERS ──────────────────────────────────────────────── */
+async function apiFetch(url, body) {
+  const r = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+    body: JSON.stringify(body),
+  });
+  return r.json();
+}
+
+function showToast(msg, type='ok') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast ${type} show`;
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+function openModal(id) {
+  document.getElementById(id).classList.add('open');
+}
+
+/* ── FORMA PICKER (edit) ────────────────────────────────── */
+let currentForma = 'Q';
+function selForma(f) {
+  currentForma = f;
+  ['R','Q','T'].forEach(x => document.getElementById('fp-'+x).classList.toggle('selected', x===f));
+}
+
+/* ── FORMA PICKER (add) ─────────────────────────────────── */
+let addForma = 'R';
+function selFormaAdd(f) {
+  addForma = f;
+  ['R','Q','T'].forEach(x => document.getElementById('afp-'+x).classList.toggle('selected', x===f));
+}
+function setCapAdd(n) {
+  document.getElementById('add-capacita-range').value = n;
+  document.getElementById('add-cap-val').textContent = n;
+}
+
+/* ── STATO PICKER ───────────────────────────────────────── */
+let currentStato = 'L';
+const statoColors = { L: 'sel-L', O: 'sel-O', P: 'sel-P', C: 'sel-C' };
+function selStato(s) {
+  currentStato = s;
+  ['L','O','P','C'].forEach(x => {
+    const el = document.getElementById('sp-'+x);
+    el.className = 'stato-opt ' + (x===s ? statoColors[x] : 'unsel');
+  });
+}
+
+/* ── DATI TAVOLI (tutti, per modal sposta) ───────────────── */
+const TUTTI_TAVOLI = {{ tutti_tavoli_js|safe }};
+
+/* ── OPEN EDIT MODAL ────────────────────────────────────── */
+function openEditModal(id, numero, forma, capacita, stato, salaId) {
+  document.getElementById('edit-tavolo-id').value = id;
+  document.getElementById('edit-sala-id').value   = salaId;
+  document.getElementById('edit-numero').value    = numero;
+  document.getElementById('edit-capacita').value  = capacita;
+  document.getElementById('modal-edit-title').textContent = `Tavolo ${numero}`;
+  selForma(forma);
+  selStato(stato);
+
+  // Sezione "Sposta ospiti" visibile se tavolo non libero
+  const haOspiti = stato !== 'L';
+  document.getElementById('sposta-section').style.display = haOspiti ? 'block' : 'none';
+
+  if (haOspiti) {
+    // Popola select con tavoli LIBERI di qualsiasi sala, escluso se stesso
+    const sel = document.getElementById('sposta-dest');
+    sel.innerHTML = '<option value="">— Scegli tavolo libero —</option>';
+    let lastSala = null;
+    TUTTI_TAVOLI.forEach(t => {
+      if (t.id === id || t.stato !== 'L') return;
+      // Separatore per sala
+      if (t.sala__nome !== lastSala) {
+        const og = document.createElement('optgroup');
+        og.label = t.sala__nome;
+        sel.appendChild(og);
+        lastSala = t.sala__nome;
+      }
+      const op = document.createElement('option');
+      op.value = t.id;
+      op.textContent = `Tavolo ${t.numero}  (${t.capacita} posti)`;
+      sel.lastElementChild.appendChild(op);
     });
+  }
+
+  openModal('modal-edit');
 }
 
-function getCookie(name) {
-    let value = `; ${document.cookie}`;
-    let parts = value.split(`; ${name}=`);
-    if (parts.length === 2) return parts.pop().split(';').shift();
+/* ── SPOSTA OSPITI ──────────────────────────────────────── */
+async function spostaOspiti() {
+  const srcId  = document.getElementById('edit-tavolo-id').value;
+  const destId = document.getElementById('sposta-dest').value;
+  const srcNum = document.getElementById('edit-numero').value;
+  if (!destId) { showToast('Scegli il tavolo di destinazione', 'err'); return; }
+
+  const destTavolo = TUTTI_TAVOLI.find(t => t.id == destId);
+  const destNum = destTavolo ? destTavolo.numero : '?';
+
+  if (!confirm(`Spostare gli ospiti del tavolo ${srcNum} → tavolo ${destNum}?\n\nOrdini e prenotazioni verranno trasferiti automaticamente.`)) return;
+
+  const d = await apiFetch(`/sala/tavolo/${srcId}/sposta/`, { dest_id: parseInt(destId) });
+  if (d.ok) {
+    showToast(`✓ Ospiti spostati: Tavolo ${srcNum} → Tavolo ${destNum}`);
+    closeModal('modal-edit');
+    setTimeout(() => location.reload(), 700);
+  } else {
+    showToast(d.errore || 'Errore durante lo spostamento', 'err');
+  }
 }
 
-// Auto-aggiornamento ogni 30 secondi
-setInterval(() => location.reload(), 30000);
+/* ── SALVA MODIFICA ─────────────────────────────────────── */
+async function salvaModifica() {
+  const id     = document.getElementById('edit-tavolo-id').value;
+  const salaId = document.getElementById('edit-sala-id').value;
+  const numero = parseInt(document.getElementById('edit-numero').value);
+  const cap    = parseInt(document.getElementById('edit-capacita').value);
+
+  if (!numero || !cap) { showToast('Compila tutti i campi', 'err'); return; }
+
+  // 1) Modifica forma / capacita / numero
+  const d1 = await apiFetch(`/sala/editor/${salaId}/tavolo/${id}/modifica/`, {
+    numero, forma: currentForma, capacita: cap
+  });
+  if (!d1.ok) { showToast(d1.errore || 'Errore', 'err'); return; }
+
+  // 2) Modifica stato (endpoint separato)
+  const d2 = await apiFetch(`/sala/tavolo/${id}/stato/`, { stato: currentStato });
+
+  // Aggiorna card senza ricaricare
+  const card = document.getElementById('tcard-' + id);
+  if (card) {
+    card.className = `t-card stato-${currentStato}`;
+    card.setAttribute('onclick', `openEditModal(${id}, ${numero}, '${currentForma}', ${cap}, '${currentStato}', ${salaId})`);
+    const formaLabel = {R:'Rotondo', Q:'Quadrato', T:'Rettangolare'}[currentForma];
+    const statoLabel = {L:'Libero', O:'Occupato', P:'Prenotato', C:'Conto richiesto'}[currentStato];
+    card.querySelector('.t-cap').textContent = `👤 ${cap} posti · ${formaLabel}`;
+    card.querySelector('.t-stato-lbl').textContent = statoLabel;
+    // rigenera SVG
+    card.querySelector('.t-shape-wrap').innerHTML = makeSvg(currentForma, numero, currentStato);
+  }
+
+  showToast(`✓ Tavolo ${numero} aggiornato`);
+  closeModal('modal-edit');
+}
+
+/* ── OPEN ADD MODAL ─────────────────────────────────────── */
+function openAddModal(salaId) {
+  document.getElementById('add-sala-id').value = salaId;
+  document.getElementById('add-numero').value  = '';
+  setCapAdd(4); selFormaAdd('R');
+  openModal('modal-add');
+}
+
+/* ── SALVA ADD ──────────────────────────────────────────── */
+async function salvaAdd() {
+  const salaId  = document.getElementById('add-sala-id').value;
+  const numero  = parseInt(document.getElementById('add-numero').value);
+  const cap     = parseInt(document.getElementById('add-capacita-range').value);
+
+  if (!numero) { showToast('Inserisci il numero del tavolo', 'err'); return; }
+
+  const d = await apiFetch(`/sala/editor/${salaId}/aggiungi/`, {
+    numero, forma: addForma, capacita: cap, x: 100, y: 100
+  });
+  if (!d.ok) { showToast(d.errore || 'Errore', 'err'); return; }
+
+  showToast(`✓ Tavolo ${numero} creato`);
+  closeModal('modal-add');
+  setTimeout(() => location.reload(), 600);
+}
+
+/* ── ELIMINA ────────────────────────────────────────────── */
+async function eliminaTavolo() {
+  const id     = document.getElementById('edit-tavolo-id').value;
+  const salaId = document.getElementById('edit-sala-id').value;
+  const numero = document.getElementById('edit-numero').value;
+  if (!confirm(`Eliminare il tavolo ${numero}? L'operazione non è reversibile.`)) return;
+  const d = await apiFetch(`/sala/editor/${salaId}/tavolo/${id}/elimina/`, {});
+  if (d.ok) {
+    document.getElementById('tcard-' + id)?.remove();
+    showToast(`Tavolo ${numero} eliminato`);
+    closeModal('modal-edit');
+  } else {
+    showToast(d.errore || 'Errore eliminazione', 'err');
+  }
+}
+
+/* ── SVG helper ─────────────────────────────────────────── */
+const FILL  = { L:'#eafaf1', O:'#fdecea', P:'#fef9e7', C:'#eaf4fb' };
+const STROKE= { L:'#27ae60', O:'#e74c3c', P:'#f39c12', C:'#3498db' };
+function makeSvg(forma, num, stato) {
+  const f = FILL[stato], s = STROKE[stato];
+  if (forma === 'R')
+    return `<svg width="56" height="56" viewBox="0 0 56 56"><circle cx="28" cy="28" r="24" fill="${f}" stroke="${s}" stroke-width="2.5"/><text x="28" y="33" text-anchor="middle" font-size="14" font-weight="800" fill="${s}">${num}</text></svg>`;
+  if (forma === 'Q')
+    return `<svg width="56" height="56" viewBox="0 0 56 56"><rect x="6" y="6" width="44" height="44" rx="6" fill="${f}" stroke="${s}" stroke-width="2.5"/><text x="28" y="33" text-anchor="middle" font-size="14" font-weight="800" fill="${s}">${num}</text></svg>`;
+  return `<svg width="72" height="44" viewBox="0 0 72 44"><rect x="3" y="3" width="66" height="38" rx="5" fill="${f}" stroke="${s}" stroke-width="2.5"/><text x="36" y="27" text-anchor="middle" font-size="14" font-weight="800" fill="${s}">${num}</text></svg>`;
+}
+
+/* ── CHIUDI MODAL CLICCANDO SFONDO ─────────────────────── */
+document.querySelectorAll('.modal-bg').forEach(bg => {
+  bg.addEventListener('click', e => { if (e.target === bg) bg.classList.remove('open'); });
+});
+
+/* ── AUTO-REFRESH ogni 60s (solo stats) ─────────────────── */
+setTimeout(() => location.reload(), 60000);
 </script>
-{% endblock %}
+</body>
+</html>

@@ -9,13 +9,14 @@ from ristorante.models import Sala, Tavolo, Categoria, Piatto, ImpostazioniRisto
 
 UTENTI_DEMO = [
     # (username, password, email, first_name, last_name, gruppo, is_staff)
-    ('admin',      'admin123',      'admin@demo.it',      'Admin',   'Rossi',   None,         True),
-    ('titolare',   'titolare123',   'titolare@demo.it',   'Marco',   'Ferrari', 'titolare',   True),
-    ('capo_area',  'capo123',       'capo@demo.it',       'Laura',   'Bianchi', 'capo_area',  False),
-    ('cameriere1', 'cam123',        'cam1@demo.it',       'Giulia',  'Verdi',   'cameriere',  False),
-    ('cameriere2', 'cam123',        'cam2@demo.it',       'Luca',    'Mori',    'cameriere',  False),
-    ('cuoco1',     'cuoco123',      'cuoco1@demo.it',     'Antonio', 'Ricci',   'cuoco',      False),
-    ('cuoco2',     'cuoco123',      'cuoco2@demo.it',     'Sofia',   'Conti',   'cuoco',      False),
+    ('admin',      'admin123',      'admin@demo.it',      'Admin',   'Rossi',    None,                True),
+    ('titolare',   'titolare123',   'titolare@demo.it',   'Marco',   'Ferrari',  'titolare',          True),
+    ('capo_area',  'capo123',       'capo@demo.it',       'Laura',   'Bianchi',  'capo_area',         False),
+    ('cameriere1', 'cam123',        'cam1@demo.it',       'Giulia',  'Verdi',    'cameriere',         False),
+    ('cameriere2', 'cam123',        'cam2@demo.it',       'Luca',    'Mori',     'cameriere',         False),
+    ('cassa1',     'cassa123',      'cassa1@demo.it',     'Roberto', 'Esposito', 'cameriere_senior',  False),
+    ('cuoco1',     'cuoco123',      'cuoco1@demo.it',     'Antonio', 'Ricci',    'cuoco',             False),
+    ('cuoco2',     'cuoco123',      'cuoco2@demo.it',     'Sofia',   'Conti',    'cuoco',             False),
 ]
 
 
@@ -25,7 +26,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         # Gruppi ruoli
         gruppi = {}
-        for nome_gruppo in ['titolare', 'capo_area', 'cameriere', 'cuoco']:
+        for nome_gruppo in ['titolare', 'capo_area', 'cameriere', 'cameriere_senior', 'cuoco']:
             g, _ = Group.objects.get_or_create(name=nome_gruppo)
             gruppi[nome_gruppo] = g
 

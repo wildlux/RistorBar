@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=200">
+<title>Menu T{{ tavolo.numero }}</title>
+<style>
+/* ── E-INK DISPLAY STYLE ───────────────────────────────────────────────────
+   Ottimizzato per display e-paper/e-ink da 1.54" - 4.2" (200x200 ~ 400x300 px)
+   Solo bianco/nero, niente gradienti, niente ombre, niente immagini.
+   Font grande e leggibile. Zero JavaScript.
+   ────────────────────────────────────────────────────────────────────────── */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 11px;
+  background: #fff;
+  color: #000;
+  width: 100%;
+  max-width: 400px;
+  padding: 4px;
+}
+.header {
+  text-align: center;
+  border-bottom: 2px solid #000;
+  padding-bottom: 3px;
+  margin-bottom: 4px;
+}
+.rist-nome {
+  font-size: 13px;
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+.tavolo-label {
+  font-size: 16px;
+  font-weight: bold;
+  margin-top: 2px;
+}
+.nota {
+  font-size: 10px;
+  border: 1px solid #000;
+  padding: 2px 4px;
+  margin: 3px 0;
+  background: #eee;
+}
+.cat-nome {
+  font-size: 12px;
+  font-weight: bold;
+  border-top: 1px solid #000;
+  margin-top: 4px;
+  padding-top: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.piatto {
+  display: flex;
+  justify-content: space-between;
+  padding: 1px 0 1px 4px;
+  border-bottom: 1px dotted #ccc;
+  font-size: 10px;
+}
+.piatto-nome { flex: 1; }
+.piatto-prezzo { font-weight: bold; white-space: nowrap; padding-left: 4px; }
+.footer {
+  border-top: 1px solid #000;
+  margin-top: 4px;
+  padding-top: 2px;
+  text-align: center;
+  font-size: 9px;
+  color: #555;
+}
+.piatto_giorno {
+  border: 2px solid #000;
+  padding: 2px 4px;
+  text-align: center;
+  margin: 3px 0;
+  font-size: 11px;
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="rist-nome">{{ imp.nome|upper|truncatechars:20 }}</div>
+  <div class="tavolo-label">TAVOLO {{ tavolo.numero }}</div>
+  <div style="font-size:9px">{{ sala.nome }}</div>
+</div>
+
+{% if tavolo.nota %}
+<div class="nota">📋 {{ tavolo.nota|truncatechars:80 }}</div>
+{% endif %}
+
+{% if imp.piatto_del_giorno %}
+<div class="piatto_giorno">
+  ★ PIATTO DEL GIORNO ★<br>
+  {{ imp.piatto_del_giorno|truncatechars:50 }}
+</div>
+{% endif %}
+
+{% for cat in categorie %}
+  {% if cat.piatti.all %}
+  <div class="cat-nome">{{ cat.nome }}</div>
+  {% for p in cat.piatti.all %}
+  <div class="piatto">
+    <span class="piatto-nome">{{ p.nome|truncatechars:28 }}</span>
+    <span class="piatto-prezzo">€{{ p.prezzo }}</span>
+  </div>
+  {% endfor %}
+  {% endif %}
+{% endfor %}
+
+<div class="footer">
+  {% if imp.telefono %}Tel: {{ imp.telefono }} · {% endif %}
+  Ordina al cameriere
+</div>
+
+</body>
+</html>

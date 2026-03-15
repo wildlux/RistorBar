@@ -9,15 +9,48 @@ from django.core.files.base import ContentFile
 
 
 class Sala(models.Model):
-    """Rappresenta una sala del ristorante (es. Sala Principale, Terrazza)."""
-    nome = models.CharField(_('Nome sala'), max_length=100)
-    larghezza = models.IntegerField(_('Larghezza griglia'), default=20)
-    altezza = models.IntegerField(_('Altezza griglia'), default=15)
-    attiva = models.BooleanField(_('Attiva'), default=True)
-    # SVG planimetria: il cliente carica il proprio file SVG della sala
-    svg_sfondo = models.FileField(_('SVG planimetria'), upload_to='sale_svg/', blank=True, null=True)
+    """Rappresenta una sala / area del locale (piano terra, terrazza, giardino…)."""
+
+    TIPO_PIANO_TERRA   = 'PT'
+    TIPO_PRIMO_PIANO   = 'P1'
+    TIPO_SECONDO_PIANO = 'P2'
+    TIPO_SEMINTERRATO  = 'SI'
+    TIPO_TERRAZZA      = 'TR'
+    TIPO_GIARDINO      = 'GI'
+    TIPO_SALA_PRIVATA  = 'SP'
+    TIPO_BANCONE       = 'BA'
+    TIPO_ESTERNO       = 'ES'
+    TIPO_ALTRO         = 'AL'
+    TIPO_CHOICES = [
+        (TIPO_PIANO_TERRA,   _('Piano Terra')),
+        (TIPO_PRIMO_PIANO,   _('Primo Piano')),
+        (TIPO_SECONDO_PIANO, _('Secondo Piano')),
+        (TIPO_SEMINTERRATO,  _('Seminterrato / Cantina')),
+        (TIPO_TERRAZZA,      _('Terrazza / Rooftop')),
+        (TIPO_GIARDINO,      _('Giardino / Cortile')),
+        (TIPO_SALA_PRIVATA,  _('Sala Privata / VIP')),
+        (TIPO_BANCONE,       _('Area Bancone / Bar')),
+        (TIPO_ESTERNO,       _('Area Esterna')),
+        (TIPO_ALTRO,         _('Altro')),
+    ]
+
+    nome        = models.CharField(_('Nome sala'), max_length=100)
+    tipo_locale = models.CharField(_('Tipo area'), max_length=2, choices=TIPO_CHOICES,
+                                   default=TIPO_PIANO_TERRA, blank=True)
+    piano       = models.IntegerField(_('Piano'), null=True, blank=True,
+                                      help_text=_('0=Piano Terra, 1=Primo Piano, -1=Seminterrato…'))
+    indirizzo   = models.CharField(_('Indirizzo'), max_length=200, blank=True)
+    citta       = models.CharField(_('Città'), max_length=100, blank=True)
+    nazione     = models.CharField(_('Nazione'), max_length=100, blank=True, default='Italia')
+    descrizione = models.TextField(_('Descrizione'), blank=True,
+                                   help_text=_('Note visibili nella pianta (es. "Vista sul mare", "No animali")'))
+    larghezza   = models.IntegerField(_('Larghezza griglia'), default=20)
+    altezza     = models.IntegerField(_('Altezza griglia'), default=15)
+    attiva      = models.BooleanField(_('Attiva'), default=True)
+    # SVG planimetria caricata dal cliente
+    svg_sfondo    = models.FileField(_('SVG planimetria'), upload_to='sale_svg/', blank=True, null=True)
     svg_larghezza = models.IntegerField(_('Larghezza canvas SVG (px)'), default=1200)
-    svg_altezza = models.IntegerField(_('Altezza canvas SVG (px)'), default=800)
+    svg_altezza   = models.IntegerField(_('Altezza canvas SVG (px)'), default=800)
 
     class Meta:
         verbose_name = _('Sala')
@@ -302,6 +335,8 @@ class ImpostazioniRistorante(models.Model):
     regime_fiscale = models.CharField(_('Regime fiscale SDI'), max_length=10, blank=True, default='RF01')
     iban      = models.CharField(_('IBAN'), max_length=34, blank=True)
     logo      = models.ImageField(_('Logo'), upload_to='logo/', blank=True, null=True)
+    orari = models.TextField(_('Orari di apertura'), blank=True,
+        help_text=_('Es. Lun-Ven 12:00-15:00 / 19:00-23:00 · Sab-Dom 12:00-23:00'))
     note_scontrino = models.TextField(_('Note piè scontrino'), blank=True, default='Grazie e arrivederci! 🙏')
     note_fattura   = models.TextField(_('Note piè fattura'), blank=True)
     piatto_del_giorno = models.CharField(_('Piatto del giorno'), max_length=200, blank=True,
@@ -322,6 +357,8 @@ class ImpostazioniRistorante(models.Model):
     telegram_bot_token = models.CharField(_('Telegram Bot Token'), max_length=100, blank=True)
     telegram_nome_bot = models.CharField(_('Nome Bot'), max_length=100, blank=True,
         help_text=_('Nome del bot es. LaTrattoriaBot'))
+    telegram_chat_id = models.CharField(_('Telegram Chat ID notifiche'), max_length=50, blank=True,
+        help_text=_('ID chat o gruppo dove inviare le notifiche (es. -1003760305730)'))
 
     # Social Media
     social_facebook = models.URLField(_('Facebook'), blank=True)
@@ -340,6 +377,75 @@ class ImpostazioniRistorante(models.Model):
     dominio_scadenza = models.DateField(_('Scadenza dominio'), null=True, blank=True)
     dominio_costo_annuale = models.DecimalField(_('Costo dominio annuale (€)'), max_digits=8, decimal_places=2, default=15.00)
     note_abbonamento = models.TextField(_('Note abbonamento'), blank=True)
+
+    # Vetrina pubblica
+    mostra_lavora_con_noi = models.BooleanField(
+        _('Mostra sezione "Lavora con noi"'), default=False,
+        help_text=_('Abilita la sezione candidature nel footer della vetrina pubblica')
+    )
+
+    # ── Pagamenti dipendenti ───────────────────────────────────────────────────
+    PAGAMENTO_BONIFICO   = 'B'
+    PAGAMENTO_CONTANTI   = 'C'
+    PAGAMENTO_ASSEGNO    = 'A'
+    PAGAMENTO_PAYROLL    = 'P'
+    METODO_PAGAMENTO_CHOICES = [
+        (PAGAMENTO_BONIFICO, _('Bonifico bancario')),
+        (PAGAMENTO_CONTANTI, _('Contanti')),
+        (PAGAMENTO_ASSEGNO,  _('Assegno')),
+        (PAGAMENTO_PAYROLL,  _('Payroll provider esterno')),
+    ]
+    pag_dip_metodo = models.CharField(
+        _('Metodo pagamento stipendi'), max_length=1,
+        choices=METODO_PAGAMENTO_CHOICES, default=PAGAMENTO_BONIFICO, blank=True,
+    )
+    pag_dip_iban = models.CharField(
+        _('IBAN conto stipendi'), max_length=34, blank=True,
+        help_text=_('IBAN da cui vengono accreditati gli stipendi (può differire dall\'IBAN principale)'),
+    )
+    pag_dip_giorno = models.IntegerField(
+        _('Giorno di pagamento'), default=27, null=True, blank=True,
+        help_text=_('Giorno del mese in cui vengono pagati gli stipendi (es. 27)'),
+    )
+    pag_dip_provider = models.CharField(
+        _('Payroll provider'), max_length=200, blank=True,
+        help_text=_('Nome del provider di buste paga (es. Zucchetti, Paghe Web, consulente)'),
+    )
+    pag_dip_note = models.TextField(
+        _('Note pagamenti dipendenti'), blank=True,
+        help_text=_('Istruzioni interne, riferimenti sindacali, contratto collettivo applicato'),
+    )
+
+    # ── DDT — Documento di Trasporto ──────────────────────────────────────────
+    PORTO_FRANCO    = 'F'
+    PORTO_ASSEGNATO = 'A'
+    PORTO_CHOICES = [
+        (PORTO_FRANCO,    _('Franco (a carico del mittente)')),
+        (PORTO_ASSEGNATO, _('Assegnato (a carico del destinatario)')),
+    ]
+    ddt_abilitato = models.BooleanField(
+        _('DDT abilitato'), default=False,
+        help_text=_('Abilita la generazione di DDT per le consegne a domicilio'),
+    )
+    ddt_causale = models.CharField(
+        _('Causale predefinita'), max_length=200, blank=True, default='Vendita',
+        help_text=_('Motivo del trasporto (es. Vendita, Conto lavoro, Reso)'),
+    )
+    ddt_vettore = models.CharField(
+        _('Vettore'), max_length=200, blank=True,
+        help_text=_('Nome o ragione sociale del corriere / rider (es. Glovo, corriere interno)'),
+    )
+    ddt_porto = models.CharField(
+        _('Porto'), max_length=1, choices=PORTO_CHOICES, default=PORTO_FRANCO, blank=True,
+    )
+    ddt_aspetto = models.CharField(
+        _('Aspetto esteriore beni'), max_length=100, blank=True, default='Confezione',
+        help_text=_('Come si presentano i colli (es. Confezione, Borsa termica, Scatola)'),
+    )
+    ddt_note = models.TextField(
+        _('Note DDT'), blank=True,
+        help_text=_('Note aggiuntive stampate sul DDT (istruzioni di consegna, temperature, ecc.)'),
+    )
 
     class Meta:
         verbose_name = _('Impostazioni Ristorante')

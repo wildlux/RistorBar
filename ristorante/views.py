@@ -1,6 +1,7 @@
 import json
 import stripe
 import requests
+from decimal import Decimal
 from datetime import date, timedelta
 from functools import wraps
 from django.conf import settings
@@ -20,7 +21,12 @@ from rest_framework import viewsets, permissions
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 
-from .models import Sala, Tavolo, TavoloUnione, Categoria, Piatto, Prenotazione, Ordine, OrdineItem, Fattura, ImpostazioniRistorante, Sede, Contatto, Dispositivo
+from .models import (
+    Sala, Tavolo, TavoloUnione, Categoria, Piatto, Prenotazione, Ordine, OrdineItem,
+    Fattura, ImpostazioniRistorante, Sede, Contatto, Dispositivo,
+    ListaSpesaGenerata, CiboRimasto, CouponSconto, ProdottoMagazzino,
+    Promemoria, ReportPeriodico,
+)
 from .serializers import (
     TavoloSerializer, PrenotazioneSerializer,
     OrdineSerializer, PiattoSerializer
@@ -31,10 +37,14 @@ stripe.api_key = settings.STRIPE_SECRET_KEY
 
 # ─── Helpers ruoli ────────────────────────────────────────────────────────────
 
-RUOLO_CAMERIERE  = 'cameriere'
-RUOLO_CUOCO      = 'cuoco'
-RUOLO_CAPO_AREA  = 'capo_area'
-RUOLO_TITOLARE   = 'titolare'
+RUOLO_CAMERIERE         = 'cameriere'
+RUOLO_CAMERIERE_SENIOR  = 'cameriere_senior'   # cameriere + accesso cassa
+RUOLO_CUOCO             = 'cuoco'
+RUOLO_CAPO_AREA         = 'capo_area'
+RUOLO_TITOLARE          = 'titolare'
+
+# Shortcut: tutti i ruoli di sala (usato nei decoratori interni)
+_RUOLI_CAPO = (RUOLO_CAPO_AREA, RUOLO_TITOLARE)
 
 def ha_ruolo(user, *ruoli):
     if user.is_superuser:
@@ -87,7 +97,7 @@ def sala_dispatch(request):
     u = request.user
     if u.is_superuser or ha_ruolo(u, RUOLO_TITOLARE, RUOLO_CAPO_AREA):
         return redirect('dashboard')
-    if ha_ruolo(u, RUOLO_CAMERIERE):
+    if ha_ruolo(u, RUOLO_CAMERIERE, RUOLO_CAMERIERE_SENIOR):
         return redirect('cameriere')
     if ha_ruolo(u, RUOLO_CUOCO):
         return redirect('cucina_kds')
@@ -99,7 +109,10 @@ def sala_dispatch(request):
 
 @ruolo_richiesto(RUOLO_CAPO_AREA, RUOLO_TITOLARE)
 def dashboard(request):
-    sale = Sala.objects.filter(attiva=True).prefetch_related('tavoli')
+    from django.db.models import Count
+    sale_qs = Sala.objects.filter(attiva=True).prefetch_related(
+        Prefetch('tavoli', queryset=Tavolo.objects.filter(attivo=True).order_by('numero'))
+    )
     prenotazioni_oggi = Prenotazione.objects.filter(
         data_ora__date=timezone.now().date(),
         stato__in=[Prenotazione.STATO_ATTESA, Prenotazione.STATO_CONFERMATA]
@@ -107,28 +120,86 @@ def dashboard(request):
     ordini_aperti = Ordine.objects.filter(
         stato__in=[Ordine.STATO_APERTO, Ordine.STATO_IN_PREPARAZIONE]
     ).select_related('tavolo')
+
+    # Stats globali
+    tutti_tavoli = Tavolo.objects.filter(attivo=True)
+    stats = {
+        'liberi':    tutti_tavoli.filter(stato=Tavolo.STATO_LIBERO).count(),
+        'occupati':  tutti_tavoli.filter(stato=Tavolo.STATO_OCCUPATO).count(),
+        'prenotati': tutti_tavoli.filter(stato=Tavolo.STATO_PRENOTATO).count(),
+        'conto':     tutti_tavoli.filter(stato=Tavolo.STATO_CONTO).count(),
+        'totale':    tutti_tavoli.count(),
+    }
+
+    # Tutti i tavoli attivi serializzati per il JS (usato dal modal "sposta")
+    tutti_tavoli_js = list(
+        Tavolo.objects.filter(attivo=True)
+        .select_related('sala')
+        .order_by('sala__nome', 'numero')
+        .values('id', 'numero', 'stato', 'capacita', 'sala__nome', 'sala_id')
+    )
+
     return render(request, 'ristorante/dashboard.html', {
-        'sale': sale,
+        'sale': sale_qs,
         'prenotazioni_oggi': prenotazioni_oggi,
         'ordini_aperti': ordini_aperti,
+        'stats': stats,
+        'tutti_tavoli_js': tutti_tavoli_js,
+        'FORMA_ROTONDO':    Tavolo.FORMA_ROTONDO,
+        'FORMA_QUADRATO':   Tavolo.FORMA_QUADRATO,
+        'FORMA_RETTANGOLO': Tavolo.FORMA_RETTANGOLO,
     })
 
 
 # ─── Mappa tavoli (vista sala) ───────────────────────────────────────────────
 
-@login_required
-def mappa_sala(request, sala_id):
+@ruolo_richiesto(RUOLO_CAMERIERE, RUOLO_CAMERIERE_SENIOR, RUOLO_CAPO_AREA, RUOLO_TITOLARE)
+def pianta_locale(request, sala_id):
+    """Pianta interattiva del locale: vista tavoli per area/piano."""
     sala = get_object_or_404(Sala, pk=sala_id, attiva=True)
-    tavoli = sala.tavoli.filter(attivo=True)
-    return render(request, 'ristorante/mappa_sala.html', {
+
+    # Modifica info sala (solo capo/titolare)
+    if request.method == 'POST' and request.POST.get('azione') == 'modifica_info':
+        if not ha_ruolo(request.user, RUOLO_CAPO_AREA, RUOLO_TITOLARE):
+            return JsonResponse({'errore': 'Non autorizzato'}, status=403)
+        sala.nome = request.POST.get('nome', sala.nome).strip() or sala.nome
+        sala.tipo_locale = request.POST.get('tipo_locale', sala.tipo_locale)
+        piano_str = request.POST.get('piano', '').strip()
+        sala.piano = int(piano_str) if piano_str.lstrip('-').isdigit() else sala.piano
+        sala.nazione = request.POST.get('nazione', sala.nazione).strip()
+        sala.citta = request.POST.get('citta', sala.citta).strip()
+        sala.indirizzo = request.POST.get('indirizzo', sala.indirizzo).strip()
+        sala.descrizione = request.POST.get('descrizione', sala.descrizione).strip()
+        sala.save()
+        return redirect('pianta_locale', sala_id=sala.pk)
+
+    tavoli = sala.tavoli.filter(attivo=True).order_by('numero')
+    tutte_sale = Sala.objects.filter(attiva=True).order_by('nome')
+    tavoli_js = list(tavoli.values(
+        'id', 'numero', 'forma', 'capacita', 'stato', 'pos_x', 'pos_y'
+    ))
+    stats = {
+        'liberi':    tavoli.filter(stato=Tavolo.STATO_LIBERO).count(),
+        'occupati':  tavoli.filter(stato=Tavolo.STATO_OCCUPATO).count(),
+        'prenotati': tavoli.filter(stato=Tavolo.STATO_PRENOTATO).count(),
+        'conto':     tavoli.filter(stato=Tavolo.STATO_CONTO).count(),
+        'totale':    tavoli.count(),
+        'posti':     sum(t.capacita for t in tavoli),
+    }
+    return render(request, 'ristorante/pianta_locale.html', {
         'sala': sala,
         'tavoli': tavoli,
+        'tavoli_js': tavoli_js,
+        'tutte_sale': tutte_sale,
+        'stats': stats,
+        'ha_cassa': ha_ruolo(request.user, RUOLO_CAMERIERE_SENIOR, RUOLO_CAPO_AREA, RUOLO_TITOLARE),
+        'is_capo': ha_ruolo(request.user, RUOLO_CAPO_AREA, RUOLO_TITOLARE),
     })
 
 
 # ─── Interfaccia Cameriere ────────────────────────────────────────────────────
 
-@ruolo_richiesto(RUOLO_CAMERIERE, RUOLO_CAPO_AREA, RUOLO_TITOLARE)
+@ruolo_richiesto(RUOLO_CAMERIERE, RUOLO_CAMERIERE_SENIOR, RUOLO_CAPO_AREA, RUOLO_TITOLARE)
 def cameriere_view(request):
     sale = Sala.objects.filter(attiva=True).prefetch_related('tavoli')
     prenotazioni_oggi = Prenotazione.objects.filter(
@@ -141,7 +212,7 @@ def cameriere_view(request):
     })
 
 
-@ruolo_richiesto(RUOLO_CAMERIERE, RUOLO_CAPO_AREA, RUOLO_TITOLARE)
+@ruolo_richiesto(RUOLO_CAMERIERE, RUOLO_CAMERIERE_SENIOR, RUOLO_CAPO_AREA, RUOLO_TITOLARE)
 def cameriere_ordine(request, tavolo_id):
     """Pagina ordine per un tavolo specifico (prendere/aggiornare comanda)."""
     tavolo = get_object_or_404(Tavolo, pk=tavolo_id)
@@ -195,14 +266,18 @@ def cameriere_ordine(request, tavolo_id):
             return JsonResponse({'ok': True})
 
         if azione == 'chiedi_conto':
+            if not ha_ruolo(request.user, RUOLO_CAMERIERE_SENIOR, RUOLO_CAPO_AREA, RUOLO_TITOLARE):
+                return JsonResponse({'errore': 'Accesso non autorizzato'}, status=403)
             tavolo.stato = Tavolo.STATO_CONTO
             tavolo.save(update_fields=['stato'])
             return JsonResponse({'ok': True})
 
+    ha_cassa = ha_ruolo(request.user, RUOLO_CAMERIERE_SENIOR, RUOLO_CAPO_AREA, RUOLO_TITOLARE)
     return render(request, 'sala/ordine.html', {
         'tavolo': tavolo,
         'ordine': ordine_aperto,
         'categorie': categorie,
+        'ha_cassa': ha_cassa,
     })
 
 
@@ -257,6 +332,53 @@ def aggiorna_stato_tavolo(request, tavolo_id):
     })
 
 
+@ruolo_richiesto(RUOLO_CAMERIERE_SENIOR, RUOLO_CAPO_AREA, RUOLO_TITOLARE)
+@require_POST
+def sposta_tavolo(request, tavolo_id):
+    """
+    Trasferisce tutti gli ordini e prenotazioni attive dal tavolo sorgente
+    a un tavolo di destinazione. Il tavolo sorgente torna Libero.
+    """
+    tavolo_src = get_object_or_404(Tavolo, pk=tavolo_id)
+    data = json.loads(request.body)
+    dest_id = data.get('dest_id')
+    if not dest_id:
+        return JsonResponse({'errore': 'Tavolo di destinazione mancante'}, status=400)
+
+    tavolo_dst = get_object_or_404(Tavolo, pk=dest_id)
+    if tavolo_dst.pk == tavolo_src.pk:
+        return JsonResponse({'errore': 'Sorgente e destinazione coincidono'}, status=400)
+    if tavolo_dst.stato != Tavolo.STATO_LIBERO:
+        return JsonResponse({'errore': f'Il tavolo {tavolo_dst.numero} non è libero'}, status=400)
+
+    # Sposta ordini aperti
+    ordini = tavolo_src.ordini.filter(
+        stato__in=[Ordine.STATO_APERTO, Ordine.STATO_IN_PREPARAZIONE]
+    )
+    ordini.update(tavolo=tavolo_dst)
+
+    # Sposta prenotazioni attive di oggi
+    from django.utils import timezone as tz
+    Prenotazione.objects.filter(
+        tavolo=tavolo_src,
+        data_ora__date=tz.now().date(),
+        stato__in=[Prenotazione.STATO_ATTESA, Prenotazione.STATO_CONFERMATA],
+    ).update(tavolo=tavolo_dst)
+
+    # Aggiorna stati: destinazione eredita lo stato della sorgente, sorgente → Libero
+    tavolo_dst.stato = tavolo_src.stato
+    tavolo_src.stato = Tavolo.STATO_LIBERO
+    tavolo_dst.save(update_fields=['stato'])
+    tavolo_src.save(update_fields=['stato'])
+
+    return JsonResponse({
+        'ok': True,
+        'src_numero':  tavolo_src.numero,
+        'dst_numero':  tavolo_dst.numero,
+        'dst_stato':   tavolo_dst.stato,
+    })
+
+
 # ─── Menu cliente (via QR) ───────────────────────────────────────────────────
 
 def menu_tavolo(request, sala_id, numero_tavolo):
@@ -267,6 +389,26 @@ def menu_tavolo(request, sala_id, numero_tavolo):
         'sala': sala,
         'tavolo': tavolo,
         'categorie': categorie,
+    })
+
+
+def menu_eink(request, sala_id, numero_tavolo):
+    """
+    Pagina menu ultra-minimale per display e-ink (ESP32, STM32).
+    Niente CSS pesante, niente immagini, solo testo e struttura.
+    Ottimizzata per schermi piccoli in bianco/nero con poca memoria.
+    """
+    sala = get_object_or_404(Sala, pk=sala_id)
+    tavolo = get_object_or_404(Tavolo, sala=sala, numero=numero_tavolo, attivo=True)
+    categorie = Categoria.objects.prefetch_related(
+        models.Prefetch('piatti', queryset=Piatto.objects.filter(disponibile=True))
+    ).all()
+    imp = ImpostazioniRistorante.get()
+    return render(request, 'ristorante/menu_eink.html', {
+        'sala': sala,
+        'tavolo': tavolo,
+        'categorie': categorie,
+        'imp': imp,
     })
 
 
@@ -481,6 +623,8 @@ def rispondi_callback(callback_id, testo):
 
 
 def gestisci_messaggio_telegram(chat_id, testo):
+    if '@' in testo:
+        testo = testo.split('@')[0]
     testo_lower = testo.lower().strip()
     
     if testo_lower in TELEGRAM_COMANDI:
@@ -523,7 +667,7 @@ def genera_ordini_telegram():
     try:
         from django.utils import timezone
         ordini = Ordine.objects.filter(
-            stato__in=[Ordine.STATO_IN_ATTESA, Ordine.STATO_IN_CUCINA]
+            stato__in=[Ordine.STATO_APERTO, Ordine.STATO_IN_PREPARAZIONE]
         ).select_related('tavolo').prefetch_related('items__piatto')[:10]
         
         if not ordini:
@@ -544,8 +688,8 @@ def genera_ordini_cucina_telegram():
     try:
         from django.utils import timezone
         items = OrdineItem.objects.filter(
-            stato__in=[OrdineItem.STATO_IN_CUCINA, OrdineItem.STATO_IN_ATTESA]
-        ).select_related('ordine__tavolo', 'piatto').order_by('ordine__data_creazione')[:15]
+            stato__in=[OrdineItem.STATO_IN_CUCINA, OrdineItem.STATO_ATTESA]
+        ).select_related('ordine__tavolo', 'piatto').order_by('ordine__creato_il')[:15]
         
         if not items:
             return "Nessun ordine in cucina."
@@ -556,7 +700,7 @@ def genera_ordini_cucina_telegram():
             if current_ordine != item.ordine_id:
                 current_ordine = item.ordine_id
                 msg += f"--- Tavolo {item.ordine.tavolo.numero} ---\n"
-            stato_emoji = "⏳" if item.stato == OrdineItem.STATO_IN_ATTESA else "🔥"
+            stato_emoji = "⏳" if item.stato == OrdineItem.STATO_ATTESA else "🔥"
             msg += f"{stato_emoji} {item.piatto.nome} x{item.quantita}\n"
         return msg
     except Exception:
@@ -829,7 +973,7 @@ def api_esp32_tavolo(request, sala_id, numero_tavolo):
         ).first()
         
         ordine_attivo = tavolo.ordini.filter(
-            stato__in=[Ordine.STATO_IN_ATTESA, Ordine.STATO_IN_CUCINA]
+            stato__in=[Ordine.STATO_APERTO, Ordine.STATO_IN_PREPARAZIONE]
         ).prefetch_related('items__piatto').first()
         
         items = []
@@ -898,7 +1042,7 @@ def api_esp32_sala(request, sala_id):
             Prefetch(
                 'ordini',
                 queryset=Ordine.objects.filter(
-                    stato__in=[Ordine.STATO_IN_ATTESA, Ordine.STATO_IN_CUCINA]
+                    stato__in=[Ordine.STATO_APERTO, Ordine.STATO_IN_PREPARAZIONE]
                 )
             )
         )
@@ -1100,7 +1244,49 @@ def elimina_tavolo_editor(request, sala_id, tavolo_id):
 def vetrina(request):
     """Pagina pubblica del ristorante: info, menu, prenotazione."""
     categorie = Categoria.objects.prefetch_related('piatti').all()
-    return render(request, 'ristorante/vetrina.html', {'categorie': categorie})
+    candidatura_inviata = False
+
+    if request.method == 'POST' and request.POST.get('form_tipo') == 'candidatura':
+        nome     = request.POST.get('nome', '').strip()
+        email    = request.POST.get('email', '').strip()
+        telefono = request.POST.get('telefono', '').strip()
+        ruolo    = request.POST.get('ruolo', '').strip()
+        msg      = request.POST.get('messaggio', '').strip()
+
+        if nome and email and ruolo and msg:
+            imp = ImpostazioniRistorante.get()
+            dest = imp.email if imp and imp.email else None
+            corpo = (
+                f"Nuova candidatura ricevuta dal sito\n\n"
+                f"Nome: {nome}\n"
+                f"Email: {email}\n"
+                f"Telefono: {telefono or '—'}\n"
+                f"Ruolo: {ruolo}\n\n"
+                f"Messaggio:\n{msg}"
+            )
+            try:
+                if dest:
+                    send_mail(
+                        subject=f"Candidatura: {ruolo} — {nome}",
+                        message=corpo,
+                        from_email=settings.DEFAULT_FROM_EMAIL if hasattr(settings, 'DEFAULT_FROM_EMAIL') else 'noreply@ristobar.it',
+                        recipient_list=[dest],
+                        fail_silently=True,
+                    )
+                # Notifica Telegram se configurato
+                token = settings.TELEGRAM_BOT_TOKEN
+                chat_id = imp.telegram_chat_id if imp else ''
+                if token and chat_id:
+                    invia_messaggio_telegram(chat_id, f"📋 *Nuova candidatura*\n👤 {nome}\n🎯 {ruolo}\n📧 {email}")
+            except Exception:
+                pass
+            candidatura_inviata = True
+
+    return render(request, 'ristorante/vetrina.html', {
+        'categorie': categorie,
+        'candidatura_inviata': candidatura_inviata,
+        'impostazioni': ImpostazioniRistorante.get(),
+    })
 
 
 # ─── API REST standard ─────────────────────────────────────────────────────────
@@ -1253,7 +1439,7 @@ def gestione_eprint(request):
     })
 
 
-@ruolo_richiesto(RUOLO_CAMERIERE, RUOLO_CAPO_AREA, RUOLO_TITOLARE)
+@ruolo_richiesto(RUOLO_CAMERIERE, RUOLO_CAMERIERE_SENIOR, RUOLO_CAPO_AREA, RUOLO_TITOLARE)
 @require_POST
 def eprint_ordine(request, ordine_id):
     """Invia l'ordine/comanda via email alla stampante ePrint del tavolo."""
@@ -1391,7 +1577,7 @@ def impostazioni_ristorante(request):
     if request.method == 'POST':
         campi = [
             'nome', 'slogan', 'indirizzo', 'cap', 'citta', 'provincia',
-            'telefono', 'email', 'sito', 'piva', 'cf', 'regime_fiscale',
+            'telefono', 'email', 'sito', 'orari', 'piva', 'cf', 'regime_fiscale',
             'iban', 'note_scontrino', 'note_fattura', 'piatto_del_giorno',
             # WhatsApp
             'whatsapp_numero', 'whatsapp_nome',
@@ -1402,6 +1588,10 @@ def impostazioni_ristorante(request):
             'social_youtube', 'social_tiktok', 'social_instagram',
             # Abbonamento
             'dominio', 'note_abbonamento',
+            # Pagamenti dipendenti
+            'pag_dip_iban', 'pag_dip_provider', 'pag_dip_note',
+            # DDT
+            'ddt_causale', 'ddt_vettore', 'ddt_aspetto', 'ddt_note',
         ]
         for c in campi:
             setattr(imp, c, request.POST.get(c, '').strip())
@@ -1414,8 +1604,30 @@ def impostazioni_ristorante(request):
         
         imp.telegram_enabled = request.POST.get('telegram_enabled') == 'on'
         imp.telegram_bot_token = request.POST.get('telegram_bot_token', '').strip()
+        chat_id = request.POST.get('telegram_chat_id', '').strip()
+        if chat_id:
+            if chat_id.startswith('@'):
+                # Username pubblico — lascia invariato
+                imp.telegram_chat_id = chat_id
+            else:
+                digits = chat_id.lstrip('-')
+                if digits.isdigit():
+                    imp.telegram_chat_id = ('-' + digits) if len(digits) > 9 else digits
+                else:
+                    imp.telegram_chat_id = chat_id
         
         imp.abbonamento_attivo = request.POST.get('abbonamento_attivo') == 'on'
+        imp.mostra_lavora_con_noi = request.POST.get('mostra_lavora_con_noi') == 'on'
+        imp.ddt_abilitato = request.POST.get('ddt_abilitato') == 'on'
+
+        # Dropdown / select fields
+        imp.pag_dip_metodo = request.POST.get('pag_dip_metodo', 'B')
+        imp.ddt_porto = request.POST.get('ddt_porto', 'F')
+
+        # Integer fields
+        giorno = request.POST.get('pag_dip_giorno', '').strip()
+        if giorno.isdigit():
+            imp.pag_dip_giorno = int(giorno)
         
         # Date fields
         for field in ['abbonamento_inizio', 'abbonamento_fine', 'dominio_scadenza']:
@@ -1446,7 +1658,7 @@ def impostazioni_ristorante(request):
 
 # ─── Scontrino ───────────────────────────────────────────────────────────────
 
-@ruolo_richiesto(RUOLO_CAMERIERE, RUOLO_CAPO_AREA, RUOLO_TITOLARE)
+@ruolo_richiesto(RUOLO_CAMERIERE_SENIOR, RUOLO_CAPO_AREA, RUOLO_TITOLARE)
 def scontrino_view(request, ordine_id):
     """Genera e mostra lo scontrino di cortesia per un ordine."""
     ordine = get_object_or_404(Ordine, pk=ordine_id)
@@ -1501,7 +1713,7 @@ def scontrino_view(request, ordine_id):
 
 # ─── Fattura / Ricevuta ───────────────────────────────────────────────────────
 
-@ruolo_richiesto(RUOLO_CAMERIERE, RUOLO_CAPO_AREA, RUOLO_TITOLARE)
+@ruolo_richiesto(RUOLO_CAMERIERE_SENIOR, RUOLO_CAPO_AREA, RUOLO_TITOLARE)
 def fattura_nuova(request, ordine_id):
     """Form per emettere una fattura o ricevuta intestata a un cliente."""
     ordine = get_object_or_404(Ordine, pk=ordine_id)
@@ -1533,7 +1745,7 @@ def fattura_nuova(request, ordine_id):
     })
 
 
-@ruolo_richiesto(RUOLO_CAMERIERE, RUOLO_CAPO_AREA, RUOLO_TITOLARE)
+@ruolo_richiesto(RUOLO_CAMERIERE_SENIOR, RUOLO_CAPO_AREA, RUOLO_TITOLARE)
 def fattura_print(request, fattura_id):
     """Stampa o invia via email/ePrint una fattura/ricevuta."""
     doc    = get_object_or_404(Fattura, pk=fattura_id)
@@ -1605,10 +1817,29 @@ def dev_panel(request):
         from django.http import Http404
         raise Http404
 
-    # Recupera dati live dal DB per i link parametrici
     sala1 = Sala.objects.first()
     tavolo1 = Tavolo.objects.filter(attivo=True).first() if sala1 else None
     prenotazione1 = Prenotazione.objects.first()
+
+    tg_token = settings.TELEGRAM_BOT_TOKEN
+    tg_ok = False
+    tg_bot_name = ''
+    if tg_token:
+        try:
+            r = requests.get(f'https://api.telegram.org/bot{tg_token}/getMe', timeout=5)
+            data = r.json()
+            if data.get('ok'):
+                tg_ok = True
+                tg_bot_name = data['result'].get('username', '')
+        except Exception:
+            pass
+
+    imp = ImpostazioniRistorante.get()
+    wa_ok = bool(getattr(imp, 'whatsapp_enabled', False) and getattr(imp, 'whatsapp_token', ''))
+
+    stripe_ok = bool(getattr(settings, 'STRIPE_SECRET_KEY', ''))
+    stripe_pub_ok = bool(getattr(settings, 'STRIPE_PUBLIC_KEY', ''))
+    stripe_webhook_ok = bool(getattr(settings, 'STRIPE_WEBHOOK_SECRET', ''))
 
     ctx = {
         'sala1': sala1,
@@ -1619,8 +1850,97 @@ def dev_panel(request):
         'n_piatti': Piatto.objects.count(),
         'n_ordini': Ordine.objects.count(),
         'n_prenotazioni': Prenotazione.objects.count(),
+        'tg_ok': tg_ok,
+        'tg_bot_name': tg_bot_name,
+        'wa_ok': wa_ok,
+        'stripe_ok': stripe_ok,
+        'stripe_pub_ok': stripe_pub_ok,
+        'stripe_webhook_ok': stripe_webhook_ok,
+        'tg_chat_id_saved': imp.telegram_chat_id,
     }
     return render(request, 'dev/panel.html', ctx)
+
+
+@csrf_exempt
+def dev_telegram_verifica(request):
+    """Verifica che il chat_id sia raggiungibile dal bot."""
+    if not settings.DEBUG:
+        return JsonResponse({'errore': 'Solo in DEBUG'}, status=403)
+    token = settings.TELEGRAM_BOT_TOKEN
+    if not token:
+        return JsonResponse({'errore': 'Token non configurato'}, status=400)
+    data = json.loads(request.body)
+    chat_id = data.get('chat_id', '').strip()
+    if not chat_id:
+        return JsonResponse({'errore': 'chat_id mancante'}, status=400)
+    try:
+        r = requests.get(
+            f'https://api.telegram.org/bot{token}/getChat',
+            params={'chat_id': chat_id},
+            timeout=10,
+        )
+        d = r.json()
+        if d.get('ok'):
+            chat = d['result']
+            nome = chat.get('title') or f"{chat.get('first_name','')} {chat.get('last_name','')}".strip()
+            tipo = chat.get('type', '')
+            return JsonResponse({'ok': True, 'nome': nome, 'tipo': tipo})
+        return JsonResponse({'errore': d.get('description', 'Chat non trovata')}, status=400)
+    except Exception as e:
+        return JsonResponse({'errore': str(e)}, status=500)
+
+
+@csrf_exempt
+def dev_telegram_leggi(request):
+    """Legge gli ultimi messaggi ricevuti dal bot (dal buffer in memoria)."""
+    if not settings.DEBUG:
+        return JsonResponse({'errore': 'Solo in DEBUG'}, status=403)
+    from ristorante.telegram_service import _messaggi_recenti
+    return JsonResponse({'messaggi': list(reversed(_messaggi_recenti))})
+
+
+@csrf_exempt
+@require_POST
+def dev_telegram_invia(request):
+    """Invia un messaggio Telegram a un chat_id specificato."""
+    if not settings.DEBUG:
+        return JsonResponse({'errore': 'Solo in DEBUG'}, status=403)
+    token = settings.TELEGRAM_BOT_TOKEN
+    if not token:
+        return JsonResponse({'errore': 'Token non configurato'}, status=400)
+    data = json.loads(request.body)
+    chat_id = data.get('chat_id', '').strip()
+    testo = data.get('testo', '').strip()
+    if not chat_id or not testo:
+        return JsonResponse({'errore': 'chat_id e testo obbligatori'}, status=400)
+    try:
+        r = requests.post(
+            f'https://api.telegram.org/bot{token}/sendMessage',
+            json={'chat_id': chat_id, 'text': testo, 'parse_mode': 'Markdown'},
+            timeout=10,
+        )
+        if r.json().get('ok'):
+            return JsonResponse({'ok': True})
+        return JsonResponse({'errore': r.json().get('description', 'Errore sconosciuto')}, status=400)
+    except Exception as e:
+        return JsonResponse({'errore': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_POST
+def dev_whatsapp_invia(request):
+    """Invia un messaggio WhatsApp di test."""
+    if not settings.DEBUG:
+        return JsonResponse({'errore': 'Solo in DEBUG'}, status=403)
+    data = json.loads(request.body)
+    numero = data.get('numero', '').strip()
+    testo = data.get('testo', '').strip()
+    if not numero or not testo:
+        return JsonResponse({'errore': 'numero e testo obbligatori'}, status=400)
+    ok, risposta = invia_whatsapp(testo, numero)
+    if ok:
+        return JsonResponse({'ok': True})
+    return JsonResponse({'errore': str(risposta)}, status=400)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

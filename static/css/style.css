@@ -176,12 +176,55 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 
 .text-muted { color: var(--muted); }
 
-/* ─── Responsive ─────────────────────────────────────────────── */
+/* ─── Responsive — Tablet (≤900px) ─────────────────────────────── */
+@media (max-width: 900px) {
+    .container { padding: 1.25rem; }
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .tavoli-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
+
+    /* Navbar: meno spazio */
+    .nav-links a { font-size: 0.82rem; padding: 0.35rem 0.6rem; }
+    .nav-brand   { font-size: 1rem; }
+
+    /* Impostazioni ristorante — griglia a 1 colonna */
+    .ir-grid { grid-template-columns: 1fr !important; }
+}
+
+/* ─── Responsive — Smartphone (≤600px) ─────────────────────────── */
 @media (max-width: 600px) {
-    .container { padding: 1rem; }
-    .tavoli-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); }
-    .stats-grid { grid-template-columns: 1fr 1fr; }
+    .container { padding: 0.75rem; }
+    .tavoli-grid { grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 0.5rem; }
+    .stats-grid { grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+
+    /* Nasconde link navbar, mostra solo brand */
     .nav-links a { display: none; }
+    .nav-brand   { font-size: 0.95rem; }
+
+    /* Cards */
+    .card, .stat-card { border-radius: 8px; padding: 0.75rem; }
+
+    /* Tabelle — scroll orizzontale */
+    table { display: block; overflow-x: auto; white-space: nowrap; }
+
+    /* Impostazioni — tab scorrevoli */
+    .ir-tabs { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 4px; }
+    .ir-tab  { white-space: nowrap; font-size: 0.75rem; padding: 0.35rem 0.7rem; }
+    .ir-grid { grid-template-columns: 1fr !important; }
+
+    /* Form elementi full-width */
+    .btn, button[type="submit"] { width: 100%; font-size: 0.9rem; }
+
+    /* Stat strip dashboard */
+    .stat-strip { flex-wrap: wrap; gap: 0.4rem; }
+    .stat-chip  { font-size: 0.75rem; }
+}
+
+/* ─── Responsive — Piccolo smartphone (≤400px) ─────────────────── */
+@media (max-width: 400px) {
+    .tavoli-grid { grid-template-columns: repeat(2, 1fr); }
+    .stats-grid  { grid-template-columns: 1fr; }
+    h1 { font-size: 1.3rem; }
+    h2 { font-size: 1.1rem; }
 }
 
 /* ── Editor sala ────────────────────────────────────────────── */

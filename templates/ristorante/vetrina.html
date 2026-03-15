@@ -144,12 +144,106 @@
 
 <!-- ── FOOTER ─────────────────────────────────────── -->
 <footer class="vetrina-footer">
+
+  {% if impostazioni.mostra_lavora_con_noi %}
+  <!-- Lavora con noi -->
+  <div class="footer-lavora" id="lavora">
+    <div class="footer-lavora-inner">
+      <div class="footer-lavora-header">
+        <h2>Lavora con noi</h2>
+        <p>Sei appassionato di cucina e ospitalità? Entra nel nostro team</p>
+      </div>
+
+      <div class="lavora-grid">
+        <div class="lavora-ruoli">
+          <h3>Posizioni aperte</h3>
+          <div class="ruolo-card">
+            <span class="ruolo-icon">👨‍🍳</span>
+            <div>
+              <strong>Cuoco / Sous Chef</strong>
+              <p>Esperienza in cucina italiana, passione per i prodotti freschi</p>
+            </div>
+          </div>
+          <div class="ruolo-card">
+            <span class="ruolo-icon">🍽️</span>
+            <div>
+              <strong>Cameriere / Cameriera</strong>
+              <p>Buona presenza, attitudine al servizio, italiano fluente</p>
+            </div>
+          </div>
+          <div class="ruolo-card">
+            <span class="ruolo-icon">🍹</span>
+            <div>
+              <strong>Barista</strong>
+              <p>Esperienza nel settore bar, cocktail e beverage</p>
+            </div>
+          </div>
+          <div class="ruolo-card">
+            <span class="ruolo-icon">📦</span>
+            <div>
+              <strong>Aiuto Cucina / Lavapiatti</strong>
+              <p>Anche prima esperienza, disponibilità weekend</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="lavora-form-wrap">
+          <h3>Invia la tua candidatura</h3>
+          {% if candidatura_inviata %}
+          <div class="lavora-success">
+            ✅ Candidatura inviata! Ti contatteremo al più presto.
+          </div>
+          {% else %}
+          <form method="post" action="#lavora" class="lavora-form">
+            {% csrf_token %}
+            <input type="hidden" name="form_tipo" value="candidatura">
+            <div class="lf-group">
+              <label>Nome e Cognome *</label>
+              <input type="text" name="nome" class="lf-input" required placeholder="Mario Rossi">
+            </div>
+            <div class="lf-group">
+              <label>Email *</label>
+              <input type="email" name="email" class="lf-input" required placeholder="mario@email.com">
+            </div>
+            <div class="lf-group">
+              <label>Telefono</label>
+              <input type="tel" name="telefono" class="lf-input" placeholder="+39 333 1234567">
+            </div>
+            <div class="lf-group">
+              <label>Ruolo desiderato *</label>
+              <select name="ruolo" class="lf-input" required>
+                <option value="">— Scegli —</option>
+                <option>Cuoco / Sous Chef</option>
+                <option>Cameriere / Cameriera</option>
+                <option>Barista</option>
+                <option>Aiuto Cucina / Lavapiatti</option>
+                <option>Altro</option>
+              </select>
+            </div>
+            <div class="lf-group">
+              <label>Presentati brevemente *</label>
+              <textarea name="messaggio" class="lf-input" rows="4" required
+                placeholder="Racconta la tua esperienza e disponibilità…"></textarea>
+            </div>
+            <button type="submit" class="btn-cta-primary" style="width:100%">
+              Invia candidatura →
+            </button>
+          </form>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="footer-divider"></div>
+  {% endif %}
+
   <div class="footer-inner">
     <div class="footer-brand">🍽️ La Trattoria</div>
     <div class="footer-links">
       <a href="#menu">Menu</a>
       <a href="#info">Info</a>
-      <a href="/accounts/login/">Area riservata</a>
+      {% if impostazioni.mostra_lavora_con_noi %}<a href="#lavora">Lavora con noi</a>{% endif %}
+      <a href="/login/">Area riservata</a>
     </div>
     <div class="footer-copy">© 2026 La Trattoria — Powered by RistoBAR</div>
   </div>

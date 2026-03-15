@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+{% load i18n static %}
+
+{% block title %}Statistiche — RistoBAR{% endblock %}
+
+{% block content %}
+<style>
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.2rem; margin-bottom: 2rem; }
+  .stat-card { background: #fff; border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 8px rgba(0,0,0,.08); text-align: center; }
+  .stat-card .valore { font-size: 2.4rem; font-weight: 700; color: #2c3e50; }
+  .stat-card .etichetta { font-size: .85rem; color: #7f8c8d; margin-top: .4rem; }
+  .section-title { font-size: 1.2rem; font-weight: 600; color: #2c3e50; margin: 2rem 0 1rem; border-left: 4px solid #3498db; padding-left: .8rem; }
+  .chart-wrap { background: #fff; border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 8px rgba(0,0,0,.08); overflow-x: auto; }
+  .bar-row { display: flex; align-items: center; gap: .8rem; margin-bottom: .6rem; font-size: .9rem; }
+  .bar-label { width: 40px; text-align: right; color: #555; }
+  .bar-bg { flex: 1; background: #ecf0f1; border-radius: 4px; height: 22px; position: relative; }
+  .bar-fill { background: #3498db; height: 100%; border-radius: 4px; transition: width .4s; }
+  .bar-val { width: 70px; color: #2c3e50; font-weight: 600; font-size: .85rem; }
+  .piatti-table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+  .piatti-table th { background: #2c3e50; color: #fff; padding: .6rem 1rem; text-align: left; }
+  .piatti-table td { padding: .6rem 1rem; border-bottom: 1px solid #ecf0f1; }
+  .piatti-table tr:hover td { background: #f8f9fa; }
+  .prm-list { list-style: none; padding: 0; }
+  .prm-item { background: #fff; border-radius: 8px; padding: .8rem 1rem; margin-bottom: .6rem;
+              box-shadow: 0 1px 4px rgba(0,0,0,.06); display: flex; gap: 1rem; align-items: center; }
+  .prm-data { background: #e74c3c; color: #fff; border-radius: 6px; padding: .2rem .6rem; font-size: .8rem; font-weight: 600; white-space: nowrap; }
+  .report-list { list-style: none; padding: 0; }
+  .report-item { display: flex; gap: 1rem; padding: .7rem 0; border-bottom: 1px solid #ecf0f1; font-size: .9rem; }
+  .report-tipo { background: #2980b9; color: #fff; border-radius: 4px; padding: .1rem .5rem; font-size: .75rem; }
+  .form-report { background: #fff; border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 8px rgba(0,0,0,.08); margin-bottom: 1.5rem; }
+  .form-report .row { display: flex; gap: 1rem; flex-wrap: wrap; }
+  .form-report label { font-size: .85rem; font-weight: 600; color: #555; display: block; margin-bottom: .3rem; }
+  .form-report input, .form-report select { padding: .5rem .8rem; border: 1px solid #ddd; border-radius: 6px; font-size: .9rem; }
+  .btn-genera { background: #27ae60; color: #fff; border: none; border-radius: 8px; padding: .7rem 1.6rem; font-size: .95rem; cursor: pointer; margin-top: .5rem; }
+  .btn-genera:hover { background: #219a52; }
+  .msg-ok { background: #d5f5e3; border: 1px solid #27ae60; border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem; color: #1d8348; }
+  .msg-err { background: #fde8e8; border: 1px solid #e74c3c; border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem; color: #922b21; }
+</style>
+
+<div style="max-width:960px; margin:0 auto; padding:2rem 1rem;">
+
+  <h1 style="color:#2c3e50; margin-bottom:1.5rem;">📊 Statistiche</h1>
+
+  {% if messages %}
+    {% for m in messages %}
+      <div class="{% if 'error' in m.tags %}msg-err{% else %}msg-ok{% endif %}">{{ m }}</div>
+    {% endfor %}
+  {% endif %}
+
+  <!-- KPI oggi -->
+  <div class="stat-grid">
+    <div class="stat-card">
+      <div class="valore">€ {{ incassi_oggi|floatformat:2 }}</div>
+      <div class="etichetta">Incassi oggi</div>
+    </div>
+    <div class="stat-card">
+      <div class="valore">{{ ordini_oggi }}</div>
+      <div class="etichetta">Ordini oggi</div>
+    </div>
+    <div class="stat-card">
+      <div class="valore">{{ prenotazioni_confermate }}</div>
+      <div class="etichetta">Prenotazioni confermate oggi</div>
+    </div>
+  </div>
+
+  <!-- Grafico a barre ultimi 7 giorni -->
+  <p class="section-title">Andamento settimana (incassi €)</p>
+  <div class="chart-wrap">
+    {% with max_val=dati_settimana|length %}
+    {% for g in dati_settimana %}
+      {% with pct=g.incassi|floatformat:0 %}
+      <div class="bar-row">
+        <div class="bar-label">{{ g.giorno }}</div>
+        <div class="bar-bg">
+          <div class="bar-fill" style="width:{% if g.incassi %}{{ g.incassi|floatformat:0 }}{% else %}0{% endif %}px; max-width:100%;"></div>
+        </div>
+        <div class="bar-val">€ {{ g.incassi|floatformat:2 }}</div>
+        <div style="color:#7f8c8d; font-size:.8rem;">{{ g.ordini }} ord.</div>
+      </div>
+      {% endwith %}
+    {% endfor %}
+    {% endwith %}
+  </div>
+
+  <!-- Piatti più venduti -->
+  <p class="section-title">Top 10 piatti (ultimi 30 giorni)</p>
+  <div class="chart-wrap">
+    {% if piatti_venduti %}
+      <table class="piatti-table">
+        <thead>
+          <tr><th>#</th><th>Piatto</th><th>Unità vendute</th></tr>
+        </thead>
+        <tbody>
+          {% for p in piatti_venduti %}
+          <tr>
+            <td>{{ forloop.counter }}</td>
+            <td>{{ p.piatto__nome }}</td>
+            <td>{{ p.totale }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p style="color:#7f8c8d; text-align:center; padding:1rem;">Nessun dato negli ultimi 30 giorni.</p>
+    {% endif %}
+  </div>
+
+  <!-- Promemoria in scadenza -->
+  {% if promemoria_attivi %}
+  <p class="section-title">⏰ Promemoria in scadenza (prossimi 30 gg)</p>
+  <ul class="prm-list">
+    {% for p in promemoria_attivi %}
+    <li class="prm-item">
+      <span class="prm-data">{{ p.data_scadenza|date:"d/m" }}</span>
+      <span>{{ p.titolo }}</span>
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+
+  <!-- Genera report -->
+  <p class="section-title">Genera report periodico</p>
+  <div class="form-report">
+    <form method="post" action="{% url 'genera_report' %}">
+      {% csrf_token %}
+      <div class="row">
+        <div>
+          <label>Tipo</label>
+          <select name="tipo">
+            <option value="GIORNALIERO">Giornaliero</option>
+            <option value="SETTIMANALE">Settimanale</option>
+            <option value="MENSILE" selected>Mensile</option>
+          </select>
+        </div>
+        <div>
+          <label>Da</label>
+          <input type="date" name="data_da" required>
+        </div>
+        <div>
+          <label>A</label>
+          <input type="date" name="data_a" required>
+        </div>
+      </div>
+      <button type="submit" class="btn-genera">Genera report</button>
+    </form>
+  </div>
+
+  <!-- Report recenti -->
+  {% if report_recenti %}
+  <p class="section-title">Report recenti</p>
+  <ul class="report-list">
+    {% for r in report_recenti %}
+    <li class="report-item">
+      <span class="report-tipo">{{ r.tipo }}</span>
+      <span>{{ r.data_da|date:"d/m/Y" }} → {{ r.data_a|date:"d/m/Y" }}</span>
+      <span style="color:#7f8c8d; font-size:.8rem; margin-left:auto;">{{ r.creato_il|date:"d/m H:i" }}</span>
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+
+</div>
+{% endblock %}

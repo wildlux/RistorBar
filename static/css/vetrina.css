@@ -131,3 +131,128 @@
   .features { grid-template-columns: 1fr 1fr; }
   .feat { border-right: none; border-bottom: 1px solid #e9ecef; }
 }
+
+/* ── LAVORA CON NOI (nel footer) ─────────────────── */
+.footer-lavora {
+  background: #12122a;
+  padding: 4rem 2rem;
+  text-align: center;
+}
+.footer-lavora-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+.footer-lavora-header {
+  margin-bottom: 2.5rem;
+}
+.footer-lavora-header h2 {
+  font-size: clamp(1.6rem, 4vw, 2.2rem);
+  font-weight: 800;
+  color: white;
+  margin: 0 0 0.5rem;
+}
+.footer-lavora-header p {
+  color: rgba(255,255,255,0.6);
+  font-size: 1rem;
+  margin: 0;
+}
+.footer-divider {
+  border-top: 1px solid rgba(255,255,255,0.08);
+  margin: 0;
+}
+.lavora-grid {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3rem;
+  align-items: start;
+  text-align: left;
+}
+.lavora-ruoli h3,
+.lavora-form-wrap h3 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin-bottom: 1.2rem;
+  color: rgba(255,255,255,0.9);
+}
+.ruolo-card {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  padding: 1rem 1.2rem;
+  margin-bottom: 0.75rem;
+  transition: background 0.15s;
+}
+.ruolo-card:hover { background: rgba(255,255,255,0.09); }
+.ruolo-icon { font-size: 1.8rem; flex-shrink: 0; }
+.ruolo-card strong { display: block; font-size: 0.95rem; margin-bottom: 0.2rem; color: white; }
+.ruolo-card p { font-size: 0.8rem; color: rgba(255,255,255,0.5); margin: 0; }
+
+.lavora-form-wrap {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 16px;
+  padding: 2rem;
+}
+.lf-group { margin-bottom: 1rem; }
+.lf-group label { display: block; font-size: 0.78rem; font-weight: 600; color: rgba(255,255,255,0.6); margin-bottom: 0.3rem; }
+.lf-input {
+  width: 100%;
+  padding: 0.55rem 0.8rem;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 8px;
+  font-size: 0.88rem;
+  color: white;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+}
+.lf-input::placeholder { color: rgba(255,255,255,0.3); }
+.lf-input option { background: #1a1a2e; color: white; }
+.lf-input:focus { outline: none; border-color: #e74c3c; }
+textarea.lf-input { resize: vertical; }
+.lavora-success {
+  background: rgba(46,204,113,0.15);
+  color: #2ecc71;
+  border: 1px solid rgba(46,204,113,0.3);
+  border-radius: 10px;
+  padding: 1.5rem;
+  text-align: center;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+@media (max-width: 768px) {
+  .lavora-grid { grid-template-columns: 1fr; gap: 2rem; }
+}
+
+/* ── Tablet (≤900px) ──────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .hero-content h1 { font-size: clamp(1.8rem, 5vw, 2.8rem); }
+  .features { grid-template-columns: 1fr 1fr; }
+  .menu-grid { grid-template-columns: 1fr 1fr; }
+  .footer-lavora { padding: 2.5rem 1.5rem; }
+}
+
+/* ── Smartphone (≤600px) ──────────────────────────────────────── */
+@media (max-width: 600px) {
+  .hero-content h1 { font-size: 1.6rem; }
+  .hero-content p  { font-size: 0.9rem; }
+  .hero-actions { flex-direction: column; gap: 0.75rem; }
+  .features { grid-template-columns: 1fr; }
+  .menu-grid { grid-template-columns: 1fr; }
+  .quick-fields { grid-template-columns: 1fr; }
+  .footer-lavora { padding: 2rem 1rem; }
+  .footer-lavora-header h2 { font-size: 1.4rem; }
+  .lf-input, .lf-select { font-size: 0.9rem; }
+}
+
+/* ── Piccolo smartphone (≤400px) ─────────────────────────────── */
+@media (max-width: 400px) {
+  .hero-nav-links .btn-hero-prenota { font-size: 0.8rem; padding: 0.4rem 0.8rem; }
+  .feat { padding: 1rem; }
+}

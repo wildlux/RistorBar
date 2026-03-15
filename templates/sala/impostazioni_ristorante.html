@@ -8,7 +8,19 @@
   <link rel="stylesheet" href="{% static 'css/style.css' %}">
   <link rel="stylesheet" href="{% static 'css/sala_staff.css' %}">
   <style>
-    .ir-body { max-width: 760px; margin: 0 auto; padding: 1.25rem; }
+    .ir-body { max-width: 820px; margin: 0 auto; padding: 1.25rem; }
+
+    /* Tabs */
+    .ir-tabs { display: flex; gap: 0.25rem; flex-wrap: wrap; margin-bottom: 1.25rem;
+               background: #f8f9fa; border-radius: 10px; padding: 0.35rem; }
+    .ir-tab { padding: 0.45rem 1rem; border-radius: 7px; border: none; background: none;
+               font-size: 0.83rem; font-weight: 600; color: #888; cursor: pointer; white-space: nowrap; }
+    .ir-tab.active { background: white; color: #2c3e50; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+    .ir-tab:hover:not(.active) { color: #555; }
+    .ir-section { display: none; }
+    .ir-section.active { display: block; }
+
+    /* Cards */
     .ir-card { background: white; border: 1px solid #e9ecef; border-radius: 12px;
                padding: 1.25rem 1.5rem; margin-bottom: 1rem; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
     .ir-card h3 { font-size: 0.95rem; font-weight: 700; margin-bottom: 1rem;
@@ -17,14 +29,37 @@
     .ir-full { grid-column: 1/-1; }
     .ir-label { font-size: 0.78rem; color: #666; font-weight: 600; display: block; margin-bottom: 0.2rem; }
     .ir-input { width: 100%; padding: 0.5rem 0.7rem; border: 1px solid #ddd;
-                border-radius: 7px; font-size: 0.88rem; }
+                border-radius: 7px; font-size: 0.88rem; box-sizing: border-box; }
     .ir-input:focus { outline: none; border-color: #3498db; }
     textarea.ir-input { resize: vertical; min-height: 70px; }
-    .ir-hint { font-size: 0.72rem; color: #aaa; margin-top: 0.2rem; }
+    .ir-hint { font-size: 0.72rem; color: #aaa; margin-top: 0.2rem; line-height: 1.5; }
     .ir-msg { background: #d5f5e3; color: #1e8449; border-radius: 8px;
               padding: 0.6rem 1rem; font-weight: 700; margin-bottom: 1rem; }
-    .ir-save { display: flex; gap: 0.75rem; align-items: center; }
+    .ir-save { display: flex; gap: 0.75rem; align-items: center; margin-top: 0.5rem; }
     .ir-logo-preview { max-height: 60px; border-radius: 6px; border: 1px solid #ddd; padding: 4px; }
+
+    /* Test messaggi inline */
+    .test-box { margin-top: 1rem; border-top: 2px dashed #e8e8e8; padding-top: 0.9rem; }
+    .test-box-title { font-size: 0.72rem; font-weight: 700; color: #aaa; letter-spacing: 0.06em;
+                      text-transform: uppercase; margin-bottom: 0.6rem; }
+    .test-row { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 0.5rem; }
+    .test-input { flex: 1; min-width: 100px; padding: 0.38rem 0.6rem; border: 1px solid #ddd;
+                  border-radius: 6px; font-size: 0.82rem; }
+    .test-input:focus { outline: none; border-color: #3498db; }
+    .test-btn { padding: 0.38rem 0.85rem; border: none; border-radius: 6px; font-size: 0.78rem;
+                font-weight: 700; cursor: pointer; white-space: nowrap; transition: opacity 0.15s; }
+    .test-btn:hover { opacity: 0.82; }
+    .btn-tg    { background: #0088cc; color: #fff; }
+    .btn-wa    { background: #25d366; color: #fff; }
+    .btn-check { background: #ecf0f1; color: #555; }
+    .btn-read  { background: #f39c12; color: #fff; }
+    .test-log { font-size: 0.75rem; font-family: monospace; padding: 0.4rem 0.7rem;
+                background: #f8f9fa; border: 1px solid #eee; border-radius: 6px;
+                min-height: 30px; line-height: 1.7; max-height: 160px; overflow-y: auto; }
+    .test-log .ok  { color: #27ae60; }
+    .test-log .err { color: #e74c3c; }
+    .test-log .inf { color: #999; }
+    .test-log .msg { color: #8e44ad; }
   </style>
 </head>
 <body>
@@ -42,303 +77,685 @@
   <div class="ir-msg">✅ {{ messaggio }}</div>
   {% endif %}
 
+  <!-- TABS -->
+  <div class="ir-tabs">
+    <button class="ir-tab active" onclick="showTab('generale')">🏷️ Generale</button>
+    <button class="ir-tab" onclick="showTab('fiscale')">🏛️ Fiscale</button>
+    <button class="ir-tab" onclick="showTab('messaggistica')">💬 Messaggistica</button>
+    <button class="ir-tab" onclick="showTab('social')">📱 Social</button>
+    <button class="ir-tab" onclick="showTab('hardware')">📟 Hardware</button>
+    <button class="ir-tab" onclick="showTab('abbonamento')">💳 Abbonamento</button>
+    <button class="ir-tab" onclick="showTab('dipendenti')">👥 Dipendenti</button>
+    <button class="ir-tab" onclick="showTab('ddt')">🚚 DDT</button>
+  </div>
+
   <form method="post" enctype="multipart/form-data">
     {% csrf_token %}
 
-    <div class="ir-card">
-      <h3>🏷️ Dati generali</h3>
-      <div class="ir-grid">
-        <div class="ir-full">
-          <label class="ir-label">Nome ristorante</label>
-          <input class="ir-input" type="text" name="nome" value="{{ imp.nome }}">
+    <!-- ══ GENERALE ═══════════════════════════════════════════════════ -->
+    <div id="tab-generale" class="ir-section active">
+
+      <div class="ir-card">
+        <h3>🏷️ Dati generali</h3>
+        <div class="ir-grid">
+          <div class="ir-full">
+            <label class="ir-label">Nome ristorante</label>
+            <input class="ir-input" type="text" name="nome" value="{{ imp.nome }}">
+          </div>
+          <div class="ir-full">
+            <label class="ir-label">Slogan / sottotitolo</label>
+            <input class="ir-input" type="text" name="slogan" value="{{ imp.slogan }}">
+          </div>
+          <div>
+            <label class="ir-label">Telefono</label>
+            <input class="ir-input" type="text" name="telefono" value="{{ imp.telefono }}">
+          </div>
+          <div>
+            <label class="ir-label">Email</label>
+            <input class="ir-input" type="email" name="email" value="{{ imp.email }}">
+          </div>
+          <div class="ir-full">
+            <label class="ir-label">Sito web</label>
+            <input class="ir-input" type="url" name="sito" value="{{ imp.sito }}" placeholder="https://www.mioristorante.it">
+          </div>
+          <div class="ir-full">
+            <label class="ir-label">Orari di apertura</label>
+            <textarea class="ir-input" name="orari" rows="3" placeholder="Es. Lun-Ven 12:00-15:00 / 19:00-23:00&#10;Sab-Dom 12:00-23:00&#10;Martedì chiuso">{{ imp.orari|default:'' }}</textarea>
+            <div class="ir-hint">Usato dal bot Telegram per rispondere a "quando siete aperti?"</div>
+          </div>
         </div>
-        <div class="ir-full">
-          <label class="ir-label">Slogan / sottotitolo</label>
-          <input class="ir-input" type="text" name="slogan" value="{{ imp.slogan }}">
+      </div>
+
+      <div class="ir-card">
+        <h3>📍 Indirizzo</h3>
+        <div class="ir-grid">
+          <div class="ir-full">
+            <label class="ir-label">Via / Piazza</label>
+            <input class="ir-input" type="text" name="indirizzo" value="{{ imp.indirizzo }}">
+          </div>
+          <div>
+            <label class="ir-label">CAP</label>
+            <input class="ir-input" type="text" name="cap" value="{{ imp.cap }}" maxlength="10">
+          </div>
+          <div>
+            <label class="ir-label">Città</label>
+            <input class="ir-input" type="text" name="citta" value="{{ imp.citta }}">
+          </div>
+          <div>
+            <label class="ir-label">Provincia (sigla)</label>
+            <input class="ir-input" type="text" name="provincia" value="{{ imp.provincia }}" maxlength="5" placeholder="MI">
+          </div>
         </div>
-        <div>
-          <label class="ir-label">Telefono</label>
-          <input class="ir-input" type="text" name="telefono" value="{{ imp.telefono }}">
-        </div>
-        <div>
-          <label class="ir-label">Email</label>
-          <input class="ir-input" type="email" name="email" value="{{ imp.email }}">
-        </div>
-        <div class="ir-full">
-          <label class="ir-label">Sito web</label>
-          <input class="ir-input" type="url" name="sito" value="{{ imp.sito }}" placeholder="https://www.mioristorante.it">
-        </div>
+      </div>
+
+      <div class="ir-card">
+        <h3>🖼️ Logo</h3>
+        {% if imp.logo %}
+        <img src="{{ imp.logo.url }}" class="ir-logo-preview" alt="Logo attuale"><br><br>
+        {% endif %}
+        <input type="file" name="logo" accept="image/*">
+        <div class="ir-hint">Usato nell'intestazione di fatture e scontrini. Consigliato: PNG trasparente, max 300×100px.</div>
+      </div>
+
+      <div class="ir-save">
+        <button type="submit" class="btn btn-primary">💾 Salva</button>
       </div>
     </div>
 
-    <div class="ir-card">
-      <h3>📍 Indirizzo</h3>
-      <div class="ir-grid">
-        <div class="ir-full">
-          <label class="ir-label">Via / Piazza</label>
-          <input class="ir-input" type="text" name="indirizzo" value="{{ imp.indirizzo }}">
+    <!-- ══ FISCALE ════════════════════════════════════════════════════ -->
+    <div id="tab-fiscale" class="ir-section">
+
+      <div class="ir-card">
+        <h3>🏛️ Dati fiscali</h3>
+        <div class="ir-grid">
+          <div>
+            <label class="ir-label">Partita IVA</label>
+            <input class="ir-input" type="text" name="piva" value="{{ imp.piva }}" maxlength="11" placeholder="12345678901">
+          </div>
+          <div>
+            <label class="ir-label">Codice Fiscale</label>
+            <input class="ir-input" type="text" name="cf" value="{{ imp.cf }}" maxlength="16">
+          </div>
+          <div>
+            <label class="ir-label">Regime fiscale SDI</label>
+            <input class="ir-input" type="text" name="regime_fiscale" value="{{ imp.regime_fiscale }}" placeholder="RF01">
+            <div class="ir-hint">RF01 = Ordinario · RF19 = Forfettario</div>
+          </div>
+          <div>
+            <label class="ir-label">IBAN</label>
+            <input class="ir-input" type="text" name="iban" value="{{ imp.iban }}" placeholder="IT60X0542811101000000123456">
+          </div>
         </div>
-        <div>
-          <label class="ir-label">CAP</label>
-          <input class="ir-input" type="text" name="cap" value="{{ imp.cap }}" maxlength="10">
+      </div>
+
+      <div class="ir-card">
+        <h3>📝 Note documenti</h3>
+        <div class="ir-grid">
+          <div class="ir-full">
+            <label class="ir-label">Note a piè di scontrino</label>
+            <textarea class="ir-input" name="note_scontrino">{{ imp.note_scontrino }}</textarea>
+          </div>
+          <div class="ir-full">
+            <label class="ir-label">Note a piè di fattura</label>
+            <textarea class="ir-input" name="note_fattura">{{ imp.note_fattura }}</textarea>
+            <div class="ir-hint">Es. "Pagamento a 30gg d.f.f.m."</div>
+          </div>
         </div>
-        <div>
-          <label class="ir-label">Città</label>
-          <input class="ir-input" type="text" name="citta" value="{{ imp.citta }}">
-        </div>
-        <div>
-          <label class="ir-label">Provincia (sigla)</label>
-          <input class="ir-input" type="text" name="provincia" value="{{ imp.provincia }}" maxlength="5" placeholder="MI">
-        </div>
+      </div>
+
+      <div class="ir-save">
+        <button type="submit" class="btn btn-primary">💾 Salva</button>
       </div>
     </div>
 
-    <div class="ir-card">
-      <h3>🏛️ Dati fiscali</h3>
-      <div class="ir-grid">
-        <div>
-          <label class="ir-label">Partita IVA</label>
-          <input class="ir-input" type="text" name="piva" value="{{ imp.piva }}" maxlength="11" placeholder="12345678901">
+    <!-- ══ MESSAGGISTICA ══════════════════════════════════════════════ -->
+    <div id="tab-messaggistica" class="ir-section">
+
+      <!-- Guide API -->
+      <div class="ir-card" style="border-color:#e0e0e0;background:#fafafa">
+        <h3>📋 Come ottenere le credenziali API</h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+
+          <!-- WhatsApp -->
+          <div style="background:white;border:1px solid #e9ecef;border-radius:10px;padding:1rem">
+            <div style="font-weight:700;font-size:0.9rem;color:#25D366;margin-bottom:0.6rem">💬 WhatsApp Business API (Meta)</div>
+            <div style="font-size:0.78rem;color:#555;line-height:1.8">
+              <strong>⚠️ Richiede account Meta Business</strong><br>
+              <ol style="margin:0.4rem 0 0.4rem 1.2rem;padding:0">
+                <li>Crea un account su <a href="https://business.facebook.com" target="_blank" style="color:#1877f2">Meta Business Suite</a></li>
+                <li>Vai su <a href="https://developers.facebook.com" target="_blank" style="color:#1877f2">developers.facebook.com</a> → crea una App</li>
+                <li>Aggiungi il prodotto <strong>WhatsApp</strong> all'app</li>
+                <li>In <em>WhatsApp → Configurazione API</em> trovi:<br>
+                  • <strong>Phone ID</strong><br>
+                  • <strong>Business ID</strong><br>
+                  • <strong>Access Token</strong> (temporaneo o permanente)</li>
+                <li>Verifica il numero di telefono business</li>
+              </ol>
+              <div style="margin-top:0.5rem;padding:0.4rem 0.6rem;background:#fff3cd;border-radius:6px;font-size:0.72rem">
+                💰 Gratis fino a 1.000 conversazioni/mese, poi a pagamento.<br>
+                Per produzione serve <strong>verifica business Meta</strong>.
+              </div>
+              <div style="margin-top:0.5rem">
+                <a href="https://developers.facebook.com/docs/whatsapp/cloud-api/get-started" target="_blank" style="font-size:0.75rem;color:#1877f2">→ Guida ufficiale Meta</a>
+              </div>
+            </div>
+          </div>
+
+          <!-- Telegram -->
+          <div style="background:white;border:1px solid #e9ecef;border-radius:10px;padding:1rem">
+            <div style="font-weight:700;font-size:0.9rem;color:#0088cc;margin-bottom:0.6rem">✈️ Telegram Bot API</div>
+            <div style="font-size:0.78rem;color:#555;line-height:1.8">
+              <strong>✅ Completamente gratuito</strong><br>
+              <ol style="margin:0.4rem 0 0.4rem 1.2rem;padding:0">
+                <li>Apri Telegram e cerca <strong>@BotFather</strong></li>
+                <li>Scrivi <code>/newbot</code></li>
+                <li>Scegli nome e username del bot (deve finire in <em>bot</em>)</li>
+                <li>BotFather ti darà il <strong>Bot Token</strong> da incollare qui</li>
+                <li>Per ricevere notifiche in un gruppo:<br>
+                  • Aggiungi il bot al gruppo<br>
+                  • Usa <code>@username_gruppo</code> come Chat ID</li>
+              </ol>
+              <div style="margin-top:0.5rem;padding:0.4rem 0.6rem;background:#d5f5e3;border-radius:6px;font-size:0.72rem">
+                💰 API Telegram completamente gratuita, nessun limite pratico di messaggi.
+              </div>
+              <div style="margin-top:0.5rem">
+                <a href="https://core.telegram.org/bots#how-do-i-create-a-bot" target="_blank" style="font-size:0.75rem;color:#0088cc">→ Guida ufficiale Telegram</a>
+              </div>
+            </div>
+          </div>
+
         </div>
-        <div>
-          <label class="ir-label">Codice Fiscale</label>
-          <input class="ir-input" type="text" name="cf" value="{{ imp.cf }}" maxlength="16">
+      </div>
+
+      <!-- WhatsApp -->
+      <div class="ir-card" style="border-color:#25D366">
+        <h3>💬 WhatsApp Business</h3>
+        <div class="ir-grid">
+          <div class="ir-full">
+            <label class="ir-label">
+              <input type="checkbox" name="whatsapp_enabled" {% if imp.whatsapp_enabled %}checked{% endif %}>
+              Attivo
+            </label>
+          </div>
+          <div>
+            <label class="ir-label">Numero di telefono</label>
+            <input class="ir-input" type="text" name="whatsapp_numero" value="{{ imp.whatsapp_numero|default:'' }}" placeholder="+393491234567">
+          </div>
+          <div>
+            <label class="ir-label">Nome visualizzato</label>
+            <input class="ir-input" type="text" name="whatsapp_nome" value="{{ imp.whatsapp_nome|default:'' }}" placeholder="La Trattoria">
+          </div>
+          <div>
+            <label class="ir-label">Access Token</label>
+            <input class="ir-input" type="password" name="whatsapp_token" value="{{ imp.whatsapp_token|default:'' }}" placeholder="EA...">
+          </div>
+          <div>
+            <label class="ir-label">Phone ID</label>
+            <input class="ir-input" type="text" name="whatsapp_phone_id" value="{{ imp.whatsapp_phone_id|default:'' }}" placeholder="123456789012345">
+          </div>
+          <div class="ir-full">
+            <label class="ir-label">Business ID</label>
+            <input class="ir-input" type="text" name="whatsapp_business_id" value="{{ imp.whatsapp_business_id|default:'' }}" placeholder="123456789012345">
+          </div>
         </div>
-        <div>
-          <label class="ir-label">Regime fiscale SDI</label>
-          <input class="ir-input" type="text" name="regime_fiscale" value="{{ imp.regime_fiscale }}" placeholder="RF01">
-          <div class="ir-hint">RF01 = Ordinario, RF19 = Forfettario</div>
+        <div class="ir-hint" style="margin-top:0.4rem">
+          <a href="https://developers.facebook.com/docs/whatsapp/cloud-api" target="_blank">WhatsApp Cloud API →</a>
         </div>
-        <div>
-          <label class="ir-label">IBAN</label>
-          <input class="ir-input" type="text" name="iban" value="{{ imp.iban }}" placeholder="IT60X0542811101000000123456">
+
+        <!-- TEST WHATSAPP -->
+        <div class="test-box">
+          <div class="test-box-title">🧪 Test invio messaggio</div>
+          {% if not imp.whatsapp_enabled or not imp.whatsapp_token %}
+          <div style="color:#e74c3c;font-size:0.78rem;margin-bottom:0.5rem;">⚠️ WhatsApp non configurato — salva prima le credenziali.</div>
+          {% endif %}
+          <div class="test-row">
+            <input id="wa-test-numero" class="test-input" type="text"
+                   placeholder="Numero destinatario (+39…)"
+                   value="{{ imp.whatsapp_numero|default:'' }}" style="max-width:200px">
+            <input id="wa-test-testo" class="test-input" type="text" placeholder="Testo del messaggio…">
+            <button type="button" class="test-btn btn-wa" onclick="waTest()">Invia ✈️</button>
+          </div>
+          <div id="wa-log" class="test-log"><span class="inf">— pronto —</span></div>
         </div>
+      </div>
+
+      <!-- Telegram -->
+      <div class="ir-card" style="border-color:#0088cc">
+        <h3>✈️ Telegram</h3>
+        <div class="ir-grid">
+          <div class="ir-full">
+            <label class="ir-label">
+              <input type="checkbox" name="telegram_enabled" {% if imp.telegram_enabled %}checked{% endif %}>
+              Attivo
+            </label>
+          </div>
+          <div>
+            <label class="ir-label">Nome Bot</label>
+            <input class="ir-input" type="text" name="telegram_nome_bot" value="{{ imp.telegram_nome_bot|default:'' }}" placeholder="LaTrattoriaBot">
+          </div>
+          <div>
+            <label class="ir-label">Bot Token</label>
+            <input class="ir-input" type="password" name="telegram_bot_token" value="{{ imp.telegram_bot_token|default:'' }}" placeholder="123456789:ABC...">
+          </div>
+          <div class="ir-full">
+            <label class="ir-label">Chat ID notifiche</label>
+            <input class="ir-input" type="text" name="telegram_chat_id" id="tg-chat-id-field"
+                   value="{{ imp.telegram_chat_id|default:'' }}"
+                   placeholder="es. 243961735 · gruppo: -1003760305730">
+            <div class="ir-hint">
+              Account personale o gruppo dove ricevere le notifiche.<br>
+              <strong>Come trovarlo:</strong> scrivi <code>/start</code> al bot → clicca <strong>Leggi messaggi</strong> qui sotto.
+              Per un <strong>gruppo</strong>: aggiungi il bot al gruppo e scrivi un messaggio.
+            </div>
+          </div>
+        </div>
+        <div class="ir-hint" style="margin-top:0.4rem">Crea il bot con @BotFather → /newbot</div>
+
+        <!-- TEST TELEGRAM -->
+        <div class="test-box">
+          <div class="test-box-title">🧪 Test Telegram</div>
+          <div class="test-row">
+            <input id="tg-test-chat" class="test-input" type="text"
+                   placeholder="Chat ID" style="max-width:160px"
+                   value="{{ imp.telegram_chat_id|default:'' }}">
+            <button type="button" class="test-btn btn-check" onclick="tgVerifica()">Verifica ✓</button>
+            <button type="button" class="test-btn btn-check" onclick="tgLeggi()">Leggi 📥</button>
+          </div>
+          <div class="test-row">
+            <input id="tg-test-testo" class="test-input" type="text" placeholder="Testo del messaggio…">
+            <button type="button" class="test-btn btn-tg" onclick="tgTest()">Invia ✈️</button>
+          </div>
+          <div id="tg-log" class="test-log"><span class="inf">— pronto —</span></div>
+        </div>
+      </div>
+
+      <div class="ir-save">
+        <button type="submit" class="btn btn-primary">💾 Salva</button>
       </div>
     </div>
 
-    <div class="ir-card">
-      <h3>🖼️ Logo</h3>
-      {% if imp.logo %}
-      <img src="{{ imp.logo.url }}" class="ir-logo-preview" alt="Logo attuale"><br><br>
-      {% endif %}
-      <input type="file" name="logo" accept="image/*">
-      <div class="ir-hint">Usato nell'intestazione di fatture e scontrini. Consigliato: PNG trasparente, max 300×100px.</div>
-    </div>
+    <!-- ══ SOCIAL ══════════════════════════════════════════════════════ -->
+    <div id="tab-social" class="ir-section">
 
-    <div class="ir-card">
-      <h3>📝 Note documenti</h3>
-      <div class="ir-grid">
-        <div class="ir-full">
-          <label class="ir-label">Note a piè di scontrino</label>
-          <textarea class="ir-input" name="note_scontrino">{{ imp.note_scontrino }}</textarea>
-        </div>
-        <div class="ir-full">
-          <label class="ir-label">Note a piè di fattura</label>
-          <textarea class="ir-input" name="note_fattura">{{ imp.note_fattura }}</textarea>
-          <div class="ir-hint">Es. "Pagamento a 30gg d.f.f.m." oppure condizioni legali.</div>
+      <div class="ir-card" style="border-color:#E1306C">
+        <h3>📱 Social Media</h3>
+        <div class="ir-grid">
+          <div>
+            <label class="ir-label">Facebook</label>
+            <input class="ir-input" type="url" name="social_facebook" value="{{ imp.social_facebook|default:'' }}" placeholder="https://facebook.com/ristorante">
+          </div>
+          <div>
+            <label class="ir-label">Instagram</label>
+            <input class="ir-input" type="url" name="social_instagram" value="{{ imp.social_instagram|default:'' }}" placeholder="https://instagram.com/ristorante">
+          </div>
+          <div>
+            <label class="ir-label">X (Twitter)</label>
+            <input class="ir-input" type="url" name="social_x" value="{{ imp.social_x|default:'' }}" placeholder="https://x.com/ristorante">
+          </div>
+          <div>
+            <label class="ir-label">TikTok</label>
+            <input class="ir-input" type="url" name="social_tiktok" value="{{ imp.social_tiktok|default:'' }}" placeholder="https://tiktok.com/@ristorante">
+          </div>
+          <div>
+            <label class="ir-label">YouTube</label>
+            <input class="ir-input" type="url" name="social_youtube" value="{{ imp.social_youtube|default:'' }}" placeholder="https://youtube.com/@ristorante">
+          </div>
+          <div>
+            <label class="ir-label">Pinterest</label>
+            <input class="ir-input" type="url" name="social_pinterest" value="{{ imp.social_pinterest|default:'' }}" placeholder="https://pinterest.com/ristorante">
+          </div>
         </div>
       </div>
-    </div>
 
-    <div class="ir-card" style="border-color:#9b59b6">
-      <h3>📱 Display e-ink (tavoli)</h3>
-      <div class="ir-grid">
-        <div class="ir-full">
-          <label class="ir-label">🍳 Piatto del giorno</label>
-          <input class="ir-input" type="text" name="piatto_del_giorno" value="{{ imp.piatto_del_giorno|default:'' }}" placeholder="Es: Risotto ai funghi porcini">
-          <div class="ir-hint">Questo piatto verrà mostrato automaticamente sui display e-ink di tutti i tavoli.</div>
-        </div>
-      </div>
-      <div style="margin-top:1rem">
-        <a href="/sala/dispositivi/" class="btn btn-outline" style="font-size:0.85rem">
-          📟 Gestisci Display e-ink
-        </a>
-        <span style="font-size:0.78rem;color:#888;margin-left:0.5rem">Configura singoli tavoli e note personalizzate.</span>
+      <div class="ir-save">
+        <button type="submit" class="btn btn-primary">💾 Salva</button>
       </div>
     </div>
 
-    <!-- WhatsApp Business -->
-    <div class="ir-card" style="border-color:#25D366">
-      <h3>💬 WhatsApp Business</h3>
-      <div class="ir-grid">
-        <div>
-          <label class="ir-label">
-            <input type="checkbox" name="whatsapp_enabled" {% if imp.whatsapp_enabled %}checked{% endif %}>
-            Attivo
-          </label>
+    <!-- ══ HARDWARE ════════════════════════════════════════════════════ -->
+    <div id="tab-hardware" class="ir-section">
+
+      <div class="ir-card" style="border-color:#9b59b6">
+        <h3>📟 Display e-ink (tavoli)</h3>
+        <div class="ir-grid">
+          <div class="ir-full">
+            <label class="ir-label">🍳 Piatto del giorno</label>
+            <input class="ir-input" type="text" name="piatto_del_giorno" value="{{ imp.piatto_del_giorno|default:'' }}" placeholder="Es: Risotto ai funghi porcini">
+            <div class="ir-hint">Mostrato automaticamente sui display e-ink di tutti i tavoli.</div>
+          </div>
         </div>
-        <div class="ir-full">
-          <label class="ir-label">Numero di telefono</label>
-          <input class="ir-input" type="text" name="whatsapp_numero" value="{{ imp.whatsapp_numero|default:'' }}" placeholder="+393491234567">
-          <div class="ir-hint">Numero WhatsApp Business con prefisso internazionale</div>
+        <div style="margin-top:1rem">
+          <a href="/sala/dispositivi/" class="btn btn-outline" style="font-size:0.85rem">
+            📟 Gestisci Display e-ink
+          </a>
         </div>
-        <div class="ir-full">
-          <label class="ir-label">Nome visualizzato</label>
-          <input class="ir-input" type="text" name="whatsapp_nome" value="{{ imp.whatsapp_nome|default:'' }}" placeholder="La Trattoria">
-        </div>
-        <div>
-          <label class="ir-label">WhatsApp Access Token</label>
-          <input class="ir-input" type="password" name="whatsapp_token" value="{{ imp.whatsapp_token|default:'' }}" placeholder="EA...">
-        </div>
-        <div>
-          <label class="ir-label">Phone ID</label>
-          <input class="ir-input" type="text" name="whatsapp_phone_id" value="{{ imp.whatsapp_phone_id|default:'' }}" placeholder="123456789012345">
-        </div>
-        <div>
-          <label class="ir-label">Business ID</label>
-          <input class="ir-input" type="text" name="whatsapp_business_id" value="{{ imp.whatsapp_business_id|default:'' }}" placeholder="123456789012345">
+
+        <div class="ir-grid" style="margin-top:1.5rem">
+          <div class="ir-full">
+            <label class="ir-label" style="display:flex;align-items:center;gap:0.6rem;cursor:pointer">
+              <input type="checkbox" name="mostra_lavora_con_noi"
+                {% if imp.mostra_lavora_con_noi %}checked{% endif %}
+                style="width:18px;height:18px;accent-color:#e74c3c;cursor:pointer">
+              <span>👔 Mostra sezione "Lavora con noi" nella vetrina pubblica</span>
+            </label>
+            <div class="ir-hint" style="margin-top:0.3rem">
+              Abilita il form di candidatura nel footer del sito. Visibile solo ai visitatori.
+            </div>
+          </div>
         </div>
       </div>
-      <div class="ir-hint" style="margin-top:0.5rem">
-        Per configurare: <a href="https://developers.facebook.com/docs/whatsapp/cloud-api" target="_blank">WhatsApp Cloud API</a>
+
+      <div class="ir-save">
+        <button type="submit" class="btn btn-primary">💾 Salva</button>
       </div>
     </div>
 
-    <!-- Telegram -->
-    <div class="ir-card" style="border-color:#0088cc">
-      <h3>✈️ Telegram</h3>
-      <div class="ir-grid">
-        <div>
-          <label class="ir-label">
-            <input type="checkbox" name="telegram_enabled" {% if imp.telegram_enabled %}checked{% endif %}>
-            Attivo
-          </label>
-        </div>
-        <div class="ir-full">
-          <label class="ir-label">Nome Bot</label>
-          <input class="ir-input" type="text" name="telegram_nome_bot" value="{{ imp.telegram_nome_bot|default:'' }}" placeholder="LaTrattoriaBot">
-          <div class="ir-hint">Il nome del tuo bot su Telegram</div>
-        </div>
-        <div class="ir-full">
-          <label class="ir-label">Bot Token</label>
-          <input class="ir-input" type="password" name="telegram_bot_token" value="{{ imp.telegram_bot_token|default:'' }}" placeholder="123456789:ABCdefGHIjklMNOpqrsTUVwxyz">
+    <!-- ══ ABBONAMENTO ════════════════════════════════════════════════ -->
+    <div id="tab-abbonamento" class="ir-section">
+
+      <div class="ir-card" style="border-color:#f39c12">
+        <h3>💳 Abbonamento RistoBAR</h3>
+        <div class="ir-grid">
+          <div class="ir-full">
+            <label class="ir-label">
+              <input type="checkbox" name="abbonamento_attivo" {% if imp.abbonamento_attivo %}checked{% endif %}>
+              Abbonamento attivo
+            </label>
+          </div>
+          <div>
+            <label class="ir-label">Costo mensile (€)</label>
+            <input class="ir-input" type="number" step="0.01" name="abbonamento_mensile_euro" value="{{ imp.abbonamento_mensile_euro|default:'49.90' }}">
+          </div>
+          <div>
+            <label class="ir-label">Inizio abbonamento</label>
+            <input class="ir-input" type="date" name="abbonamento_inizio" value="{{ imp.abbonamento_inizio|default:'' }}">
+          </div>
+          <div>
+            <label class="ir-label">Fine abbonamento</label>
+            <input class="ir-input" type="date" name="abbonamento_fine" value="{{ imp.abbonamento_fine|default:'' }}">
+          </div>
         </div>
       </div>
-      <div class="ir-hint" style="margin-top:0.5rem">
-        Per configurare: cerca @BotFather su Telegram e crea un nuovo bot con /newbot
+
+      <div class="ir-card" style="border-color:#3498db">
+        <h3>🌐 Dominio</h3>
+        <div class="ir-grid">
+          <div>
+            <label class="ir-label">Dominio</label>
+            <input class="ir-input" type="text" name="dominio" value="{{ imp.dominio|default:'' }}" placeholder="mioristorante.it">
+          </div>
+          <div>
+            <label class="ir-label">Costo annuale (€)</label>
+            <input class="ir-input" type="number" step="0.01" name="dominio_costo_annuale" value="{{ imp.dominio_costo_annuale|default:'15.00' }}">
+          </div>
+          <div>
+            <label class="ir-label">Scadenza dominio</label>
+            <input class="ir-input" type="date" name="dominio_scadenza" value="{{ imp.dominio_scadenza|default:'' }}">
+          </div>
+        </div>
+      </div>
+
+      <div class="ir-card">
+        <h3>📋 Note abbonamento</h3>
+        <textarea class="ir-input" name="note_abbonamento" rows="4" placeholder="Note aggiuntive…">{{ imp.note_abbonamento|default:'' }}</textarea>
+      </div>
+
+      <div class="ir-save">
+        <button type="submit" class="btn btn-primary">💾 Salva</button>
       </div>
     </div>
 
-    <!-- Social Media -->
-    <div class="ir-card" style="border-color:#E1306C">
-      <h3>📱 Social Media</h3>
-      <div class="ir-grid">
-        <div>
-          <label class="ir-label">Facebook</label>
-          <input class="ir-input" type="url" name="social_facebook" value="{{ imp.social_facebook|default:'' }}" placeholder="https://facebook.com/ristorante">
-        </div>
-        <div>
-          <label class="ir-label">X (Twitter)</label>
-          <input class="ir-input" type="url" name="social_x" value="{{ imp.social_x|default:'' }}" placeholder="https://x.com/ristorante">
-        </div>
-        <div>
-          <label class="ir-label">Instagram</label>
-          <input class="ir-input" type="url" name="social_instagram" value="{{ imp.social_instagram|default:'' }}" placeholder="https://instagram.com/ristorante">
-        </div>
-        <div>
-          <label class="ir-label">Pinterest</label>
-          <input class="ir-input" type="url" name="social_pinterest" value="{{ imp.social_pinterest|default:'' }}" placeholder="https://pinterest.com/ristorante">
-        </div>
-        <div>
-          <label class="ir-label">YouTube</label>
-          <input class="ir-input" type="url" name="social_youtube" value="{{ imp.social_youtube|default:'' }}" placeholder="https://youtube.com/@ristorante">
-        </div>
-        <div>
-          <label class="ir-label">TikTok</label>
-          <input class="ir-input" type="url" name="social_tiktok" value="{{ imp.social_tiktok|default:'' }}" placeholder="https://tiktok.com/@ristorante">
-        </div>
-      </div>
-    </div>
-
-    <!-- Abbonamento e Costi -->
-    <div class="ir-card" style="border-color:#f39c12">
-      <h3>💳 Abbonamento RistoBAR</h3>
-      <div class="ir-grid">
-        <div>
-          <label class="ir-label">
-            <input type="checkbox" name="abbonamento_attivo" {% if imp.abbonamento_attivo %}checked{% endif %}>
-            Abbonamento attivo
-          </label>
-        </div>
-        <div>
-          <label class="ir-label">Costo mensile (€)</label>
-          <input class="ir-input" type="number" step="0.01" name="abbonamento_mensile_euro" value="{{ imp.abbonamento_mensile_euro|default:'49.90' }}">
-        </div>
-        <div>
-          <label class="ir-label">Inizio abbonamento</label>
-          <input class="ir-input" type="date" name="abbonamento_inizio" value="{{ imp.abbonamento_inizio|default:'' }}">
-        </div>
-        <div>
-          <label class="ir-label">Fine abbonamento</label>
-          <input class="ir-input" type="date" name="abbonamento_fine" value="{{ imp.abbonamento_fine|default:'' }}">
-        </div>
-      </div>
-    </div>
-
-    <!-- Dominio -->
-    <div class="ir-card" style="border-color:#3498db">
-      <h3>🌐 Dominio</h3>
-      <div class="ir-grid">
-        <div>
-          <label class="ir-label">Dominio</label>
-          <input class="ir-input" type="text" name="dominio" value="{{ imp.dominio|default:'' }}" placeholder="mioristorante.it">
-        </div>
-        <div>
-          <label class="ir-label">Costo annuale (€)</label>
-          <input class="ir-input" type="number" step="0.01" name="dominio_costo_annuale" value="{{ imp.dominio_costo_annuale|default:'15.00' }}">
-        </div>
-        <div>
-          <label class="ir-label">Scadenza dominio</label>
-          <input class="ir-input" type="date" name="dominio_scadenza" value="{{ imp.dominio_scadenza|default:'' }}">
-        </div>
-      </div>
-      <div class="ir-full" style="margin-top:1rem">
-        <label class="ir-label">Note abbonamento</label>
-        <textarea class="ir-input" name="note_abbonamento" rows="3" placeholder="Note aggiuntive sull'abbonamento...">{{ imp.note_abbonamento|default:'' }}</textarea>
-      </div>
-    </div>
-
-    <div class="ir-save">
-      <button type="submit" class="btn btn-primary">💾 Salva impostazioni</button>
-      <a href="/sala/capo/" class="btn btn-secondary">Annulla</a>
-    </div>
   </form>
 
-  <!-- Sedi / indirizzi aggiuntivi -->
-  <div class="ir-card" style="margin-top:1.5rem">
-    <h3>📍 Sedi / Indirizzi aggiuntivi</h3>
-    {% if imp.sedi.all %}
-    <table style="width:100%;border-collapse:collapse;font-size:0.85rem;margin-bottom:1rem">
-      <thead>
-        <tr style="background:#f8f9fa">
-          <th style="padding:0.4rem 0.6rem;text-align:left">Tipo</th>
-          <th style="padding:0.4rem 0.6rem;text-align:left">Nome</th>
-          <th style="padding:0.4rem 0.6rem;text-align:left">Indirizzo</th>
-          <th style="padding:0.4rem 0.6rem;text-align:left">Telefono</th>
-          <th style="padding:0.4rem 0.6rem;text-align:center">Principale</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for sede in imp.sedi.all %}{% if sede.attiva %}
-        <tr style="border-top:1px solid #f0f0f0">
-          <td style="padding:0.4rem 0.6rem">{{ sede.get_tipo_display }}</td>
-          <td style="padding:0.4rem 0.6rem"><strong>{{ sede.nome }}</strong></td>
-          <td style="padding:0.4rem 0.6rem">{{ sede.indirizzo_completo }}</td>
-          <td style="padding:0.4rem 0.6rem">{{ sede.telefono|default:"—" }}</td>
-          <td style="padding:0.4rem 0.6rem;text-align:center">{% if sede.principale %}✅{% else %}—{% endif %}</td>
-        </tr>
-        {% endif %}{% endfor %}
-      </tbody>
-    </table>
-    {% else %}
-    <p style="color:#aaa;font-size:0.85rem;margin-bottom:0.75rem">Nessuna sede aggiuntiva configurata.</p>
-    {% endif %}
-    <a href="/amministrazione/ristorante/sede/" class="btn btn-outline" style="font-size:0.85rem">
-      ⚙️ Gestisci sedi in Admin
-    </a>
-    <span style="font-size:0.78rem;color:#888;margin-left:0.5rem">Le sedi si gestiscono dal pannello amministrazione Django.</span>
+  <!-- Sedi / indirizzi aggiuntivi (fuori dal form, gestito da admin) -->
+  <div id="tab-sedi-ext" style="display:none">
+    <div class="ir-card" style="margin-top:0.5rem">
+      <h3>📍 Sedi / Indirizzi aggiuntivi</h3>
+      {% if imp.sedi.all %}
+      <table style="width:100%;border-collapse:collapse;font-size:0.85rem;margin-bottom:1rem">
+        <thead>
+          <tr style="background:#f8f9fa">
+            <th style="padding:0.4rem 0.6rem;text-align:left">Tipo</th>
+            <th style="padding:0.4rem 0.6rem;text-align:left">Nome</th>
+            <th style="padding:0.4rem 0.6rem;text-align:left">Indirizzo</th>
+            <th style="padding:0.4rem 0.6rem;text-align:left">Telefono</th>
+            <th style="padding:0.4rem 0.6rem;text-align:center">Principale</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for sede in imp.sedi.all %}{% if sede.attiva %}
+          <tr style="border-top:1px solid #f0f0f0">
+            <td style="padding:0.4rem 0.6rem">{{ sede.get_tipo_display }}</td>
+            <td style="padding:0.4rem 0.6rem"><strong>{{ sede.nome }}</strong></td>
+            <td style="padding:0.4rem 0.6rem">{{ sede.indirizzo_completo }}</td>
+            <td style="padding:0.4rem 0.6rem">{{ sede.telefono|default:"—" }}</td>
+            <td style="padding:0.4rem 0.6rem;text-align:center">{% if sede.principale %}✅{% else %}—{% endif %}</td>
+          </tr>
+          {% endif %}{% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p style="color:#aaa;font-size:0.85rem;margin-bottom:0.75rem">Nessuna sede aggiuntiva configurata.</p>
+      {% endif %}
+      <a href="/amministrazione/ristorante/sede/" class="btn btn-outline" style="font-size:0.85rem">
+        ⚙️ Gestisci sedi in Admin
+      </a>
+    </div>
   </div>
 
-</div>
+
+    <!-- ── TAB DIPENDENTI ──────────────────────────────────────────────────── -->
+    <div id="tab-dipendenti" class="ir-section">
+
+      <div class="ir-card" style="border-color:#8e44ad">
+        <h3>👥 Pagamenti dipendenti</h3>
+        <div class="ir-grid">
+          <div>
+            <label class="ir-label">Metodo di pagamento stipendi</label>
+            <select class="ir-input" name="pag_dip_metodo">
+              <option value="B" {% if imp.pag_dip_metodo == 'B' %}selected{% endif %}>Bonifico bancario</option>
+              <option value="C" {% if imp.pag_dip_metodo == 'C' %}selected{% endif %}>Contanti</option>
+              <option value="A" {% if imp.pag_dip_metodo == 'A' %}selected{% endif %}>Assegno</option>
+              <option value="P" {% if imp.pag_dip_metodo == 'P' %}selected{% endif %}>Payroll provider esterno</option>
+            </select>
+          </div>
+          <div>
+            <label class="ir-label">Giorno di pagamento</label>
+            <input class="ir-input" type="number" min="1" max="31" name="pag_dip_giorno"
+                   value="{{ imp.pag_dip_giorno|default:27 }}"
+                   placeholder="Es. 27">
+            <p class="ir-hint">Giorno del mese in cui vengono pagati gli stipendi</p>
+          </div>
+          <div class="ir-full">
+            <label class="ir-label">IBAN conto stipendi</label>
+            <input class="ir-input" type="text" name="pag_dip_iban"
+                   value="{{ imp.pag_dip_iban }}"
+                   placeholder="IT60 X054 2811 1010 0000 0123 456"
+                   maxlength="34">
+            <p class="ir-hint">Può differire dall'IBAN principale del ristorante</p>
+          </div>
+          <div class="ir-full">
+            <label class="ir-label">Payroll provider / Consulente del lavoro</label>
+            <input class="ir-input" type="text" name="pag_dip_provider"
+                   value="{{ imp.pag_dip_provider }}"
+                   placeholder="Es. Studio Rossi, Zucchetti, Paghe Web...">
+          </div>
+          <div class="ir-full">
+            <label class="ir-label">Note pagamenti</label>
+            <textarea class="ir-input" name="pag_dip_note"
+                      placeholder="Contratto collettivo applicato, istruzioni interne...">{{ imp.pag_dip_note }}</textarea>
+          </div>
+        </div>
+        <div class="ir-save">
+          <button type="submit" class="btn btn-primary">💾 Salva</button>
+        </div>
+      </div>
+
+    </div><!-- #tab-dipendenti -->
+
+    <!-- ── TAB DDT ─────────────────────────────────────────────────────────── -->
+    <div id="tab-ddt" class="ir-section">
+
+      <div class="ir-card" style="border-color:#16a085">
+        <h3>🚚 Documento di Trasporto (DDT) — Consegne a domicilio</h3>
+        <div class="ir-grid">
+          <div class="ir-full">
+            <label class="ir-label">
+              <input type="checkbox" name="ddt_abilitato" {% if imp.ddt_abilitato %}checked{% endif %}>
+              &nbsp;Abilita generazione DDT per le consegne a domicilio
+            </label>
+          </div>
+          <div>
+            <label class="ir-label">Causale predefinita</label>
+            <input class="ir-input" type="text" name="ddt_causale"
+                   value="{{ imp.ddt_causale|default:'Vendita' }}"
+                   placeholder="Es. Vendita, Conto lavoro, Reso">
+          </div>
+          <div>
+            <label class="ir-label">Porto</label>
+            <select class="ir-input" name="ddt_porto">
+              <option value="F" {% if imp.ddt_porto == 'F' %}selected{% endif %}>Franco (a carico del mittente)</option>
+              <option value="A" {% if imp.ddt_porto == 'A' %}selected{% endif %}>Assegnato (a carico del destinatario)</option>
+            </select>
+          </div>
+          <div>
+            <label class="ir-label">Vettore / Corriere</label>
+            <input class="ir-input" type="text" name="ddt_vettore"
+                   value="{{ imp.ddt_vettore }}"
+                   placeholder="Es. Glovo, corriere interno, Bartolini">
+          </div>
+          <div>
+            <label class="ir-label">Aspetto esteriore beni</label>
+            <input class="ir-input" type="text" name="ddt_aspetto"
+                   value="{{ imp.ddt_aspetto|default:'Confezione' }}"
+                   placeholder="Es. Confezione, Borsa termica, Scatola">
+          </div>
+          <div class="ir-full">
+            <label class="ir-label">Note DDT</label>
+            <textarea class="ir-input" name="ddt_note"
+                      placeholder="Istruzioni di consegna, temperatura di conservazione, avvertenze...">{{ imp.ddt_note }}</textarea>
+          </div>
+        </div>
+        <div class="ir-save">
+          <button type="submit" class="btn btn-primary">💾 Salva</button>
+        </div>
+      </div>
+
+      <div class="ir-card" style="background:#f0fff8; border-color:#16a085">
+        <h3 style="color:#16a085">ℹ️ Cos'è il DDT?</h3>
+        <p style="font-size:0.88rem; color:#555; line-height:1.6">
+          Il <strong>Documento di Trasporto</strong> (DDT, ex Bolla di accompagnamento) è
+          obbligatorio per le consegne di merce fuori sede quando non viene emessa
+          subito la fattura. Deve accompagnare la merce durante il trasporto e
+          riportare: mittente, destinatario, descrizione beni, quantità, causale e vettore.
+        </p>
+        <p style="font-size:0.85rem; color:#888; margin-top:0.5rem">
+          Per i ristoranti: si usa tipicamente per le <strong>consegne a domicilio</strong>
+          (delivery) quando il pagamento avviene in un secondo momento o tramite fattura differita.
+        </p>
+      </div>
+
+    </div><!-- #tab-ddt -->
+
+</div><!-- .ir-body -->
+
+<script>
+// ── Auto-fix Chat ID gruppi (aggiunge - se mancante) ────────────────────────
+function fixChatId(el) {
+  let v = el.value.trim();
+  if (v.startsWith('@')) return; // username pubblico, non toccare
+  const digits = v.replace(/^-+/, '');
+  if (digits && /^\d+$/.test(digits)) {
+    el.value = digits.length > 9 ? '-' + digits : digits;
+  }
+}
+document.addEventListener('DOMContentLoaded', () => {
+  ['tg-test-chat', 'tg-chat-id-field'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('blur', () => fixChatId(el));
+  });
+});
+
+// ── Tab navigation ──────────────────────────────────────────────────────────
+function showTab(name) {
+  document.querySelectorAll('.ir-section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.ir-tab').forEach(t => t.classList.remove('active'));
+  const sec = document.getElementById('tab-' + name);
+  if (sec) sec.classList.add('active');
+  event.target.classList.add('active');
+  // Ricorda tab attivo
+  sessionStorage.setItem('ir-tab', name);
+}
+
+// Ripristina tab attivo al reload
+(function() {
+  const saved = sessionStorage.getItem('ir-tab');
+  if (saved) {
+    const sec = document.getElementById('tab-' + saved);
+    if (sec) {
+      document.querySelectorAll('.ir-section').forEach(s => s.classList.remove('active'));
+      document.querySelectorAll('.ir-tab').forEach(t => t.classList.remove('active'));
+      sec.classList.add('active');
+      const btn = [...document.querySelectorAll('.ir-tab')].find(t => t.getAttribute('onclick')?.includes("'" + saved + "'"));
+      if (btn) btn.classList.add('active');
+    }
+  }
+})();
+
+// ── Test helpers ────────────────────────────────────────────────────────────
+function ts() { return new Date().toLocaleTimeString('it-IT'); }
+
+function logMsg(id, cls, txt) {
+  const el = document.getElementById(id);
+  const prev = el.innerHTML.includes('pronto') ? '' : el.innerHTML + '<br>';
+  el.innerHTML = prev + `<span class="${cls}">[${ts()}] ${txt}</span>`;
+  el.scrollTop = el.scrollHeight;
+}
+
+// ── TELEGRAM ────────────────────────────────────────────────────────────────
+async function tgVerifica() {
+  const chat_id = document.getElementById('tg-test-chat').value.trim();
+  if (!chat_id) { logMsg('tg-log','err','Inserisci un Chat ID'); return; }
+  logMsg('tg-log','inf','Verifica in corso…');
+  const r = await fetch('/dev/telegram/verifica/', { method:'POST', body: JSON.stringify({chat_id}) });
+  const d = await r.json();
+  if (d.ok) logMsg('tg-log','ok',`✅ Chat trovata: "${d.nome}" (${d.tipo})`);
+  else       logMsg('tg-log','err',`❌ ${d.errore} — Scrivi prima /start al bot`);
+}
+
+async function tgLeggi() {
+  logMsg('tg-log','inf','Lettura messaggi…');
+  const r = await fetch('/dev/telegram/leggi/');
+  const d = await r.json();
+  if (d.errore) { logMsg('tg-log','err',`❌ ${d.errore}`); return; }
+  if (!d.messaggi.length) { logMsg('tg-log','inf','Nessun messaggio recente'); return; }
+  d.messaggi.forEach(m => {
+    const ora = m.ora ? new Date(m.ora * 1000).toLocaleTimeString('it-IT') : '?';
+    logMsg('tg-log','msg',`👤 ${m.da.trim()||'?'} [${m.chat_id}] (${ora}): ${m.testo}`);
+  });
+}
+
+async function tgTest() {
+  const chat_id = document.getElementById('tg-test-chat').value.trim();
+  const testo   = document.getElementById('tg-test-testo').value.trim();
+  if (!chat_id || !testo) { logMsg('tg-log','err','Chat ID e testo obbligatori'); return; }
+  const r = await fetch('/dev/telegram/invia/', { method:'POST', body: JSON.stringify({chat_id, testo}) });
+  const d = await r.json();
+  if (d.ok) logMsg('tg-log','ok',`✅ Inviato a ${chat_id}`);
+  else       logMsg('tg-log','err',`❌ ${d.errore}`);
+}
+
+// ── WHATSAPP ─────────────────────────────────────────────────────────────────
+async function waTest() {
+  const numero = document.getElementById('wa-test-numero').value.trim();
+  const testo  = document.getElementById('wa-test-testo').value.trim();
+  if (!numero || !testo) { logMsg('wa-log','err','Numero e testo obbligatori'); return; }
+  const r = await fetch('/dev/whatsapp/invia/', { method:'POST', body: JSON.stringify({numero, testo}) });
+  const d = await r.json();
+  if (d.ok) logMsg('wa-log','ok',`✅ Inviato a ${numero}`);
+  else       logMsg('wa-log','err',`❌ ${d.errore}`);
+}
+</script>
+
 </body>
 </html>

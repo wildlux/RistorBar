@@ -1,0 +1,741 @@
+{% load i18n static %}
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ sala.nome }} — Pianta Locale</title>
+  <style>
+    :root {
+      --c-L: #27ae60; --c-O: #e74c3c; --c-P: #f39c12; --c-C: #3498db;
+      --bg: #f0f2f5; --card: #fff; --border: #e5e7eb;
+      --dark: #1a1a2e; --muted: #6b7280;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; display: flex; flex-direction: column; }
+
+    /* ── TOP NAV ─────────────────────────────────────── */
+    .nav {
+      background: var(--dark); color: white; height: 54px;
+      display: flex; align-items: center; padding: 0 1.25rem; gap: 1rem;
+      position: sticky; top: 0; z-index: 300; flex-shrink: 0;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    }
+    .nav-back { color: rgba(255,255,255,0.7); text-decoration: none; font-size: 0.85rem; display: flex; align-items: center; gap: 0.3rem; padding: 0.3rem 0.6rem; border-radius: 6px; transition: background 0.15s; }
+    .nav-back:hover { background: rgba(255,255,255,0.1); color: white; }
+    .nav-title { font-weight: 800; font-size: 1rem; flex: 1; display: flex; align-items: center; gap: 0.5rem; }
+    .nav-tipo-badge {
+      font-size: 0.65rem; background: rgba(255,255,255,0.12);
+      padding: 0.15rem 0.55rem; border-radius: 20px; font-weight: 600;
+      color: rgba(255,255,255,0.8);
+    }
+    .nav-right { display: flex; align-items: center; gap: 0.5rem; }
+    .nav-btn {
+      padding: 0.35rem 0.75rem; border-radius: 7px; font-size: 0.8rem; font-weight: 600;
+      border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.08);
+      color: white; cursor: pointer; text-decoration: none; transition: background 0.15s;
+    }
+    .nav-btn:hover { background: rgba(255,255,255,0.15); }
+    .nav-btn.primary { background: #e74c3c; border-color: #e74c3c; }
+    .nav-btn.primary:hover { background: #c0392b; }
+
+    /* ── LAYOUT ──────────────────────────────────────── */
+    .layout { display: flex; flex: 1; overflow: hidden; }
+
+    /* ── SIDEBAR ─────────────────────────────────────── */
+    .sidebar {
+      width: 240px; flex-shrink: 0; background: white;
+      border-right: 1px solid var(--border); overflow-y: auto;
+      display: flex; flex-direction: column;
+    }
+
+    /* Localizzazione */
+    .loc-block { padding: 1rem; border-bottom: 1px solid var(--border); }
+    .loc-title { font-size: 0.65rem; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 0.6rem; }
+    .loc-row { display: flex; align-items: flex-start; gap: 0.5rem; font-size: 0.8rem; color: #374151; margin-bottom: 0.3rem; }
+    .loc-icon { font-size: 0.9rem; flex-shrink: 0; width: 16px; text-align: center; }
+    .loc-val { color: #374151; }
+    .loc-empty { color: var(--muted); font-style: italic; }
+
+    /* Stats */
+    .stats-block { padding: 0.85rem 1rem; border-bottom: 1px solid var(--border); }
+    .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem; }
+    .s-chip {
+      border-radius: 8px; padding: 0.45rem 0.6rem; text-align: center;
+      border: 1px solid transparent;
+    }
+    .s-chip-val { font-size: 1.25rem; font-weight: 800; line-height: 1; }
+    .s-chip-lbl { font-size: 0.62rem; color: #6b7280; margin-top: 0.1rem; }
+    .s-L { background: #f0faf4; border-color: #a7f3d0; }
+    .s-L .s-chip-val { color: var(--c-L); }
+    .s-O { background: #fff5f5; border-color: #fecaca; }
+    .s-O .s-chip-val { color: var(--c-O); }
+    .s-P { background: #fffbf0; border-color: #fde68a; }
+    .s-P .s-chip-val { color: var(--c-P); }
+    .s-C { background: #eff6ff; border-color: #bfdbfe; }
+    .s-C .s-chip-val { color: var(--c-C); }
+    .s-tot { background: var(--dark); border-color: var(--dark); grid-column: 1 / -1; }
+    .s-tot .s-chip-val { color: white; font-size: 1rem; }
+    .s-tot .s-chip-lbl { color: rgba(255,255,255,0.6); }
+    .s-posti { background: #f9fafb; border-color: #e5e7eb; grid-column: 1 / -1; }
+    .s-posti .s-chip-val { color: #374151; font-size: 1rem; }
+
+    /* Navigazione sale */
+    .sale-block { padding: 0.75rem 1rem; flex: 1; }
+    .sale-title { font-size: 0.65rem; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 0.5rem; }
+    .sala-link {
+      display: flex; align-items: center; gap: 0.5rem;
+      padding: 0.5rem 0.65rem; border-radius: 8px; text-decoration: none;
+      color: #374151; font-size: 0.82rem; margin-bottom: 0.2rem;
+      transition: background 0.12s; border: 1px solid transparent;
+    }
+    .sala-link:hover { background: #f3f4f6; }
+    .sala-link.active { background: #eef2ff; border-color: #c7d2fe; color: var(--dark); font-weight: 700; }
+    .sala-link .sl-icon { font-size: 1rem; width: 20px; text-align: center; }
+    .sala-link .sl-info { font-size: 0.68rem; color: var(--muted); }
+
+    /* Legenda */
+    .legenda-block { padding: 0.75rem 1rem; border-top: 1px solid var(--border); }
+    .legenda-row { display: flex; align-items: center; gap: 0.5rem; font-size: 0.75rem; color: #374151; margin-bottom: 0.3rem; }
+    .leg-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+    /* ── MAIN PIANTA ─────────────────────────────────── */
+    .pianta-main { flex: 1; overflow: auto; padding: 1.25rem; display: flex; flex-direction: column; gap: 1rem; }
+
+    /* info bar */
+    .pianta-infobar {
+      background: white; border-radius: 10px; padding: 0.75rem 1rem;
+      display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
+      border: 1px solid var(--border); font-size: 0.82rem; color: var(--muted);
+    }
+    .infobar-item { display: flex; align-items: center; gap: 0.35rem; }
+    .infobar-item strong { color: #374151; }
+    .auto-badge {
+      margin-left: auto; font-size: 0.7rem; background: #f0faf4;
+      color: var(--c-L); padding: 0.2rem 0.6rem; border-radius: 20px;
+      border: 1px solid #a7f3d0; font-weight: 700;
+      display: flex; align-items: center; gap: 0.3rem;
+    }
+    .pulse { width: 7px; height: 7px; border-radius: 50%; background: var(--c-L); animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.8)} }
+
+    /* canvas pianta */
+    .pianta-canvas-wrap {
+      background: white; border-radius: 12px; border: 1px solid var(--border);
+      overflow: auto; flex: 1; min-height: 400px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    }
+    .pianta-canvas {
+      position: relative; min-width: 800px; min-height: 500px;
+    }
+
+    /* Griglia puntata di sfondo */
+    .pianta-canvas::before {
+      content: '';
+      position: absolute; inset: 0;
+      background-image: radial-gradient(circle, #d1d5db 1px, transparent 1px);
+      background-size: 30px 30px;
+      pointer-events: none;
+    }
+
+    /* etichetta piano */
+    .piano-label {
+      position: absolute; top: 12px; left: 12px;
+      font-size: 0.68rem; font-weight: 800; color: #9ca3af;
+      text-transform: uppercase; letter-spacing: 0.08em;
+      pointer-events: none;
+    }
+
+    /* ── TAVOLO SVG ─────────────────────────────────── */
+    .t-wrap {
+      position: absolute; cursor: pointer;
+      transform: translate(-50%, -50%);
+      transition: filter 0.15s;
+    }
+    .t-wrap:hover { filter: drop-shadow(0 4px 12px rgba(0,0,0,0.2)); z-index: 10; }
+    .t-wrap svg { display: block; }
+    .t-label {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      pointer-events: none; gap: 1px;
+    }
+    .t-num { font-size: 13px; font-weight: 900; line-height: 1; }
+    .t-cap { font-size: 9px; font-weight: 600; opacity: 0.75; }
+
+    /* ── MODAL ──────────────────────────────────────── */
+    .modal-bg {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 999; padding: 1rem;
+      opacity: 0; pointer-events: none; transition: opacity 0.2s;
+    }
+    .modal-bg.open { opacity: 1; pointer-events: auto; }
+    .modal {
+      background: white; border-radius: 16px; width: 100%; max-width: 420px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+      transform: scale(0.95); transition: transform 0.2s;
+    }
+    .modal-bg.open .modal { transform: scale(1); }
+    .modal-head {
+      padding: 1rem 1.25rem 0.85rem; border-bottom: 1px solid #f0f0f0;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .modal-title { font-size: 1rem; font-weight: 800; display: flex; align-items: center; gap: 0.5rem; }
+    .modal-close { background: none; border: none; font-size: 1.3rem; cursor: pointer; color: #9ca3af; padding: 0 0.25rem; }
+    .modal-close:hover { color: #374151; }
+    .modal-body { padding: 1.1rem 1.25rem; }
+    .modal-footer { padding: 0.85rem 1.25rem; border-top: 1px solid #f0f0f0; display: flex; gap: 0.5rem; justify-content: flex-end; flex-wrap: wrap; }
+
+    /* info row nel modal */
+    .m-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 1rem; }
+    .m-info-chip {
+      background: #f9fafb; border: 1px solid var(--border); border-radius: 8px;
+      padding: 0.5rem 0.75rem; text-align: center;
+    }
+    .m-info-chip .val { font-size: 1.1rem; font-weight: 800; }
+    .m-info-chip .lbl { font-size: 0.68rem; color: var(--muted); margin-top: 0.1rem; }
+
+    /* stato selector */
+    .stato-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem; margin-bottom: 0.85rem; }
+    .stato-btn {
+      padding: 0.55rem; border-radius: 8px; border: 2px solid #e5e7eb;
+      cursor: pointer; font-size: 0.78rem; font-weight: 700; text-align: center;
+      transition: all 0.12s; background: #f9fafb; color: #9ca3af;
+    }
+    .stato-btn:hover { filter: brightness(0.97); }
+    .stato-btn.sel-L { border-color: var(--c-L); background: #f0faf4; color: var(--c-L); }
+    .stato-btn.sel-O { border-color: var(--c-O); background: #fff5f5; color: var(--c-O); }
+    .stato-btn.sel-P { border-color: var(--c-P); background: #fffbf0; color: var(--c-P); }
+    .stato-btn.sel-C { border-color: var(--c-C); background: #eff6ff; color: var(--c-C); }
+
+    .m-btn {
+      padding: 0.45rem 0.9rem; border-radius: 8px; font-size: 0.82rem; font-weight: 600;
+      border: 1px solid var(--border); background: white; cursor: pointer; text-decoration: none;
+      color: #374151; transition: background 0.12s; display: inline-flex; align-items: center; gap: 0.3rem;
+    }
+    .m-btn:hover { background: #f3f4f6; }
+    .m-btn.primary { background: var(--dark); color: white; border-color: var(--dark); }
+    .m-btn.primary:hover { background: #2a2a4e; }
+    .m-btn.green { background: #27ae60; color: white; border-color: #27ae60; }
+    .m-btn.green:hover { background: #219150; }
+
+    /* sposta section */
+    .sposta-wrap { border-top: 1px solid #f0f0f0; padding-top: 0.85rem; margin-top: 0.85rem; }
+    .sposta-label { font-size: 0.72rem; font-weight: 700; color: var(--muted); margin-bottom: 0.4rem; }
+    .sposta-row { display: flex; gap: 0.4rem; }
+    .sposta-sel {
+      flex: 1; padding: 0.45rem 0.6rem; border: 1px solid var(--border);
+      border-radius: 8px; font-size: 0.82rem; background: white;
+    }
+    .sposta-sel:focus { outline: none; border-color: var(--dark); }
+
+    /* toast */
+    .toast {
+      position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 9999;
+      background: var(--dark); color: white; padding: 0.65rem 1.1rem;
+      border-radius: 10px; font-size: 0.82rem; font-weight: 600;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+      opacity: 0; transform: translateY(8px);
+      transition: opacity 0.2s, transform 0.2s; pointer-events: none;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.ok  { border-left: 4px solid var(--c-L); }
+    .toast.err { border-left: 4px solid var(--c-O); }
+
+    @media (max-width: 700px) {
+      .sidebar { display: none; }
+      .pianta-main { padding: 0.75rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── NAV ──────────────────────────────────────────────────────────────── -->
+<nav class="nav">
+  <a href="{% url 'dashboard' %}" class="nav-back">← Dashboard</a>
+  <div class="nav-title">
+    {{ sala.get_tipo_locale_display|default:"Locale" }} — {{ sala.nome }}
+    {% if sala.piano is not None %}<span class="nav-tipo-badge">Piano {{ sala.piano }}</span>{% endif %}
+  </div>
+  <div class="nav-right">
+    {% if is_capo %}
+    <a href="{% url 'editor_sala' sala.id %}" class="nav-btn">✏️ Editor</a>
+    <button class="nav-btn" onclick="openInfoModal()">⚙️ Modifica info</button>
+    {% endif %}
+  </div>
+</nav>
+
+<div class="layout">
+
+  <!-- ── SIDEBAR ───────────────────────────────────────────────────────── -->
+  <aside class="sidebar">
+
+    <!-- Localizzazione -->
+    <div class="loc-block">
+      <div class="loc-title">Localizzazione</div>
+      <div class="loc-row">
+        <span class="loc-icon">🏢</span>
+        <span class="loc-val">{{ sala.get_tipo_locale_display|default:"—" }}</span>
+      </div>
+      {% if sala.piano is not None %}
+      <div class="loc-row">
+        <span class="loc-icon">🏗️</span>
+        <span class="loc-val">
+          {% if sala.piano == 0 %}Piano Terra
+          {% elif sala.piano > 0 %}{{ sala.piano }}° Piano
+          {% else %}Seminterrato{% endif %}
+        </span>
+      </div>
+      {% endif %}
+      {% if sala.indirizzo %}
+      <div class="loc-row">
+        <span class="loc-icon">📍</span>
+        <span class="loc-val">{{ sala.indirizzo }}</span>
+      </div>
+      {% endif %}
+      {% if sala.citta %}
+      <div class="loc-row">
+        <span class="loc-icon">🏙️</span>
+        <span class="loc-val">{{ sala.citta }}{% if sala.nazione %}, {{ sala.nazione }}{% endif %}</span>
+      </div>
+      {% endif %}
+      {% if sala.descrizione %}
+      <div class="loc-row" style="margin-top:0.4rem">
+        <span class="loc-icon">📝</span>
+        <span class="loc-val" style="font-size:0.75rem;color:#6b7280">{{ sala.descrizione }}</span>
+      </div>
+      {% endif %}
+      {% if not sala.indirizzo and not sala.citta and not sala.descrizione %}
+      <div class="loc-row"><span class="loc-empty">Nessuna info configurata</span></div>
+      {% endif %}
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-block">
+      <div class="loc-title" style="margin-bottom:0.6rem">Occupazione</div>
+      <div class="stats-grid">
+        <div class="s-chip s-tot">
+          <div class="s-chip-val">{{ stats.totale }} tavoli</div>
+          <div class="s-chip-lbl">· {{ stats.posti }} posti totali</div>
+        </div>
+        <div class="s-chip s-L">
+          <div class="s-chip-val">{{ stats.liberi }}</div>
+          <div class="s-chip-lbl">Liberi</div>
+        </div>
+        <div class="s-chip s-O">
+          <div class="s-chip-val">{{ stats.occupati }}</div>
+          <div class="s-chip-lbl">Occupati</div>
+        </div>
+        <div class="s-chip s-P">
+          <div class="s-chip-val">{{ stats.prenotati }}</div>
+          <div class="s-chip-lbl">Prenotati</div>
+        </div>
+        <div class="s-chip s-C">
+          <div class="s-chip-val">{{ stats.conto }}</div>
+          <div class="s-chip-lbl">Conto</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sale del locale -->
+    <div class="sale-block">
+      <div class="sale-title">Aree del locale</div>
+      {% for s in tutte_sale %}
+      <a href="{% url 'pianta_locale' s.id %}" class="sala-link {% if s.id == sala.id %}active{% endif %}">
+        <span class="sl-icon">
+          {% if s.tipo_locale == 'TR' %}🌇
+          {% elif s.tipo_locale == 'GI' %}🌿
+          {% elif s.tipo_locale == 'SP' %}🎯
+          {% elif s.tipo_locale == 'BA' %}🍺
+          {% elif s.tipo_locale == 'ES' %}🌤️
+          {% elif s.tipo_locale == 'SI' %}🔽
+          {% elif s.tipo_locale == 'P1' %}🔼
+          {% elif s.tipo_locale == 'P2' %}⬆️
+          {% else %}🏠{% endif %}
+        </span>
+        <div>
+          <div>{{ s.nome }}</div>
+          <div class="sl-info">{{ s.get_tipo_locale_display|default:"" }}{% if s.piano is not None %} · P{{ s.piano }}{% endif %} · {{ s.tavoli.count }}T</div>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+
+    <!-- Legenda -->
+    <div class="legenda-block">
+      <div class="sale-title" style="margin-bottom:0.4rem">Legenda</div>
+      <div class="legenda-row"><div class="leg-dot" style="background:var(--c-L)"></div>Libero</div>
+      <div class="legenda-row"><div class="leg-dot" style="background:var(--c-P)"></div>Prenotato</div>
+      <div class="legenda-row"><div class="leg-dot" style="background:var(--c-O)"></div>Occupato</div>
+      <div class="legenda-row"><div class="leg-dot" style="background:var(--c-C)"></div>Conto richiesto</div>
+      <div style="font-size:0.68rem;color:var(--muted);margin-top:0.5rem">Clicca un tavolo per gestirlo</div>
+    </div>
+
+  </aside>
+
+  <!-- ── PIANTA ─────────────────────────────────────────────────────────── -->
+  <main class="pianta-main">
+
+    <!-- info bar -->
+    <div class="pianta-infobar">
+      <div class="infobar-item">🏢 <strong>{{ sala.get_tipo_locale_display|default:"—" }}</strong></div>
+      {% if sala.piano is not None %}
+      <div class="infobar-item">🏗️ <strong>{% if sala.piano == 0 %}Piano Terra{% elif sala.piano > 0 %}{{ sala.piano }}° Piano{% else %}Seminterrato{% endif %}</strong></div>
+      {% endif %}
+      {% if sala.citta %}
+      <div class="infobar-item">📍 <strong>{{ sala.citta }}{% if sala.nazione %}, {{ sala.nazione }}{% endif %}</strong></div>
+      {% endif %}
+      <div class="infobar-item">🪑 <strong>{{ stats.posti }}</strong> posti · <strong>{{ stats.totale }}</strong> tavoli</div>
+      <div class="auto-badge">
+        <div class="pulse"></div> Live
+      </div>
+    </div>
+
+    <!-- canvas -->
+    <div class="pianta-canvas-wrap">
+      <div class="pianta-canvas" id="canvas"
+           style="width:{{ sala.svg_larghezza }}px; height:{{ sala.svg_altezza }}px;">
+        <div class="piano-label">
+          {{ sala.nome }}{% if sala.piano is not None %} · {% if sala.piano == 0 %}PT{% elif sala.piano > 0 %}P{{ sala.piano }}{% else %}S{{ sala.piano|stringformat:'d' }}{% endif %}{% endif %}
+        </div>
+
+        {% for t in tavoli %}
+        {% if t.forma == 'R' %}
+        <!-- ROTONDO -->
+        <div class="t-wrap" id="tw{{ t.id }}"
+             style="left:{{ t.pos_x }}px; top:{{ t.pos_y }}px; width:70px; height:70px;"
+             onclick="openTavolo({{ t.id }})">
+          <svg width="70" height="70" viewBox="0 0 70 70">
+            <circle cx="35" cy="35" r="30"
+              fill="{{ t.colore_stato }}22"
+              stroke="{{ t.colore_stato }}"
+              stroke-width="3" id="svg-bg-{{ t.id }}"/>
+          </svg>
+          <div class="t-label">
+            <span class="t-num" id="tnum{{ t.id }}" style="color:{{ t.colore_stato }}">{{ t.numero }}</span>
+            <span class="t-cap" style="color:{{ t.colore_stato }}">{{ t.capacita }}p</span>
+          </div>
+        </div>
+
+        {% elif t.forma == 'Q' %}
+        <!-- QUADRATO -->
+        <div class="t-wrap" id="tw{{ t.id }}"
+             style="left:{{ t.pos_x }}px; top:{{ t.pos_y }}px; width:70px; height:70px;"
+             onclick="openTavolo({{ t.id }})">
+          <svg width="70" height="70" viewBox="0 0 70 70">
+            <rect x="5" y="5" width="60" height="60" rx="8"
+              fill="{{ t.colore_stato }}22"
+              stroke="{{ t.colore_stato }}"
+              stroke-width="3" id="svg-bg-{{ t.id }}"/>
+          </svg>
+          <div class="t-label">
+            <span class="t-num" id="tnum{{ t.id }}" style="color:{{ t.colore_stato }}">{{ t.numero }}</span>
+            <span class="t-cap" style="color:{{ t.colore_stato }}">{{ t.capacita }}p</span>
+          </div>
+        </div>
+
+        {% else %}
+        <!-- RETTANGOLARE -->
+        <div class="t-wrap" id="tw{{ t.id }}"
+             style="left:{{ t.pos_x }}px; top:{{ t.pos_y }}px; width:100px; height:60px;"
+             onclick="openTavolo({{ t.id }})">
+          <svg width="100" height="60" viewBox="0 0 100 60">
+            <rect x="4" y="4" width="92" height="52" rx="7"
+              fill="{{ t.colore_stato }}22"
+              stroke="{{ t.colore_stato }}"
+              stroke-width="3" id="svg-bg-{{ t.id }}"/>
+          </svg>
+          <div class="t-label">
+            <span class="t-num" id="tnum{{ t.id }}" style="color:{{ t.colore_stato }}">{{ t.numero }}</span>
+            <span class="t-cap" style="color:{{ t.colore_stato }}">{{ t.capacita }}p</span>
+          </div>
+        </div>
+        {% endif %}
+        {% empty %}
+        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:0.5rem;color:#9ca3af;">
+          <span style="font-size:2.5rem">🪑</span>
+          <span style="font-size:0.9rem">Nessun tavolo — usa l'Editor per aggiungerli</span>
+          {% if is_capo %}<a href="{% url 'editor_sala' sala.id %}" style="color:#1a1a2e;font-weight:700;font-size:0.82rem;text-decoration:underline">Apri Editor →</a>{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ── MODAL TAVOLO ──────────────────────────────────────────────────────── -->
+<div class="modal-bg" id="modal-t">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title">
+        <span id="mt-forma-icon">🔲</span>
+        <span id="mt-title">Tavolo</span>
+        <span id="mt-stato-badge" style="font-size:0.65rem;padding:0.15rem 0.5rem;border-radius:20px;font-weight:700"></span>
+      </div>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="mt-id">
+
+      <div class="m-info-grid">
+        <div class="m-info-chip">
+          <div class="val" id="mt-cap">—</div>
+          <div class="lbl">Posti</div>
+        </div>
+        <div class="m-info-chip">
+          <div class="val" id="mt-forma">—</div>
+          <div class="lbl">Forma</div>
+        </div>
+      </div>
+
+      <!-- Cambio stato -->
+      <div style="font-size:0.72rem;font-weight:700;color:var(--muted);margin-bottom:0.4rem">Stato</div>
+      <div class="stato-grid">
+        <button class="stato-btn" id="sb-L" onclick="selStato('L')">🟢 Libero</button>
+        <button class="stato-btn" id="sb-P" onclick="selStato('P')">🟡 Prenotato</button>
+        <button class="stato-btn" id="sb-O" onclick="selStato('O')">🔴 Occupato</button>
+        <button class="stato-btn" id="sb-C" onclick="selStato('C')">🔵 Conto</button>
+      </div>
+
+      <!-- Sposta ospiti (solo senior/capo) -->
+      {% if ha_cassa %}
+      <div id="sposta-wrap" class="sposta-wrap" style="display:none">
+        <div class="sposta-label">🔀 Sposta ospiti a un altro tavolo</div>
+        <div style="font-size:0.7rem;color:var(--muted);margin-bottom:0.4rem">Trasferisce ordine e prenotazione. Questo tavolo torna libero.</div>
+        <div class="sposta-row">
+          <select id="sposta-dest" class="sposta-sel">
+            <option value="">— Scegli tavolo libero —</option>
+          </select>
+          <button class="m-btn primary" onclick="spostaOspiti()">🔀 Sposta</button>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+    <div class="modal-footer">
+      {% if is_capo %}
+      <a id="mt-link-editor" href="#" class="m-btn" style="margin-right:auto">✏️ Editor</a>
+      {% endif %}
+      <a id="mt-link-comanda" href="#" class="m-btn green">🍽️ Comanda</a>
+      <button class="m-btn primary" onclick="salvaStato()">✓ Salva stato</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODAL INFO SALA ───────────────────────────────────────────────────── -->
+{% if is_capo %}
+<div class="modal-bg" id="modal-info">
+  <div class="modal" style="max-width:500px">
+    <div class="modal-head">
+      <span class="modal-title">⚙️ Modifica info sala</span>
+      <button class="modal-close" onclick="document.getElementById('modal-info').classList.remove('open')">×</button>
+    </div>
+    <form method="post" action="{% url 'pianta_locale' sala.id %}">
+      {% csrf_token %}
+      <input type="hidden" name="azione" value="modifica_info">
+      <div class="modal-body" style="display:flex;flex-direction:column;gap:0.75rem">
+        <div>
+          <label style="font-size:0.75rem;font-weight:700;color:var(--muted);display:block;margin-bottom:0.3rem">Nome sala</label>
+          <input name="nome" value="{{ sala.nome }}" style="width:100%;padding:0.5rem 0.75rem;border:1px solid var(--border);border-radius:8px;font-size:0.9rem">
+        </div>
+        <div>
+          <label style="font-size:0.75rem;font-weight:700;color:var(--muted);display:block;margin-bottom:0.3rem">Tipo area</label>
+          <select name="tipo_locale" style="width:100%;padding:0.5rem 0.75rem;border:1px solid var(--border);border-radius:8px;font-size:0.9rem">
+            {% for val, lbl in sala.TIPO_CHOICES %}
+            <option value="{{ val }}" {% if sala.tipo_locale == val %}selected{% endif %}>{{ lbl }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem">
+          <div>
+            <label style="font-size:0.75rem;font-weight:700;color:var(--muted);display:block;margin-bottom:0.3rem">Piano</label>
+            <input name="piano" type="number" value="{{ sala.piano|default:'' }}" placeholder="0=PT, 1=1°, -1=inter."
+              style="width:100%;padding:0.5rem 0.75rem;border:1px solid var(--border);border-radius:8px;font-size:0.9rem">
+          </div>
+          <div>
+            <label style="font-size:0.75rem;font-weight:700;color:var(--muted);display:block;margin-bottom:0.3rem">Nazione</label>
+            <input name="nazione" value="{{ sala.nazione }}" placeholder="Italia"
+              style="width:100%;padding:0.5rem 0.75rem;border:1px solid var(--border);border-radius:8px;font-size:0.9rem">
+          </div>
+        </div>
+        <div>
+          <label style="font-size:0.75rem;font-weight:700;color:var(--muted);display:block;margin-bottom:0.3rem">Città</label>
+          <input name="citta" value="{{ sala.citta }}" placeholder="es. Milano"
+            style="width:100%;padding:0.5rem 0.75rem;border:1px solid var(--border);border-radius:8px;font-size:0.9rem">
+        </div>
+        <div>
+          <label style="font-size:0.75rem;font-weight:700;color:var(--muted);display:block;margin-bottom:0.3rem">Indirizzo</label>
+          <input name="indirizzo" value="{{ sala.indirizzo }}" placeholder="es. Via Roma 42"
+            style="width:100%;padding:0.5rem 0.75rem;border:1px solid var(--border);border-radius:8px;font-size:0.9rem">
+        </div>
+        <div>
+          <label style="font-size:0.75rem;font-weight:700;color:var(--muted);display:block;margin-bottom:0.3rem">Descrizione / Note</label>
+          <textarea name="descrizione" rows="2" placeholder="es. Vista sul mare, accesso disabili..."
+            style="width:100%;padding:0.5rem 0.75rem;border:1px solid var(--border);border-radius:8px;font-size:0.9rem;resize:vertical">{{ sala.descrizione }}</textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="m-btn" onclick="document.getElementById('modal-info').classList.remove('open')">Annulla</button>
+        <button type="submit" class="m-btn primary">✓ Salva</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
+
+<div id="toast" class="toast"></div>
+
+<script>
+const CSRF = '{{ csrf_token }}';
+const TAVOLI = {{ tavoli_js|safe }};
+const SALA_ID = {{ sala.id }};
+const TUTTI = {{ tutti_tavoli_js|default:'[]'|safe }};
+
+/* ── STATO ──────────────────────────────────────────────── */
+const COLORI   = { L:'#27ae60', O:'#e74c3c', P:'#f39c12', C:'#3498db' };
+const LABELS   = { L:'Libero', O:'Occupato', P:'Prenotato', C:'Conto richiesto' };
+const FORMA_LBL = { R:'Rotondo', Q:'Quadrato', T:'Rettangolare' };
+const FORMA_ICO = { R:'⬤', Q:'■', T:'▬' };
+
+// Dizionario locale per aggiornamenti live
+const tavoliMap = {};
+TAVOLI.forEach(t => tavoliMap[t.id] = { ...t });
+
+/* ── TOAST ──────────────────────────────────────────────── */
+function toast(msg, type='ok') {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.className = `toast ${type} show`;
+  setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+/* ── FETCH ──────────────────────────────────────────────── */
+async function post(url, body) {
+  const r = await fetch(url, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json','X-CSRFToken':CSRF},
+    body: JSON.stringify(body),
+  });
+  return r.json();
+}
+
+/* ── AGGIORNA SVG ───────────────────────────────────────── */
+function updateSvg(id) {
+  const t = tavoliMap[id];
+  const c = COLORI[t.stato];
+  const wrap = document.getElementById('tw' + id);
+  if (!wrap) return;
+  const rect = wrap.querySelector('rect, circle');
+  if (rect) { rect.setAttribute('fill', c + '22'); rect.setAttribute('stroke', c); }
+  const num = document.getElementById('tnum' + id);
+  if (num) num.style.color = c;
+  const capEl = wrap.querySelector('.t-cap');
+  if (capEl) capEl.style.color = c;
+}
+
+/* ── OPEN MODAL ─────────────────────────────────────────── */
+let currentStato = 'L';
+function openTavolo(id) {
+  const t = tavoliMap[id];
+  currentStato = t.stato;
+  document.getElementById('mt-id').value = id;
+  document.getElementById('mt-title').textContent = `Tavolo ${t.numero}`;
+  document.getElementById('mt-forma-icon').textContent = FORMA_ICO[t.forma] || '▪️';
+  document.getElementById('mt-cap').textContent = t.capacita + ' posti';
+  document.getElementById('mt-forma').textContent = FORMA_LBL[t.forma] || '—';
+
+  // Badge stato
+  const badge = document.getElementById('mt-stato-badge');
+  badge.textContent = LABELS[t.stato];
+  badge.style.background = COLORI[t.stato] + '20';
+  badge.style.color = COLORI[t.stato];
+
+  // Pulsanti stato
+  ['L','O','P','C'].forEach(s => {
+    const btn = document.getElementById('sb-' + s);
+    btn.className = 'stato-btn' + (s === t.stato ? ' sel-' + s : '');
+  });
+
+  // Link comanda ed editor
+  document.getElementById('mt-link-comanda').href = `/sala/cameriere/ordine/${id}/`;
+  const editorLink = document.getElementById('mt-link-editor');
+  if (editorLink) editorLink.href = `/sala/editor/${SALA_ID}/`;
+
+  // Sezione sposta
+  const spost = document.getElementById('sposta-wrap');
+  if (spost) {
+    const haOspiti = t.stato !== 'L';
+    spost.style.display = haOspiti ? 'block' : 'none';
+    if (haOspiti) {
+      const sel = document.getElementById('sposta-dest');
+      sel.innerHTML = '<option value="">— Scegli tavolo libero —</option>';
+      let lastSala = null;
+      TUTTI.filter(x => x.id !== id && x.stato === 'L').forEach(x => {
+        if (x.sala__nome !== lastSala) {
+          const og = document.createElement('optgroup');
+          og.label = x.sala__nome; sel.appendChild(og);
+          lastSala = x.sala__nome;
+        }
+        const op = document.createElement('option');
+        op.value = x.id;
+        op.textContent = `Tavolo ${x.numero} (${x.capacita} posti)`;
+        sel.lastElementChild.appendChild(op);
+      });
+    }
+  }
+
+  document.getElementById('modal-t').classList.add('open');
+}
+
+function closeModal() { document.getElementById('modal-t').classList.remove('open'); }
+
+function selStato(s) {
+  currentStato = s;
+  ['L','O','P','C'].forEach(x => {
+    document.getElementById('sb-'+x).className = 'stato-btn' + (x===s ? ' sel-'+s : '');
+  });
+}
+
+/* ── SALVA STATO ────────────────────────────────────────── */
+async function salvaStato() {
+  const id = document.getElementById('mt-id').value;
+  const d = await post(`/sala/tavolo/${id}/stato/`, { stato: currentStato });
+  if (d.successo) {
+    tavoliMap[id].stato = currentStato;
+    updateSvg(id);
+    toast(`✓ Tavolo ${tavoliMap[id].numero} → ${LABELS[currentStato]}`);
+    closeModal();
+  } else {
+    toast(d.errore || 'Errore', 'err');
+  }
+}
+
+/* ── SPOSTA OSPITI ──────────────────────────────────────── */
+async function spostaOspiti() {
+  const srcId  = document.getElementById('mt-id').value;
+  const destId = document.getElementById('sposta-dest').value;
+  if (!destId) { toast('Scegli il tavolo di destinazione', 'err'); return; }
+  const dest = TUTTI.find(t => t.id == destId);
+  if (!confirm(`Spostare gli ospiti del Tavolo ${tavoliMap[srcId].numero} → Tavolo ${dest?.numero}?\n\nOrdini e prenotazioni verranno trasferiti automaticamente.`)) return;
+  const d = await post(`/sala/tavolo/${srcId}/sposta/`, { dest_id: parseInt(destId) });
+  if (d.ok) {
+    toast(`✓ Ospiti spostati al Tavolo ${d.dst_numero}`);
+    closeModal();
+    setTimeout(() => location.reload(), 700);
+  } else {
+    toast(d.errore || 'Errore', 'err');
+  }
+}
+
+/* ── INFO MODAL ─────────────────────────────────────────── */
+function openInfoModal() { document.getElementById('modal-info').classList.add('open'); }
+
+/* ── CHIUDI CLICCANDO SFONDO ───────────────────────────── */
+document.querySelectorAll('.modal-bg').forEach(bg => {
+  bg.addEventListener('click', e => { if (e.target === bg) bg.classList.remove('open'); });
+});
+
+/* ── AUTO-REFRESH ogni 30s ──────────────────────────────── */
+setTimeout(() => location.reload(), 30000);
+</script>
+</body>
+</html>

@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.urls import path, include
+from ristorante.admin import admin_site
 from django.conf import settings
 from django.conf.urls.static import static
 from django.http import JsonResponse
@@ -33,7 +34,7 @@ router.register(r'piatti', views.PiattoViewSet)
 
 urlpatterns = [
     # ── Admin Django (rinominato) ──────────────────────────────
-    path('amministrazione/', admin.site.urls),
+    path('amministrazione/', admin_site.urls),
     path('admin/', lambda r: redirect('/amministrazione/')),  # redirect di cortesia
 
     # ── Auth (login/logout/password) ───────────────────────────
@@ -58,6 +59,7 @@ urlpatterns = [
     # ══════════════════════════════════════════════════════════
     path('homepage',                               views.vetrina,                name='homepage'),
     path('menu/<int:sala_id>/<int:numero_tavolo>/', views.menu_tavolo,           name='menu_tavolo'),
+    path('eink/<int:sala_id>/<int:numero_tavolo>/', views.menu_eink,            name='menu_eink'),
     path('prenota/<int:sala_id>/<int:numero_tavolo>/', views.prenota,            name='prenota'),
     path('prenota/conferma/<int:prenotazione_id>/', views.conferma_prenotazione, name='conferma_prenotazione'),
     path('prenota/caparra/<int:prenotazione_id>/',  views.pagamento_caparra,     name='pagamento_caparra'),
@@ -87,7 +89,7 @@ urlpatterns = [
 
     # Capo area / Titolare — dashboard completa
     path('sala/capo/',               views.dashboard,        name='dashboard'),
-    path('sala/capo/sala/<int:sala_id>/', views.mappa_sala,  name='mappa_sala'),
+    path('pianta/<int:sala_id>/', views.pianta_locale, name='pianta_locale'),
     
     # Centro di controllo dispositivi hardware
     path('sala/dispositivi/',              views.centro_controllo,     name='centro_controllo'),
@@ -98,6 +100,8 @@ urlpatterns = [
 
     # Aggiorna stato tavolo (usato da cameriere e capo area)
     path('sala/tavolo/<int:tavolo_id>/stato/', views.aggiorna_stato_tavolo, name='aggiorna_stato_tavolo'),
+    # Sposta ospiti da un tavolo a un altro
+    path('sala/tavolo/<int:tavolo_id>/sposta/', views.sposta_tavolo, name='sposta_tavolo'),
 
     # Editor planimetria (capo area / titolare)
     path('sala/editor/<int:sala_id>/',               views.editor_sala,            name='editor_sala'),
@@ -172,4 +176,8 @@ if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     urlpatterns += [
         path('dev/', views.dev_panel, name='dev_panel'),
+        path('dev/telegram/verifica/', views.dev_telegram_verifica, name='dev_telegram_verifica'),
+        path('dev/telegram/leggi/', views.dev_telegram_leggi, name='dev_telegram_leggi'),
+        path('dev/telegram/invia/', views.dev_telegram_invia, name='dev_telegram_invia'),
+        path('dev/whatsapp/invia/', views.dev_whatsapp_invia, name='dev_whatsapp_invia'),
     ]

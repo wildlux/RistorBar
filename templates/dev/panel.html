@@ -7,558 +7,1107 @@
   <style>
     :root {
       --bg: #0d1117;
+      --bg2: #090c10;
       --card: #161b22;
+      --card2: #1c2129;
       --border: #30363d;
-      --accent: #58a6ff;
-      --accent2: #3fb950;
-      --accent3: #f78166;
-      --accent4: #d2a8ff;
-      --accent5: #ffa657;
-      --muted: #8b949e;
-      --text: #e6edf3;
+      --border2: #21262d;
+      --accent:  #58a6ff;
+      --green:   #3fb950;
+      --red:     #f78166;
+      --purple:  #d2a8ff;
+      --orange:  #ffa657;
+      --teal:    #39d2c0;
+      --yellow:  #e3b341;
+      --muted:   #8b949e;
+      --text:    #e6edf3;
+      --text2:   #c9d1d9;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; }
+    a { text-decoration: none; }
 
-    /* Header */
-    .dev-header {
+    /* ── TOP BAR ────────────────────────────────────── */
+    .topbar {
       background: var(--card); border-bottom: 1px solid var(--border);
-      padding: 1rem 1.5rem; display: flex; align-items: center; justify-content: space-between;
-      position: sticky; top: 0; z-index: 100;
+      padding: 0.75rem 1.5rem;
+      display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 200; gap: 1rem;
     }
-    .dev-brand { display: flex; align-items: center; gap: 0.75rem; }
-    .dev-brand h1 { font-size: 1.2rem; font-weight: 700; }
-    .dev-badge { font-size: 0.7rem; background: #f78166; color: #000; padding: 0.1rem 0.5rem;
-                 border-radius: 20px; font-weight: 800; letter-spacing: 0.05em; }
-    .dev-stats { display: flex; gap: 1.5rem; font-size: 0.82rem; color: var(--muted); }
-    .dev-stat span { color: var(--text); font-weight: 700; }
-
-    /* Layout */
-    .dev-body { max-width: 1400px; margin: 0 auto; padding: 1.5rem; }
-    .dev-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 1.25rem; }
-
-    /* Card sezione */
-    .dev-section {
-      background: var(--card); border: 1px solid var(--border); border-radius: 10px;
-      overflow: hidden;
+    .topbar-brand { display: flex; align-items: center; gap: 0.6rem; }
+    .topbar-brand h1 { font-size: 1.1rem; font-weight: 800; letter-spacing: -0.3px; }
+    .badge-dev {
+      font-size: 0.65rem; background: var(--red); color: #000;
+      padding: 0.1rem 0.45rem; border-radius: 20px; font-weight: 900; letter-spacing: 0.06em;
     }
-    .dev-section-head {
-      padding: 0.75rem 1rem; display: flex; align-items: center; gap: 0.6rem;
-      border-bottom: 1px solid var(--border); font-weight: 700; font-size: 0.95rem;
+    .badge-ver {
+      font-size: 0.65rem; background: rgba(255,255,255,0.07); color: var(--muted);
+      padding: 0.1rem 0.45rem; border-radius: 20px; font-family: monospace;
     }
-    .dev-section-head .icon { font-size: 1.1rem; }
-    .dev-section-head .badge-count {
-      margin-left: auto; font-size: 0.7rem; background: rgba(255,255,255,0.08);
-      padding: 0.1rem 0.5rem; border-radius: 20px; font-weight: 600;
+    .topbar-nav { display: flex; gap: 0.25rem; }
+    .topbar-nav a {
+      padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.82rem;
+      color: var(--muted); transition: background 0.15s, color 0.15s;
+    }
+    .topbar-nav a:hover { background: rgba(255,255,255,0.06); color: var(--text); }
+    .topbar-right { display: flex; align-items: center; gap: 1rem; font-size: 0.8rem; color: var(--muted); }
+    .topbar-right .stat-pill {
+      background: rgba(255,255,255,0.05); border: 1px solid var(--border2);
+      border-radius: 20px; padding: 0.2rem 0.65rem;
+      display: flex; align-items: center; gap: 0.35rem;
+    }
+    .stat-pill strong { color: var(--text); font-weight: 700; }
+
+    /* ── LAYOUT ─────────────────────────────────────── */
+    .dev-wrap { max-width: 1500px; margin: 0 auto; padding: 1.5rem; display: flex; gap: 1.25rem; }
+    .dev-sidebar {
+      width: 200px; flex-shrink: 0;
+      position: sticky; top: 57px; height: calc(100vh - 75px); overflow-y: auto;
+    }
+    .dev-main { flex: 1; min-width: 0; }
+
+    /* ── SIDEBAR ─────────────────────────────────────── */
+    .sidebar-section { margin-bottom: 1.5rem; }
+    .sidebar-label { font-size: 0.65rem; font-weight: 800; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; padding: 0 0.5rem 0.4rem; }
+    .sidebar-link {
+      display: flex; align-items: center; gap: 0.5rem;
+      padding: 0.35rem 0.5rem; border-radius: 6px;
+      font-size: 0.82rem; color: var(--muted);
+      transition: background 0.12s, color 0.12s; cursor: pointer;
+      margin-bottom: 0.1rem;
+    }
+    .sidebar-link:hover, .sidebar-link.active { background: rgba(88,166,255,0.1); color: var(--accent); }
+    .sidebar-link .s-icon { font-size: 0.95rem; width: 18px; text-align: center; }
+
+    /* ── STATUS STRIP ────────────────────────────────── */
+    .status-strip {
+      display: flex; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1.25rem;
+    }
+    .status-chip {
+      display: flex; align-items: center; gap: 0.5rem;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 8px; padding: 0.5rem 0.85rem; font-size: 0.8rem;
+      flex: 1; min-width: 140px;
+    }
+    .status-chip .chip-icon { font-size: 1.1rem; }
+    .status-chip .chip-label { color: var(--muted); font-size: 0.72rem; display: block; }
+    .status-chip .chip-val   { font-weight: 700; font-size: 0.85rem; }
+    .chip-ok   { border-left: 3px solid var(--green); }
+    .chip-warn { border-left: 3px solid var(--yellow); }
+    .chip-err  { border-left: 3px solid var(--red); }
+    .chip-info { border-left: 3px solid var(--accent); }
+    .dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .dot-ok   { background: var(--green); box-shadow: 0 0 6px var(--green); }
+    .dot-warn { background: var(--yellow); box-shadow: 0 0 6px var(--yellow); }
+    .dot-err  { background: var(--red); }
+    .dot-off  { background: var(--border); }
+
+    /* ── CARDS ───────────────────────────────────────── */
+    .dev-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 1rem; }
+    .dev-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 10px; overflow: hidden;
+    }
+    .dev-card.full { grid-column: 1 / -1; }
+    .card-head {
+      padding: 0.65rem 1rem; display: flex; align-items: center; gap: 0.6rem;
+      border-bottom: 1px solid var(--border); font-weight: 700; font-size: 0.9rem;
+    }
+    .card-head .ch-badge {
+      margin-left: auto; font-size: 0.68rem; background: rgba(255,255,255,0.07);
+      padding: 0.1rem 0.45rem; border-radius: 20px; font-weight: 600; color: var(--muted);
     }
 
-    /* Colori sezioni */
-    .sect-pubblica  .dev-section-head { background: rgba(88,166,255,0.08); color: var(--accent); }
-    .sect-staff     .dev-section-head { background: rgba(63,185,80,0.08);  color: var(--accent2); }
-    .sect-editor    .dev-section-head { background: rgba(210,168,255,0.08);color: var(--accent4); }
-    .sect-api       .dev-section-head { background: rgba(255,166,87,0.08); color: var(--accent5); }
-    .sect-admin     .dev-section-head { background: rgba(247,129,102,0.08);color: var(--accent3); }
-    .sect-webhook   .dev-section-head { background: rgba(139,148,158,0.08);color: var(--muted); }
+    /* colori card head */
+    .c-blue   .card-head { background: rgba(88,166,255,0.07);   color: var(--accent); }
+    .c-green  .card-head { background: rgba(63,185,80,0.07);    color: var(--green); }
+    .c-purple .card-head { background: rgba(210,168,255,0.07);  color: var(--purple); }
+    .c-orange .card-head { background: rgba(255,166,87,0.07);   color: var(--orange); }
+    .c-red    .card-head { background: rgba(247,129,102,0.07);  color: var(--red); }
+    .c-muted  .card-head { background: rgba(139,148,158,0.05);  color: var(--muted); }
+    .c-teal   .card-head { background: rgba(57,210,192,0.07);   color: var(--teal); }
+    .c-yellow .card-head { background: rgba(227,179,65,0.07);   color: var(--yellow); }
 
-    /* Link rows */
-    .dev-links { padding: 0.5rem; }
+    /* ── LINK ROWS ───────────────────────────────────── */
+    .card-links { padding: 0.4rem; }
     .dev-link {
-      display: flex; align-items: center; gap: 0.75rem;
-      padding: 0.55rem 0.75rem; border-radius: 6px; text-decoration: none;
-      color: var(--text); transition: background 0.15s; margin-bottom: 0.2rem;
-      border: 1px solid transparent;
+      display: flex; align-items: center; gap: 0.6rem;
+      padding: 0.5rem 0.6rem; border-radius: 6px;
+      color: var(--text2); transition: background 0.12s; margin-bottom: 0.15rem;
+      border: 1px solid transparent; position: relative;
     }
-    .dev-link:hover { background: rgba(255,255,255,0.05); border-color: var(--border); }
-    .dev-link:last-child { margin-bottom: 0; }
-
+    .dev-link:hover { background: rgba(255,255,255,0.04); border-color: var(--border2); }
+    .dev-link.dim { opacity: 0.4; cursor: default; }
     .dl-method {
-      font-size: 0.65rem; font-weight: 800; padding: 0.15rem 0.4rem;
-      border-radius: 4px; flex-shrink: 0; letter-spacing: 0.03em;
-      font-family: monospace;
+      font-size: 0.62rem; font-weight: 900; padding: 0.12rem 0.38rem;
+      border-radius: 4px; flex-shrink: 0; letter-spacing: 0.03em; font-family: monospace;
     }
-    .m-get    { background: #1a3a5c; color: #58a6ff; }
-    .m-post   { background: #1a3a1a; color: #3fb950; }
-    .m-any    { background: #3a2a1a; color: #ffa657; }
-
+    .m-get  { background: rgba(88,166,255,0.15);  color: var(--accent); }
+    .m-post { background: rgba(63,185,80,0.15);   color: var(--green); }
+    .m-crud { background: rgba(255,166,87,0.15);  color: var(--orange); }
+    .m-any  { background: rgba(255,255,255,0.06); color: var(--muted); }
     .dl-path {
-      font-family: monospace; font-size: 0.82rem; color: var(--accent);
+      font-family: monospace; font-size: 0.8rem; color: var(--accent);
       flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
-    .dl-desc { font-size: 0.75rem; color: var(--muted); white-space: nowrap; }
+    .dev-link.dim .dl-path { color: var(--muted); }
+    .dl-desc { font-size: 0.72rem; color: var(--muted); white-space: nowrap; max-width: 160px; overflow: hidden; text-overflow: ellipsis; }
     .dl-role {
-      font-size: 0.65rem; padding: 0.1rem 0.4rem; border-radius: 20px;
-      background: rgba(255,255,255,0.07); color: var(--muted); white-space: nowrap;
+      font-size: 0.62rem; padding: 0.1rem 0.35rem; border-radius: 20px;
+      background: rgba(255,255,255,0.06); color: var(--muted); white-space: nowrap; flex-shrink: 0;
     }
+    .copy-btn {
+      position: absolute; right: 0.5rem; font-size: 0.65rem;
+      background: rgba(255,255,255,0.07); border: none; color: var(--muted);
+      border-radius: 4px; padding: 0.1rem 0.3rem; cursor: pointer; opacity: 0;
+      transition: opacity 0.15s;
+    }
+    .dev-link:hover .copy-btn { opacity: 1; }
+    .copy-btn:hover { background: rgba(255,255,255,0.14); color: var(--text); }
 
-    /* Sezione credenziali */
-    .dev-creds { padding: 0.5rem; }
+    /* ── CRED TABLE ───────────────────────────────────── */
+    .cred-table { padding: 0.4rem; }
+    .cred-head {
+      display: grid; grid-template-columns: 1fr 1fr 1fr auto;
+      padding: 0.3rem 0.6rem; font-size: 0.65rem; color: var(--muted); font-weight: 700; letter-spacing: 0.06em;
+    }
     .cred-row {
-      display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem;
-      padding: 0.45rem 0.75rem; border-radius: 6px; font-size: 0.8rem;
-      margin-bottom: 0.25rem; background: rgba(255,255,255,0.03);
-      border: 1px solid var(--border);
+      display: grid; grid-template-columns: 1fr 1fr 1fr auto;
+      padding: 0.4rem 0.6rem; border-radius: 6px; font-size: 0.8rem;
+      margin-bottom: 0.2rem;
+      background: rgba(255,255,255,0.02); border: 1px solid var(--border2);
+      align-items: center; gap: 0.5rem;
     }
-    .cred-user { font-weight: 700; font-family: monospace; }
-    .cred-pass { color: var(--muted); font-family: monospace; }
-    .cred-role { color: var(--accent4); text-align: right; }
+    .cred-user { font-weight: 700; font-family: monospace; color: var(--text); }
+    .cred-pass { font-family: monospace; color: var(--muted); }
+    .cred-role { color: var(--purple); font-size: 0.75rem; }
+    .cred-login {
+      background: rgba(88,166,255,0.12); color: var(--accent); border: 1px solid rgba(88,166,255,0.2);
+      border-radius: 5px; padding: 0.2rem 0.5rem; font-size: 0.72rem; font-weight: 600;
+      cursor: pointer; transition: background 0.15s; white-space: nowrap;
+    }
+    .cred-login:hover { background: rgba(88,166,255,0.22); }
 
-    /* Info box */
-    .dev-info { padding: 0.75rem 1rem; font-size: 0.8rem; color: var(--muted);
-                border-top: 1px solid var(--border); line-height: 1.6; }
-    .dev-info code { background: rgba(255,255,255,0.07); padding: 0.1rem 0.3rem;
-                     border-radius: 3px; font-size: 0.78rem; color: var(--accent5); }
+    /* ── INFO BOX ──────────────────────────────────────── */
+    .card-info {
+      padding: 0.6rem 1rem; font-size: 0.78rem; color: var(--muted);
+      border-top: 1px solid var(--border); line-height: 1.7;
+    }
+    .card-info code {
+      background: rgba(255,255,255,0.06); padding: 0.1rem 0.3rem;
+      border-radius: 3px; font-size: 0.76rem; color: var(--orange);
+    }
 
-    /* Full-width card */
-    .dev-section.full { grid-column: 1 / -1; }
+    /* ── ENV CHECK ──────────────────────────────────────── */
+    .env-list { padding: 0.5rem; }
+    .env-row {
+      display: flex; align-items: center; gap: 0.75rem;
+      padding: 0.45rem 0.6rem; border-radius: 6px; font-size: 0.8rem;
+      margin-bottom: 0.2rem; background: rgba(255,255,255,0.02);
+      border: 1px solid var(--border2);
+    }
+    .env-key { font-family: monospace; font-size: 0.78rem; flex: 1; color: var(--text2); }
+    .env-val { font-family: monospace; font-size: 0.74rem; color: var(--muted); max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .env-ok   { color: var(--green); }
+    .env-miss { color: var(--red); }
+    .env-partial { color: var(--yellow); }
 
-    /* QR section */
-    .dev-qr-note { padding: 0.5rem 1rem 0.75rem; font-size: 0.78rem; color: var(--muted); }
-    .dev-qr-note a { color: var(--accent); }
+    /* ── ARCH TABLE ─────────────────────────────────────── */
+    .arch-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+    .arch-col {
+      padding: 1rem; border-right: 1px solid var(--border);
+      border-top: 1px solid var(--border);
+    }
+    .arch-col:last-child { border-right: none; }
+    .arch-title { font-size: 0.68rem; font-weight: 800; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0.6rem; }
+    .arch-col .mono { font-size: 0.78rem; line-height: 1.9; font-family: monospace; }
+    .arch-col .s-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; }
 
-    @media (max-width: 700px) {
-      .dev-stats { display: none; }
+    /* ── MSG TESTER ─────────────────────────────────────── */
+    .msg-tabs { display: flex; border-bottom: 1px solid var(--border); }
+    .msg-tab {
+      padding: 0.55rem 1rem; font-size: 0.82rem; cursor: pointer;
+      border-bottom: 2px solid transparent; color: var(--muted);
+      background: none; border-top: none; border-left: none; border-right: none;
+      transition: color 0.15s; display: flex; align-items: center; gap: 0.4rem;
+    }
+    .msg-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .msg-panel { padding: 0.85rem; display: none; }
+    .msg-panel.active { display: block; }
+    .msg-row { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; flex-wrap: wrap; }
+    .msg-input {
+      flex: 1; min-width: 120px; background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border); border-radius: 6px;
+      padding: 0.42rem 0.65rem; color: var(--text); font-size: 0.82rem;
+    }
+    .msg-input:focus { outline: none; border-color: var(--accent); }
+    .msg-btn {
+      padding: 0.42rem 0.9rem; border-radius: 6px; border: none;
+      cursor: pointer; font-size: 0.82rem; font-weight: 600;
+      transition: opacity 0.15s, transform 0.1s; white-space: nowrap;
+    }
+    .msg-btn:hover { opacity: 0.85; }
+    .msg-btn:active { transform: scale(0.97); }
+    .btn-tg   { background: #2da0d8; color: #fff; }
+    .btn-wa   { background: #25d366; color: #fff; }
+    .btn-read { background: rgba(255,255,255,0.09); color: var(--text); }
+    .btn-clr  { background: rgba(255,255,255,0.04); color: var(--muted); }
+    .msg-log {
+      background: rgba(0,0,0,0.35); border: 1px solid var(--border);
+      border-radius: 6px; padding: 0.5rem 0.75rem; font-size: 0.77rem;
+      max-height: 220px; overflow-y: auto; font-family: monospace; line-height: 1.8;
+    }
+    .msg-hint { font-size: 0.75rem; color: var(--muted); line-height: 1.6; margin-bottom: 0.6rem; padding: 0.5rem 0.6rem; background: rgba(255,255,255,0.02); border-radius: 6px; border-left: 2px solid var(--border); }
+    .log-ok   { color: var(--green); }
+    .log-err  { color: var(--red); }
+    .log-info { color: var(--muted); }
+    .log-in   { color: var(--purple); }
+
+    /* ── QUICK ACTIONS ─────────────────────────────────── */
+    .qa-grid { padding: 0.5rem; display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 0.4rem; }
+    .qa-btn {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 0.3rem; padding: 0.75rem 0.5rem; border-radius: 8px;
+      background: rgba(255,255,255,0.03); border: 1px solid var(--border2);
+      color: var(--muted); font-size: 0.75rem; text-align: center;
+      transition: background 0.12s, color 0.12s, border-color 0.12s;
+    }
+    .qa-btn:hover { background: rgba(255,255,255,0.06); color: var(--text); border-color: var(--border); }
+    .qa-btn .qa-icon { font-size: 1.3rem; }
+    .qa-btn.c-blue:hover  { background: rgba(88,166,255,0.08);  color: var(--accent);  border-color: rgba(88,166,255,0.2); }
+    .qa-btn.c-green:hover { background: rgba(63,185,80,0.08);   color: var(--green);   border-color: rgba(63,185,80,0.2); }
+    .qa-btn.c-red:hover   { background: rgba(247,129,102,0.08); color: var(--red);     border-color: rgba(247,129,102,0.2); }
+    .qa-btn.c-purple:hover{ background: rgba(210,168,255,0.08); color: var(--purple);  border-color: rgba(210,168,255,0.2); }
+    .qa-btn.c-orange:hover{ background: rgba(255,166,87,0.08);  color: var(--orange);  border-color: rgba(255,166,87,0.2); }
+    .qa-btn.c-teal:hover  { background: rgba(57,210,192,0.08);  color: var(--teal);    border-color: rgba(57,210,192,0.2); }
+
+    /* ── SECTION SEPARATOR ─────────────────────────────── */
+    .sec-sep {
+      margin: 1.5rem 0 0.75rem; display: flex; align-items: center; gap: 0.75rem;
+    }
+    .sec-sep-label { font-size: 0.68rem; font-weight: 800; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; }
+    .sec-sep-line { flex: 1; border-top: 1px solid var(--border2); }
+
+    /* ── TOAST ──────────────────────────────────────────── */
+    .toast {
+      position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 999;
+      background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+      padding: 0.6rem 1rem; font-size: 0.82rem; color: var(--text);
+      box-shadow: 0 8px 30px rgba(0,0,0,0.4); opacity: 0; transform: translateY(8px);
+      transition: opacity 0.2s, transform 0.2s; pointer-events: none;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+
+    @media (max-width: 900px) {
+      .dev-sidebar { display: none; }
+      .dev-wrap { flex-direction: column; }
+      .topbar-nav { display: none; }
+      .topbar-right .stat-pill { display: none; }
+    }
+    @media (max-width: 600px) {
       .dev-grid { grid-template-columns: 1fr; }
+      .status-strip { flex-direction: column; }
     }
   </style>
 </head>
 <body>
 
-<header class="dev-header">
-  <div class="dev-brand">
-    <span style="font-size:1.5rem">🍽️</span>
+<!-- ── TOP BAR ──────────────────────────────────────────────────────────── -->
+<header class="topbar">
+  <div class="topbar-brand">
+    <span style="font-size:1.4rem">🍽️</span>
     <h1>RistoBAR</h1>
-    <span class="dev-badge">DEV</span>
+    <span class="badge-dev">DEV</span>
+    <span class="badge-ver">v2.0</span>
   </div>
-  <div class="dev-stats">
-    <div>Sale: <span>{{ n_sale }}</span></div>
-    <div>Tavoli: <span>{{ n_tavoli }}</span></div>
-    <div>Piatti: <span>{{ n_piatti }}</span></div>
-    <div>Ordini: <span>{{ n_ordini }}</span></div>
-    <div>Prenotazioni: <span>{{ n_prenotazioni }}</span></div>
+  <nav class="topbar-nav">
+    <a href="#status">Status</a>
+    <a href="#accesso-rapido">Accesso</a>
+    <a href="#url-explorer">URL</a>
+    <a href="#messaggi">Messaggi</a>
+    <a href="#architettura">Architettura</a>
+  </nav>
+  <div class="topbar-right">
+    <div class="stat-pill">🏠 <strong>{{ n_sale }}</strong> sale</div>
+    <div class="stat-pill">🪑 <strong>{{ n_tavoli }}</strong> tavoli</div>
+    <div class="stat-pill">🍽️ <strong>{{ n_piatti }}</strong> piatti</div>
+    <div class="stat-pill">🧾 <strong>{{ n_ordini }}</strong> ordini</div>
+    <div class="stat-pill">📅 <strong>{{ n_prenotazioni }}</strong> prenotazioni</div>
   </div>
 </header>
 
-<div class="dev-body">
-  <div class="dev-grid">
+<div class="dev-wrap">
 
-    <!-- ── PUBBLICA ─────────────────────────────────────────────── -->
-    <div class="dev-section sect-pubblica">
-      <div class="dev-section-head">
-        <span class="icon">🌐</span> Area Pubblica (clienti)
-        <span class="badge-count">GET · no login</span>
+  <!-- ── SIDEBAR ──────────────────────────────────────────────────────────── -->
+  <aside class="dev-sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Panoramica</div>
+      <a class="sidebar-link" href="#status"><span class="s-icon">🟢</span> System Status</a>
+      <a class="sidebar-link" href="#accesso-rapido"><span class="s-icon">⚡</span> Accesso rapido</a>
+      <a class="sidebar-link" href="#env"><span class="s-icon">🔑</span> Variabili ENV</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">URL Explorer</div>
+      <a class="sidebar-link" href="#url-pubblica"><span class="s-icon">🌐</span> Area pubblica</a>
+      <a class="sidebar-link" href="#url-staff"><span class="s-icon">👨‍🍳</span> Staff</a>
+      <a class="sidebar-link" href="#url-capo"><span class="s-icon">📊</span> Capo / Titolare</a>
+      <a class="sidebar-link" href="#url-editor"><span class="s-icon">🗺️</span> Editor sala</a>
+      <a class="sidebar-link" href="#url-api"><span class="s-icon">⚡</span> API REST</a>
+      <a class="sidebar-link" href="#url-admin"><span class="s-icon">🛠️</span> Django Admin</a>
+      <a class="sidebar-link" href="#url-webhook"><span class="s-icon">🔗</span> Webhook & PWA</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Strumenti</div>
+      <a class="sidebar-link" href="#messaggi"><span class="s-icon">💬</span> Test Messaggi</a>
+      <a class="sidebar-link" href="#architettura"><span class="s-icon">🏗️</span> Architettura</a>
+    </div>
+  </aside>
+
+  <!-- ── MAIN ──────────────────────────────────────────────────────────────── -->
+  <main class="dev-main">
+
+    <!-- ── SYSTEM STATUS ────────────────────────────────── -->
+    <div id="status" class="status-strip">
+      <div class="status-chip {% if tg_ok %}chip-ok{% else %}chip-warn{% endif %}">
+        <div>
+          <span class="chip-label">Telegram Bot</span>
+          <span class="chip-val">
+            {% if tg_ok %}<span class="dot dot-ok" style="display:inline-block"></span> @{{ tg_bot_name }}
+            {% else %}<span class="dot dot-warn" style="display:inline-block"></span> Non configurato{% endif %}
+          </span>
+        </div>
       </div>
-      <div class="dev-links">
-        <a class="dev-link" href="/" target="_blank">
-          <span class="dl-method m-get">GET</span>
-          <span class="dl-path">/</span>
-          <span class="dl-desc">→ redirect homepage</span>
-        </a>
-        <a class="dev-link" href="/homepage" target="_blank">
-          <span class="dl-method m-get">GET</span>
-          <span class="dl-path">/homepage</span>
-          <span class="dl-desc">Vetrina ristorante</span>
-        </a>
-        {% if sala1 and tavolo1 %}
-        <a class="dev-link" href="/menu/{{ sala1.id }}/{{ tavolo1.numero }}/" target="_blank">
-          <span class="dl-method m-get">GET</span>
-          <span class="dl-path">/menu/{{ sala1.id }}/{{ tavolo1.numero }}/</span>
-          <span class="dl-desc">Menu QR tavolo</span>
-        </a>
-        <a class="dev-link" href="/prenota/{{ sala1.id }}/{{ tavolo1.numero }}/" target="_blank">
-          <span class="dl-method m-get">GET</span>
-          <span class="dl-path">/prenota/{{ sala1.id }}/{{ tavolo1.numero }}/</span>
-          <span class="dl-desc">Form prenotazione</span>
-        </a>
-        {% else %}
-        <div class="dev-link" style="opacity:0.4;cursor:default">
-          <span class="dl-method m-get">GET</span>
-          <span class="dl-path">/menu/{sala}/{tavolo}/</span>
-          <span class="dl-desc">Nessun tavolo in DB</span>
+      <div class="status-chip {% if wa_ok %}chip-ok{% else %}chip-warn{% endif %}">
+        <div>
+          <span class="chip-label">WhatsApp Business</span>
+          <span class="chip-val">
+            {% if wa_ok %}<span class="dot dot-ok" style="display:inline-block"></span> Attivo
+            {% else %}<span class="dot dot-off" style="display:inline-block"></span> Non attivo{% endif %}
+          </span>
+        </div>
+      </div>
+      <div class="status-chip {% if stripe_ok %}chip-ok{% else %}chip-warn{% endif %}">
+        <div>
+          <span class="chip-label">Stripe Payments</span>
+          <span class="chip-val">
+            {% if stripe_ok %}<span class="dot dot-ok" style="display:inline-block"></span> Configurato
+            {% else %}<span class="dot dot-off" style="display:inline-block"></span> Non configurato{% endif %}
+          </span>
+        </div>
+      </div>
+      <div class="status-chip chip-ok">
+        <div>
+          <span class="chip-label">Database (SQLite)</span>
+          <span class="chip-val"><span class="dot dot-ok" style="display:inline-block"></span> Connesso</span>
+        </div>
+      </div>
+      <div class="status-chip chip-info">
+        <div>
+          <span class="chip-label">Django</span>
+          <span class="chip-val">DEBUG = <code style="background:rgba(255,166,87,0.15);color:var(--orange);border-radius:3px;padding:0 4px;font-size:0.78rem">True</code></span>
+        </div>
+      </div>
+      <div class="status-chip chip-info">
+        <div>
+          <span class="chip-label">Dati nel DB</span>
+          <span class="chip-val">{{ n_sale }}S · {{ n_tavoli }}T · {{ n_piatti }}P · {{ n_ordini }}O</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── ACCESSO RAPIDO ───────────────────────────────── -->
+    <div id="accesso-rapido" class="sec-sep"><div class="sec-sep-label">Accesso rapido</div><div class="sec-sep-line"></div></div>
+    <div class="dev-grid" style="margin-bottom:0">
+      <div class="dev-card c-red" id="url-auth">
+        <div class="card-head"><span>🔐</span> Credenziali demo <span class="ch-badge">5 utenti</span></div>
+        <div class="cred-table">
+          <div class="cred-head"><span>USERNAME</span><span>PASSWORD</span><span>RUOLO / ACCESSI</span><span></span></div>
+          <div class="cred-row">
+            <span class="cred-user">admin</span>
+            <span class="cred-pass">admin123</span>
+            <span class="cred-role" style="color:var(--red)">superuser — tutto</span>
+            <a href="/login/?next=/amministrazione/" target="_blank" class="cred-login">Login →</a>
+          </div>
+          <div class="cred-row">
+            <span class="cred-user">titolare</span>
+            <span class="cred-pass">titolare123</span>
+            <span class="cred-role" style="color:var(--orange)">titolare — tutto</span>
+            <a href="/login/?next=/sala/capo/" target="_blank" class="cred-login">Login →</a>
+          </div>
+          <div class="cred-row">
+            <span class="cred-user">capo_area</span>
+            <span class="cred-pass">capo123</span>
+            <span class="cred-role" style="color:var(--orange)">capo_area — tutto</span>
+            <a href="/login/?next=/sala/capo/" target="_blank" class="cred-login">Login →</a>
+          </div>
+          <div class="cred-row">
+            <span class="cred-user">cassa1</span>
+            <span class="cred-pass">cassa123</span>
+            <span class="cred-role" style="color:var(--teal)">cam. senior — comanda + cassa</span>
+            <a href="/login/?next=/sala/cameriere/" target="_blank" class="cred-login">Login →</a>
+          </div>
+          <div class="cred-row">
+            <span class="cred-user">cameriere1</span>
+            <span class="cred-pass">cam123</span>
+            <span class="cred-role" style="color:var(--accent)">cameriere — solo comanda</span>
+            <a href="/login/?next=/sala/cameriere/" target="_blank" class="cred-login">Login →</a>
+          </div>
+          <div class="cred-row">
+            <span class="cred-user">cuoco1</span>
+            <span class="cred-pass">cuoco123</span>
+            <span class="cred-role" style="color:var(--green)">cuoco — solo cucina</span>
+            <a href="/login/?next=/sala/cucina/" target="_blank" class="cred-login">Login →</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="dev-card c-teal" id="qa-actions">
+        <div class="card-head"><span>⚡</span> Azioni rapide</div>
+        <div class="qa-grid">
+          <a href="/homepage" target="_blank" class="qa-btn c-blue">
+            <span class="qa-icon">🌐</span>Vetrina pubblica
+          </a>
+          <a href="/sala/cameriere/" target="_blank" class="qa-btn c-green">
+            <span class="qa-icon">🍽️</span>Vista cameriere
+          </a>
+          <a href="/sala/cucina/" target="_blank" class="qa-btn c-orange">
+            <span class="qa-icon">👨‍🍳</span>KDS cucina
+          </a>
+          <a href="/sala/capo/" target="_blank" class="qa-btn c-purple">
+            <span class="qa-icon">📊</span>Dashboard capo
+          </a>
+          {% if sala1 %}
+          <a href="/sala/editor/{{ sala1.id }}/" target="_blank" class="qa-btn c-teal">
+            <span class="qa-icon">🗺️</span>Editor sala
+          </a>
+          {% endif %}
+          <a href="/amministrazione/" target="_blank" class="qa-btn c-red">
+            <span class="qa-icon">🛠️</span>Django Admin
+          </a>
+          <a href="/api/" target="_blank" class="qa-btn c-orange">
+            <span class="qa-icon">⚡</span>Browsable API
+          </a>
+          <a href="/sala/capo/impostazioni/" target="_blank" class="qa-btn">
+            <span class="qa-icon">⚙️</span>Impostazioni
+          </a>
+          {% if sala1 and tavolo1 %}
+          <a href="/menu/{{ sala1.id }}/{{ tavolo1.numero }}/" target="_blank" class="qa-btn c-blue">
+            <span class="qa-icon">📱</span>Menu QR tavolo
+          </a>
+          {% endif %}
+          <a href="/sala/capo/chiusura/" target="_blank" class="qa-btn">
+            <span class="qa-icon">🌙</span>Chiusura giornaliera
+          </a>
+          <a href="/sala/dispositivi/" target="_blank" class="qa-btn c-teal">
+            <span class="qa-icon">📟</span>Display e-ink
+          </a>
+          <a href="/sala/capo/lista-spesa/" target="_blank" class="qa-btn c-green">
+            <span class="qa-icon">📋</span>Lista spesa
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── ENV VARIABLES ────────────────────────────────── -->
+    <div id="env" class="sec-sep"><div class="sec-sep-label">Variabili ENV</div><div class="sec-sep-line"></div></div>
+    <div class="dev-card full c-yellow" style="margin-bottom:1rem">
+      <div class="card-head"><span>🔑</span> Environment Variables</div>
+      <div class="env-list">
+        <div class="env-row">
+          <span class="dot {% if stripe_ok %}dot-ok{% else %}dot-off{% endif %}"></span>
+          <span class="env-key">STRIPE_SECRET_KEY</span>
+          <span class="env-val {% if stripe_ok %}env-ok{% else %}env-miss{% endif %}">{% if stripe_ok %}sk_test_••••••{% else %}non impostata{% endif %}</span>
+        </div>
+        <div class="env-row">
+          <span class="dot {% if stripe_pub_ok %}dot-ok{% else %}dot-off{% endif %}"></span>
+          <span class="env-key">STRIPE_PUBLIC_KEY</span>
+          <span class="env-val {% if stripe_pub_ok %}env-ok{% else %}env-miss{% endif %}">{% if stripe_pub_ok %}pk_test_••••••{% else %}non impostata{% endif %}</span>
+        </div>
+        <div class="env-row">
+          <span class="dot {% if tg_ok %}dot-ok{% else %}dot-off{% endif %}"></span>
+          <span class="env-key">TELEGRAM_BOT_TOKEN</span>
+          <span class="env-val {% if tg_ok %}env-ok{% else %}env-miss{% endif %}">{% if tg_ok %}••••••:••••••{% else %}non impostata{% endif %}</span>
+        </div>
+        <div class="env-row">
+          <span class="dot {% if stripe_webhook_ok %}dot-ok{% else %}dot-warn{% endif %}"></span>
+          <span class="env-key">STRIPE_WEBHOOK_SECRET</span>
+          <span class="env-val {% if stripe_webhook_ok %}env-ok{% else %}env-partial{% endif %}">{% if stripe_webhook_ok %}whsec_••••••{% else %}non impostata (webhook Stripe non funzionerà){% endif %}</span>
+        </div>
+        <div class="env-row">
+          <span class="dot dot-ok"></span>
+          <span class="env-key">DEBUG</span>
+          <span class="env-val env-ok">True</span>
+        </div>
+        <div class="env-row">
+          <span class="dot dot-ok"></span>
+          <span class="env-key">SECRET_KEY</span>
+          <span class="env-val env-ok">impostata ✓</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── URL EXPLORER ─────────────────────────────────── -->
+    <div id="url-explorer" class="sec-sep"><div class="sec-sep-label">URL Explorer</div><div class="sec-sep-line"></div></div>
+    <div class="dev-grid">
+
+      <!-- PUBBLICA -->
+      <div class="dev-card c-blue" id="url-pubblica">
+        <div class="card-head"><span>🌐</span> Area Pubblica <span class="ch-badge">no login</span></div>
+        <div class="card-links">
+          <a class="dev-link" href="/" target="_blank">
+            <span class="dl-method m-get">GET</span>
+            <span class="dl-path">/</span>
+            <span class="dl-desc">→ redirect /homepage</span>
+            <button class="copy-btn" onclick="cp(this,event,'/')">⎘</button>
+          </a>
+          <a class="dev-link" href="/homepage" target="_blank">
+            <span class="dl-method m-get">GET</span>
+            <span class="dl-path">/homepage</span>
+            <span class="dl-desc">Vetrina ristorante</span>
+            <button class="copy-btn" onclick="cp(this,event,'/homepage')">⎘</button>
+          </a>
+          {% if sala1 and tavolo1 %}
+          <a class="dev-link" href="/menu/{{ sala1.id }}/{{ tavolo1.numero }}/" target="_blank">
+            <span class="dl-method m-get">GET</span>
+            <span class="dl-path">/menu/{{ sala1.id }}/{{ tavolo1.numero }}/</span>
+            <span class="dl-desc">Menu QR tavolo {{ tavolo1.numero }}</span>
+            <button class="copy-btn" onclick="cp(this,event,'/menu/{{ sala1.id }}/{{ tavolo1.numero }}/')">⎘</button>
+          </a>
+          <a class="dev-link" href="/prenota/{{ sala1.id }}/{{ tavolo1.numero }}/" target="_blank">
+            <span class="dl-method m-get">GET</span>
+            <span class="dl-path">/prenota/{{ sala1.id }}/{{ tavolo1.numero }}/</span>
+            <span class="dl-desc">Form prenotazione</span>
+            <button class="copy-btn" onclick="cp(this,event,'/prenota/{{ sala1.id }}/{{ tavolo1.numero }}/')">⎘</button>
+          </a>
+          {% else %}
+          <div class="dev-link dim">
+            <span class="dl-method m-get">GET</span>
+            <span class="dl-path">/menu/{sala}/{tavolo}/</span>
+            <span class="dl-desc">Nessun tavolo nel DB</span>
+          </div>
+          {% endif %}
+          {% if prenotazione1 %}
+          <a class="dev-link" href="/prenota/conferma/{{ prenotazione1.id }}/" target="_blank">
+            <span class="dl-method m-get">GET</span>
+            <span class="dl-path">/prenota/conferma/{{ prenotazione1.id }}/</span>
+            <span class="dl-desc">Conferma prenotazione</span>
+          </a>
+          <a class="dev-link" href="/prenota/caparra/{{ prenotazione1.id }}/" target="_blank">
+            <span class="dl-method m-get">GET</span>
+            <span class="dl-path">/prenota/caparra/{{ prenotazione1.id }}/</span>
+            <span class="dl-desc">Pagamento caparra Stripe</span>
+          </a>
+          {% endif %}
+          <a class="dev-link" href="/login/" target="_blank">
+            <span class="dl-method m-any">GET/POST</span>
+            <span class="dl-path">/login/</span>
+            <span class="dl-desc">Pagina di login</span>
+          </a>
+        </div>
+        <div class="card-info">
+          Pagine navigabili senza autenticazione.<br>
+          Sale: <code>{{ n_sale }}</code> · Tavoli attivi: <code>{{ n_tavoli }}</code>
+        </div>
+      </div>
+
+      <!-- CAMERIERE -->
+      <div class="dev-card c-green" id="url-staff">
+        <div class="card-head"><span>🍽️</span> Staff — Cameriere <span class="ch-badge">cameriere</span></div>
+        <div class="card-links">
+          <a class="dev-link" href="/sala/cameriere/" target="_blank">
+            <span class="dl-method m-get">GET</span>
+            <span class="dl-path">/sala/cameriere/</span>
+            <span class="dl-desc">Griglia tavoli</span>
+            <span class="dl-role">cameriere</span>
+            <button class="copy-btn" onclick="cp(this,event,'/sala/cameriere/')">⎘</button>
+          </a>
+          {% if tavolo1 %}
+          <a class="dev-link" href="/sala/cameriere/ordine/{{ tavolo1.id }}/" target="_blank">
+            <span class="dl-method m-get">GET</span>
+            <span class="dl-path">/sala/cameriere/ordine/{{ tavolo1.id }}/</span>
+            <span class="dl-desc">Comanda tavolo {{ tavolo1.numero }}</span>
+            <span class="dl-role">cameriere</span>
+          </a>
+          {% endif %}
+          <div class="dev-link dim">
+            <span class="dl-method m-post">POST</span>
+            <span class="dl-path">/sala/cameriere/ordine/{id}/</span>
+            <span class="dl-desc">nuovo_ordine / aggiungi_piatto / invia_cucina / chiedi_conto</span>
+          </div>
+          <div class="dev-link dim">
+            <span class="dl-method m-post">POST</span>
+            <span class="dl-path">/sala/tavolo/{id}/stato/</span>
+            <span class="dl-desc">Cambia stato tavolo</span>
+          </div>
+        </div>
+        <div class="card-info">
+          Flusso: <code>nuovo_ordine</code> → <code>aggiungi_piatto</code> → <code>invia_cucina</code> → <code>chiedi_conto</code>
+        </div>
+      </div>
+
+      <!-- CUCINA KDS -->
+      <div class="dev-card c-green">
+        <div class="card-head"><span>👨‍🍳</span> Staff — Cucina KDS <span class="ch-badge">cuoco</span></div>
+        <div class="card-links">
+          <a class="dev-link" href="/sala/cucina/" target="_blank">
+            <span class="dl-method m-get">GET</span>
+            <span class="dl-path">/sala/cucina/</span>
+            <span class="dl-desc">Kitchen Display System</span>
+            <span class="dl-role">cuoco</span>
+            <button class="copy-btn" onclick="cp(this,event,'/sala/cucina/')">⎘</button>
+          </a>
+          <div class="dev-link dim">
+            <span class="dl-method m-post">POST</span>
+            <span class="dl-path">/sala/cucina/item/{id}/stato/</span>
+            <span class="dl-desc">Aggiorna stato: A→C→P→S</span>
+          </div>
+        </div>
+        <div class="card-info">
+          <code>A</code> Attesa · <code>C</code> In cucina · <code>P</code> Pronto · <code>S</code> Servito<br>
+          Auto-refresh ogni 20s · Timer urgenza dopo 15 min
+        </div>
+      </div>
+
+      <!-- CAPO AREA -->
+      <div class="dev-card c-purple" id="url-capo">
+        <div class="card-head"><span>📊</span> Capo Area / Titolare <span class="ch-badge">capo_area</span></div>
+        <div class="card-links">
+          <a class="dev-link" href="/sala/capo/" target="_blank">
+            <span class="dl-method m-get">GET</span>
+            <span class="dl-path">/sala/capo/</span>
+            <span class="dl-desc">Dashboard completa</span>
+            <span class="dl-role">capo_area</span>
+            <button class="copy-btn" onclick="cp(this,event,'/sala/capo/')">⎘</button>
+          </a>
+          {% if sala1 %}
+          <a class="dev-link" href="/sala/capo/sala/{{ sala1.id }}/" target="_blank">
+            <span class="dl-method m-get">GET</span>
+            <span class="dl-path">/sala/capo/sala/{{ sala1.id }}/</span>
+            <span class="dl-desc">Mappa sala — {{ sala1.nome }}</span>
+          </a>
+          {% endif %}
+          <a class="dev-link" href="/sala/capo/impostazioni/" target="_blank">
+            <span class="dl-method m-any">GET/POST</span>
+            <span class="dl-path">/sala/capo/impostazioni/</span>
+            <span class="dl-desc">Impostazioni ristorante</span>
+          </a>
+          <a class="dev-link" href="/sala/capo/chiusura/" target="_blank">
+            <span class="dl-method m-get">GET</span>
+            <span class="dl-path">/sala/capo/chiusura/</span>
+            <span class="dl-desc">Chiusura giornaliera</span>
+          </a>
+          <a class="dev-link" href="/sala/capo/lista-spesa/" target="_blank">
+            <span class="dl-method m-get">GET</span>
+            <span class="dl-path">/sala/capo/lista-spesa/</span>
+            <span class="dl-desc">Liste spesa generate</span>
+          </a>
+          <a class="dev-link" href="/sala/dispositivi/" target="_blank">
+            <span class="dl-method m-get">GET</span>
+            <span class="dl-path">/sala/dispositivi/</span>
+            <span class="dl-desc">Centro controllo display</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- EDITOR SALA -->
+      <div class="dev-card c-purple" id="url-editor">
+        <div class="card-head"><span>🗺️</span> Editor Planimetria <span class="ch-badge">titolare</span></div>
+        <div class="card-links">
+          {% if sala1 %}
+          <a class="dev-link" href="/sala/editor/{{ sala1.id }}/" target="_blank">
+            <span class="dl-method m-get">GET</span>
+            <span class="dl-path">/sala/editor/{{ sala1.id }}/</span>
+            <span class="dl-desc">Editor — {{ sala1.nome }}</span>
+            <span class="dl-role">titolare</span>
+            <button class="copy-btn" onclick="cp(this,event,'/sala/editor/{{ sala1.id }}/')">⎘</button>
+          </a>
+          {% endif %}
+          <div class="dev-link dim">
+            <span class="dl-method m-post">POST</span>
+            <span class="dl-path">/sala/editor/{id}/salva/</span>
+            <span class="dl-desc">Salva posizioni drag&amp;drop</span>
+          </div>
+          <div class="dev-link dim">
+            <span class="dl-method m-post">POST</span>
+            <span class="dl-path">/sala/editor/{id}/unisci/</span>
+            <span class="dl-desc">Unisce tavoli selezionati</span>
+          </div>
+          <div class="dev-link dim">
+            <span class="dl-method m-post">POST</span>
+            <span class="dl-path">/sala/editor/{id}/separa/</span>
+            <span class="dl-desc">Scioglie unione tavoli</span>
+          </div>
+          <div class="dev-link dim">
+            <span class="dl-method m-post">POST</span>
+            <span class="dl-path">/sala/editor/{id}/aggiungi/</span>
+            <span class="dl-desc">Aggiunge nuovo tavolo</span>
+          </div>
+        </div>
+        <div class="card-info">
+          Shortcuts: <code>A</code> aggiungi · <code>E</code> modifica · <code>U</code> unisci · <code>X</code> separa · <code>Del</code> elimina · <code>Ctrl+S</code> salva
+        </div>
+      </div>
+
+      <!-- API REST -->
+      <div class="dev-card c-orange" id="url-api">
+        <div class="card-head"><span>⚡</span> API REST (DRF + STM32)</div>
+        <div class="card-links">
+          <a class="dev-link" href="/api/" target="_blank">
+            <span class="dl-method m-get">GET</span>
+            <span class="dl-path">/api/</span>
+            <span class="dl-desc">Browsable API root</span>
+            <button class="copy-btn" onclick="cp(this,event,'/api/')">⎘</button>
+          </a>
+          <a class="dev-link" href="/api/tavoli/" target="_blank">
+            <span class="dl-method m-crud">CRUD</span>
+            <span class="dl-path">/api/tavoli/</span>
+            <span class="dl-desc">ViewSet tavoli</span>
+          </a>
+          <a class="dev-link" href="/api/prenotazioni/" target="_blank">
+            <span class="dl-method m-crud">CRUD</span>
+            <span class="dl-path">/api/prenotazioni/</span>
+            <span class="dl-desc">ViewSet prenotazioni</span>
+          </a>
+          <a class="dev-link" href="/api/ordini/" target="_blank">
+            <span class="dl-method m-crud">CRUD</span>
+            <span class="dl-path">/api/ordini/</span>
+            <span class="dl-desc">ViewSet ordini</span>
+          </a>
+          <a class="dev-link" href="/api/piatti/" target="_blank">
+            <span class="dl-method m-crud">CRUD</span>
+            <span class="dl-path">/api/piatti/</span>
+            <span class="dl-desc">Solo piatti disponibili</span>
+          </a>
+          {% if sala1 and tavolo1 %}
+          <a class="dev-link" href="/api/tavolo/{{ sala1.id }}/{{ tavolo1.numero }}/" target="_blank">
+            <span class="dl-method m-get">GET</span>
+            <span class="dl-path">/api/tavolo/{{ sala1.id }}/{{ tavolo1.numero }}/</span>
+            <span class="dl-desc">Stato singolo (STM32)</span>
+            <button class="copy-btn" onclick="cp(this,event,'/api/tavolo/{{ sala1.id }}/{{ tavolo1.numero }}/')">⎘</button>
+          </a>
+          <a class="dev-link" href="/api/sala/{{ sala1.id }}/" target="_blank">
+            <span class="dl-method m-get">GET</span>
+            <span class="dl-path">/api/sala/{{ sala1.id }}/</span>
+            <span class="dl-desc">Bulk sala (Hub BLE)</span>
+          </a>
+          {% endif %}
+        </div>
+        <div class="card-info">
+          Risposta STM32: <code>t</code>=num · <code>s</code>=stato · <code>n</code>=cliente · <code>p</code>=persone · <code>h</code>=ora<br>
+          Auth: <code>IsAuthenticatedOrReadOnly</code> · Ordini: <code>IsAuthenticated</code>
+        </div>
+      </div>
+
+      <!-- ADMIN -->
+      <div class="dev-card c-red" id="url-admin">
+        <div class="card-head"><span>🛠️</span> Django Admin <span class="ch-badge">superuser</span></div>
+        <div class="card-links">
+          <a class="dev-link" href="/amministrazione/" target="_blank">
+            <span class="dl-method m-get">GET</span>
+            <span class="dl-path">/amministrazione/</span>
+            <span class="dl-desc">Admin index</span>
+            <button class="copy-btn" onclick="cp(this,event,'/amministrazione/')">⎘</button>
+          </a>
+          <a class="dev-link" href="/amministrazione/ristorante/sala/" target="_blank">
+            <span class="dl-method m-get">GET</span>
+            <span class="dl-path">/amministrazione/ristorante/sala/</span>
+            <span class="dl-desc">Sale</span>
+          </a>
+          <a class="dev-link" href="/amministrazione/ristorante/tavolo/" target="_blank">
+            <span class="dl-method m-get">GET</span>
+            <span class="dl-path">/amministrazione/ristorante/tavolo/</span>
+            <span class="dl-desc">Tavoli</span>
+          </a>
+          <a class="dev-link" href="/amministrazione/ristorante/piatto/" target="_blank">
+            <span class="dl-method m-get">GET</span>
+            <span class="dl-path">/amministrazione/ristorante/piatto/</span>
+            <span class="dl-desc">Piatti / Menu</span>
+          </a>
+          <a class="dev-link" href="/amministrazione/ristorante/prenotazione/" target="_blank">
+            <span class="dl-method m-get">GET</span>
+            <span class="dl-path">/amministrazione/ristorante/prenotazione/</span>
+            <span class="dl-desc">Prenotazioni</span>
+          </a>
+          <a class="dev-link" href="/amministrazione/ristorante/ordine/" target="_blank">
+            <span class="dl-method m-get">GET</span>
+            <span class="dl-path">/amministrazione/ristorante/ordine/</span>
+            <span class="dl-desc">Ordini</span>
+          </a>
+          <a class="dev-link" href="/amministrazione/auth/user/" target="_blank">
+            <span class="dl-method m-get">GET</span>
+            <span class="dl-path">/amministrazione/auth/user/</span>
+            <span class="dl-desc">Utenti</span>
+          </a>
+          <a class="dev-link" href="/amministrazione/auth/group/" target="_blank">
+            <span class="dl-method m-get">GET</span>
+            <span class="dl-path">/amministrazione/auth/group/</span>
+            <span class="dl-desc">Gruppi (ruoli)</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- WEBHOOK & PWA -->
+      <div class="dev-card c-muted" id="url-webhook">
+        <div class="card-head"><span>🔗</span> Webhook &amp; PWA</div>
+        <div class="card-links">
+          <div class="dev-link dim">
+            <span class="dl-method m-post">POST</span>
+            <span class="dl-path">/webhooks/stripe/</span>
+            <span class="dl-desc">Stripe (CSRF exempt)</span>
+          </div>
+          <div class="dev-link dim">
+            <span class="dl-method m-post">POST</span>
+            <span class="dl-path">/webhooks/telegram/</span>
+            <span class="dl-desc">Telegram (CSRF exempt)</span>
+          </div>
+          <a class="dev-link" href="/manifest.json" target="_blank">
+            <span class="dl-method m-get">GET</span>
+            <span class="dl-path">/manifest.json</span>
+            <span class="dl-desc">PWA manifest</span>
+          </a>
+          <a class="dev-link" href="/serviceworker.js" target="_blank">
+            <span class="dl-method m-get">GET</span>
+            <span class="dl-path">/serviceworker.js</span>
+            <span class="dl-desc">Service Worker</span>
+          </a>
+          <div class="dev-link dim">
+            <span class="dl-method m-post">POST</span>
+            <span class="dl-path">/i18n/setlang/</span>
+            <span class="dl-desc">Cambia lingua IT/EN/FR/DE/ES/ZH/JA/AR</span>
+          </div>
+        </div>
+        <div class="card-info">
+          Stripe: caparra €10 per prenotazione (PaymentIntent).<br>
+          i18n: 8 lingue, file <code>.po</code> in <code>locale/</code>
+        </div>
+      </div>
+
+    </div><!-- /dev-grid -->
+
+    <!-- ── TEST MESSAGGI ─────────────────────────────────── -->
+    <div id="messaggi" class="sec-sep"><div class="sec-sep-label">Test Messaggi</div><div class="sec-sep-line"></div></div>
+    <div class="dev-card full" style="border-color: rgba(45,160,216,0.4); margin-bottom:1rem">
+      <div class="card-head" style="background: rgba(45,160,216,0.07); color: #2da0d8;">
+        <span>💬</span> Test Messaggi — Telegram &amp; WhatsApp
+        <span class="ch-badge">solo DEBUG</span>
+      </div>
+
+      <div class="msg-tabs">
+        <button class="msg-tab active" onclick="switchTab('tg')">
+          <span class="dot {% if tg_ok %}dot-ok{% else %}dot-err{% endif %}"></span>
+          Telegram {% if tg_bot_name %}&nbsp;<span style="opacity:0.6">@{{ tg_bot_name }}</span>{% endif %}
+        </button>
+        <button class="msg-tab" onclick="switchTab('wa')">
+          <span class="dot {% if wa_ok %}dot-ok{% else %}dot-off{% endif %}"></span>
+          WhatsApp
+        </button>
+      </div>
+
+      <!-- TELEGRAM -->
+      <div id="panel-tg" class="msg-panel active">
+        {% if not tg_ok %}
+        <div style="color:var(--red);font-size:0.8rem;margin-bottom:0.75rem;padding:0.5rem 0.75rem;background:rgba(247,129,102,0.07);border-radius:6px;border-left:3px solid var(--red)">
+          ⚠️ Bot non raggiungibile — verifica <code style="color:var(--orange)">TELEGRAM_BOT_TOKEN</code> nel file <code style="color:var(--orange)">.env</code>
         </div>
         {% endif %}
-        {% if prenotazione1 %}
-        <a class="dev-link" href="/prenota/conferma/{{ prenotazione1.id }}/" target="_blank">
-          <span class="dl-method m-get">GET</span>
-          <span class="dl-path">/prenota/conferma/{{ prenotazione1.id }}/</span>
-          <span class="dl-desc">Conferma prenotazione</span>
-        </a>
-        <a class="dev-link" href="/prenota/caparra/{{ prenotazione1.id }}/" target="_blank">
-          <span class="dl-method m-get">GET</span>
-          <span class="dl-path">/prenota/caparra/{{ prenotazione1.id }}/</span>
-          <span class="dl-desc">Pagamento caparra Stripe</span>
-        </a>
+        <div class="msg-hint">
+          💡 <strong>Come ottenere il Chat ID:</strong>
+          scrivi <code>/start</code> al bot su Telegram → clicca <strong>Leggi 📥</strong> → appare il tuo ID.
+          Per un <strong>gruppo</strong>: aggiungi il bot al gruppo, scrivi un messaggio, poi clicca Leggi.
+          &nbsp;<a href="/sala/capo/impostazioni/" style="color:var(--accent)">Salva il Chat ID nelle Impostazioni ↗</a>
+        </div>
+        <div class="msg-row">
+          <input id="tg-chat-id" class="msg-input" placeholder="Chat ID (es. -100123456789 o @username)" style="max-width:230px" value="{{ tg_chat_id_saved }}">
+          <button class="msg-btn btn-read" onclick="tgVerifica()">✓ Verifica</button>
+          <input id="tg-testo" class="msg-input" placeholder="Testo del messaggio…">
+          <button class="msg-btn btn-tg" onclick="tgInvia()">✈️ Invia</button>
+          <button class="msg-btn btn-read" onclick="tgLeggi()">📥 Leggi</button>
+          <button class="msg-btn btn-clr" onclick="clearLog('tg-log')">🗑</button>
+        </div>
+        <div id="tg-log" class="msg-log"><span class="log-info">— log messaggi —</span></div>
+      </div>
+
+      <!-- WHATSAPP -->
+      <div id="panel-wa" class="msg-panel">
+        {% if not wa_ok %}
+        <div style="color:var(--yellow);font-size:0.8rem;margin-bottom:0.75rem;padding:0.5rem 0.75rem;background:rgba(227,179,65,0.07);border-radius:6px;border-left:3px solid var(--yellow)">
+          ⚠️ WhatsApp non configurato — vai in <a href="/sala/capo/impostazioni/" style="color:var(--accent)">Impostazioni → tab Messaggistica</a> e abilita WhatsApp Business
+        </div>
         {% endif %}
-      </div>
-      <div class="dev-info">
-        Pagine navigabili senza login. Il menu viene generato via QR code incollato sul tavolo.<br>
-        Sale disponibili: <code>{{ n_sale }}</code> · Tavoli attivi: <code>{{ n_tavoli }}</code>
+        <div class="msg-row">
+          <input id="wa-numero" class="msg-input" placeholder="Numero (+39333...)" style="max-width:200px">
+          <input id="wa-testo" class="msg-input" placeholder="Testo del messaggio…">
+          <button class="msg-btn btn-wa" onclick="waInvia()">✈️ Invia</button>
+          <button class="msg-btn btn-clr" onclick="clearLog('wa-log')">🗑</button>
+        </div>
+        <div id="wa-log" class="msg-log"><span class="log-info">— log messaggi —</span></div>
       </div>
     </div>
 
-    <!-- ── AUTH ─────────────────────────────────────────────────── -->
-    <div class="dev-section sect-admin">
-      <div class="dev-section-head">
-        <span class="icon">🔐</span> Autenticazione
-      </div>
-      <div class="dev-links">
-        <a class="dev-link" href="/login/" target="_blank">
-          <span class="dl-method m-any">GET/POST</span>
-          <span class="dl-path">/login/</span>
-          <span class="dl-desc">Pagina di login</span>
-        </a>
-        <a class="dev-link" href="/logout/" target="_blank">
-          <span class="dl-method m-get">GET</span>
-          <span class="dl-path">/logout/</span>
-          <span class="dl-desc">Logout → homepage</span>
-        </a>
-        <a class="dev-link" href="/sala/" target="_blank">
-          <span class="dl-method m-get">GET</span>
-          <span class="dl-path">/sala/</span>
-          <span class="dl-desc">Dispatch ruolo (reindirizza)</span>
-          <span class="dl-role">login req.</span>
-        </a>
-      </div>
-      <div class="dev-creds">
-        <div class="cred-row" style="font-size:0.7rem;color:var(--muted);font-weight:600">
-          <span>USERNAME</span><span>PASSWORD</span><span style="text-align:right">RUOLO</span>
-        </div>
-        <div class="cred-row"><span class="cred-user">admin</span><span class="cred-pass">admin123</span><span class="cred-role">superuser</span></div>
-        <div class="cred-row"><span class="cred-user">titolare</span><span class="cred-pass">titolare123</span><span class="cred-role">titolare</span></div>
-        <div class="cred-row"><span class="cred-user">capo_area</span><span class="cred-pass">capo123</span><span class="cred-role">capo_area</span></div>
-        <div class="cred-row"><span class="cred-user">cameriere1</span><span class="cred-pass">cam123</span><span class="cred-role">cameriere</span></div>
-        <div class="cred-row"><span class="cred-user">cuoco1</span><span class="cred-pass">cuoco123</span><span class="cred-role">cuoco</span></div>
-      </div>
-    </div>
-
-    <!-- ── STAFF CAMERIERE ────────────────────────────────────────── -->
-    <div class="dev-section sect-staff">
-      <div class="dev-section-head">
-        <span class="icon">🍽️</span> Staff — Cameriere
-        <span class="badge-count">cameriere</span>
-      </div>
-      <div class="dev-links">
-        <a class="dev-link" href="/sala/cameriere/" target="_blank">
-          <span class="dl-method m-get">GET</span>
-          <span class="dl-path">/sala/cameriere/</span>
-          <span class="dl-desc">Griglia tavoli</span>
-          <span class="dl-role">cameriere</span>
-        </a>
-        {% if tavolo1 %}
-        <a class="dev-link" href="/sala/cameriere/ordine/{{ tavolo1.id }}/" target="_blank">
-          <span class="dl-method m-get">GET</span>
-          <span class="dl-path">/sala/cameriere/ordine/{{ tavolo1.id }}/</span>
-          <span class="dl-desc">Comanda tavolo {{ tavolo1.numero }}</span>
-          <span class="dl-role">cameriere</span>
-        </a>
-        {% endif %}
-        <div class="dev-link" style="opacity:0.5;cursor:default">
-          <span class="dl-method m-post">POST</span>
-          <span class="dl-path">/sala/cameriere/ordine/{id}/</span>
-          <span class="dl-desc">azione: nuovo_ordine / aggiungi_piatto / invia_cucina / chiedi_conto</span>
-        </div>
-        <div class="dev-link" style="opacity:0.5;cursor:default">
-          <span class="dl-method m-post">POST</span>
-          <span class="dl-path">/sala/tavolo/{id}/stato/</span>
-          <span class="dl-desc">Cambia stato tavolo (L/P/O/C)</span>
-        </div>
-      </div>
-      <div class="dev-info">
-        Flusso comanda: <code>nuovo_ordine</code> → <code>aggiungi_piatto</code> → <code>invia_cucina</code> → <code>chiedi_conto</code>
-      </div>
-    </div>
-
-    <!-- ── STAFF CUCINA KDS ────────────────────────────────────────── -->
-    <div class="dev-section sect-staff">
-      <div class="dev-section-head">
-        <span class="icon">👨‍🍳</span> Staff — Cucina KDS
-        <span class="badge-count">cuoco</span>
-      </div>
-      <div class="dev-links">
-        <a class="dev-link" href="/sala/cucina/" target="_blank">
-          <span class="dl-method m-get">GET</span>
-          <span class="dl-path">/sala/cucina/</span>
-          <span class="dl-desc">Kitchen Display System</span>
-          <span class="dl-role">cuoco</span>
-        </a>
-        <div class="dev-link" style="opacity:0.5;cursor:default">
-          <span class="dl-method m-post">POST</span>
-          <span class="dl-path">/sala/cucina/item/{id}/stato/</span>
-          <span class="dl-desc">Aggiorna stato item: A→C→P→S</span>
-        </div>
-      </div>
-      <div class="dev-info">
-        Stato items: <code>A</code>=Attesa · <code>C</code>=In cucina · <code>P</code>=Pronto · <code>S</code>=Servito<br>
-        Auto-refresh 20s · Timer urgenza dopo 15min
-      </div>
-    </div>
-
-    <!-- ── STAFF DASHBOARD ─────────────────────────────────────────── -->
-    <div class="dev-section sect-staff">
-      <div class="dev-section-head">
-        <span class="icon">📊</span> Staff — Dashboard Capo
-        <span class="badge-count">capo_area / titolare</span>
-      </div>
-      <div class="dev-links">
-        <a class="dev-link" href="/sala/capo/" target="_blank">
-          <span class="dl-method m-get">GET</span>
-          <span class="dl-path">/sala/capo/</span>
-          <span class="dl-desc">Dashboard completa</span>
-          <span class="dl-role">capo_area</span>
-        </a>
-        {% if sala1 %}
-        <a class="dev-link" href="/sala/capo/sala/{{ sala1.id }}/" target="_blank">
-          <span class="dl-method m-get">GET</span>
-          <span class="dl-path">/sala/capo/sala/{{ sala1.id }}/</span>
-          <span class="dl-desc">Mappa sala {{ sala1.nome }}</span>
-          <span class="dl-role">capo_area</span>
-        </a>
-        {% endif %}
-      </div>
-    </div>
-
-    <!-- ── EDITOR ────────────────────────────────────────────────── -->
-    <div class="dev-section sect-editor">
-      <div class="dev-section-head">
-        <span class="icon">🗺️</span> Editor Planimetria
-        <span class="badge-count">titolare / capo_area</span>
-      </div>
-      <div class="dev-links">
-        {% if sala1 %}
-        <a class="dev-link" href="/sala/editor/{{ sala1.id }}/" target="_blank">
-          <span class="dl-method m-get">GET</span>
-          <span class="dl-path">/sala/editor/{{ sala1.id }}/</span>
-          <span class="dl-desc">Editor — {{ sala1.nome }}</span>
-          <span class="dl-role">titolare</span>
-        </a>
-        {% endif %}
-        <div class="dev-link" style="opacity:0.5;cursor:default">
-          <span class="dl-method m-post">POST</span>
-          <span class="dl-path">/sala/editor/{id}/salva/</span>
-          <span class="dl-desc">Salva posizioni drag&amp;drop</span>
-        </div>
-        <div class="dev-link" style="opacity:0.5;cursor:default">
-          <span class="dl-method m-post">POST</span>
-          <span class="dl-path">/sala/editor/{id}/unisci/</span>
-          <span class="dl-desc">Unisce tavoli selezionati</span>
-        </div>
-        <div class="dev-link" style="opacity:0.5;cursor:default">
-          <span class="dl-method m-post">POST</span>
-          <span class="dl-path">/sala/editor/{id}/separa/</span>
-          <span class="dl-desc">Scioglie unione tavoli</span>
-        </div>
-        <div class="dev-link" style="opacity:0.5;cursor:default">
-          <span class="dl-method m-post">POST</span>
-          <span class="dl-path">/sala/editor/{id}/aggiungi/</span>
-          <span class="dl-desc">Aggiunge nuovo tavolo</span>
-        </div>
-        <div class="dev-link" style="opacity:0.5;cursor:default">
-          <span class="dl-method m-post">POST</span>
-          <span class="dl-path">/sala/editor/{id}/tavolo/{tid}/modifica/</span>
-          <span class="dl-desc">Modifica proprietà tavolo</span>
-        </div>
-        <div class="dev-link" style="opacity:0.5;cursor:default">
-          <span class="dl-method m-post">POST</span>
-          <span class="dl-path">/sala/editor/{id}/tavolo/{tid}/elimina/</span>
-          <span class="dl-desc">Disattiva tavolo</span>
-        </div>
-      </div>
-      <div class="dev-info">
-        Shortcuts editor: <code>A</code> aggiungi · <code>E</code> modifica · <code>U</code> unisci · <code>X</code> separa · <code>Del</code> elimina · <code>Ctrl+S</code> salva
-      </div>
-    </div>
-
-    <!-- ── API REST ──────────────────────────────────────────────── -->
-    <div class="dev-section sect-api">
-      <div class="dev-section-head">
-        <span class="icon">⚡</span> API REST (DRF + STM32)
-      </div>
-      <div class="dev-links">
-        <a class="dev-link" href="/api/" target="_blank">
-          <span class="dl-method m-get">GET</span>
-          <span class="dl-path">/api/</span>
-          <span class="dl-desc">Browsable API root</span>
-        </a>
-        <a class="dev-link" href="/api/tavoli/" target="_blank">
-          <span class="dl-method m-any">CRUD</span>
-          <span class="dl-path">/api/tavoli/</span>
-          <span class="dl-desc">ViewSet tavoli</span>
-        </a>
-        <a class="dev-link" href="/api/prenotazioni/" target="_blank">
-          <span class="dl-method m-any">CRUD</span>
-          <span class="dl-path">/api/prenotazioni/</span>
-          <span class="dl-desc">ViewSet prenotazioni</span>
-        </a>
-        <a class="dev-link" href="/api/ordini/" target="_blank">
-          <span class="dl-method m-any">CRUD</span>
-          <span class="dl-path">/api/ordini/</span>
-          <span class="dl-desc">ViewSet ordini</span>
-        </a>
-        <a class="dev-link" href="/api/piatti/" target="_blank">
-          <span class="dl-method m-any">CRUD</span>
-          <span class="dl-path">/api/piatti/</span>
-          <span class="dl-desc">ViewSet piatti (solo disponibili)</span>
-        </a>
-        {% if sala1 and tavolo1 %}
-        <a class="dev-link" href="/api/tavolo/{{ sala1.id }}/{{ tavolo1.numero }}/" target="_blank">
-          <span class="dl-method m-get">GET</span>
-          <span class="dl-path">/api/tavolo/{{ sala1.id }}/{{ tavolo1.numero }}/</span>
-          <span class="dl-desc">Stato singolo tavolo (STM32)</span>
-        </a>
-        <a class="dev-link" href="/api/sala/{{ sala1.id }}/" target="_blank">
-          <span class="dl-method m-get">GET</span>
-          <span class="dl-path">/api/sala/{{ sala1.id }}/</span>
-          <span class="dl-desc">Tutti tavoli sala (bulk STM32)</span>
-        </a>
-        {% endif %}
-      </div>
-      <div class="dev-info">
-        Risposta STM32 compressa: <code>t</code>=numero · <code>s</code>=stato · <code>n</code>=nome_cliente · <code>p</code>=persone · <code>h</code>=ora<br>
-        Auth DRF: <code>IsAuthenticatedOrReadOnly</code> (ordini: <code>IsAuthenticated</code>)
-      </div>
-    </div>
-
-    <!-- ── ADMIN ─────────────────────────────────────────────────── -->
-    <div class="dev-section sect-admin">
-      <div class="dev-section-head">
-        <span class="icon">🛠️</span> Django Admin
-        <span class="badge-count">superuser</span>
-      </div>
-      <div class="dev-links">
-        <a class="dev-link" href="/amministrazione/" target="_blank">
-          <span class="dl-method m-get">GET</span>
-          <span class="dl-path">/amministrazione/</span>
-          <span class="dl-desc">Admin Django (rinominato)</span>
-          <span class="dl-role">superuser</span>
-        </a>
-        <a class="dev-link" href="/amministrazione/ristorante/sala/" target="_blank">
-          <span class="dl-method m-get">GET</span>
-          <span class="dl-path">/amministrazione/ristorante/sala/</span>
-          <span class="dl-desc">Gestione Sale</span>
-        </a>
-        <a class="dev-link" href="/amministrazione/ristorante/tavolo/" target="_blank">
-          <span class="dl-method m-get">GET</span>
-          <span class="dl-path">/amministrazione/ristorante/tavolo/</span>
-          <span class="dl-desc">Gestione Tavoli</span>
-        </a>
-        <a class="dev-link" href="/amministrazione/ristorante/piatto/" target="_blank">
-          <span class="dl-method m-get">GET</span>
-          <span class="dl-path">/amministrazione/ristorante/piatto/</span>
-          <span class="dl-desc">Gestione Piatti / Menu</span>
-        </a>
-        <a class="dev-link" href="/amministrazione/ristorante/prenotazione/" target="_blank">
-          <span class="dl-method m-get">GET</span>
-          <span class="dl-path">/amministrazione/ristorante/prenotazione/</span>
-          <span class="dl-desc">Gestione Prenotazioni</span>
-        </a>
-        <a class="dev-link" href="/amministrazione/ristorante/ordine/" target="_blank">
-          <span class="dl-method m-get">GET</span>
-          <span class="dl-path">/amministrazione/ristorante/ordine/</span>
-          <span class="dl-desc">Gestione Ordini</span>
-        </a>
-        <a class="dev-link" href="/amministrazione/auth/user/" target="_blank">
-          <span class="dl-method m-get">GET</span>
-          <span class="dl-path">/amministrazione/auth/user/</span>
-          <span class="dl-desc">Utenti e Gruppi</span>
-        </a>
-        <a class="dev-link" href="/amministrazione/auth/group/" target="_blank">
-          <span class="dl-method m-get">GET</span>
-          <span class="dl-path">/amministrazione/auth/group/</span>
-          <span class="dl-desc">Gruppi (ruoli)</span>
-        </a>
-      </div>
-    </div>
-
-    <!-- ── WEBHOOKS ──────────────────────────────────────────────── -->
-    <div class="dev-section sect-webhook">
-      <div class="dev-section-head">
-        <span class="icon">🔗</span> Webhooks &amp; PWA
-      </div>
-      <div class="dev-links">
-        <div class="dev-link" style="opacity:0.5;cursor:default">
-          <span class="dl-method m-post">POST</span>
-          <span class="dl-path">/webhooks/stripe/</span>
-          <span class="dl-desc">Stripe payment events (CSRF exempt)</span>
-        </div>
-        <div class="dev-link" style="opacity:0.5;cursor:default">
-          <span class="dl-method m-post">POST</span>
-          <span class="dl-path">/webhooks/telegram/</span>
-          <span class="dl-desc">Telegram Bot updates (CSRF exempt)</span>
-        </div>
-        <a class="dev-link" href="/manifest.json" target="_blank">
-          <span class="dl-method m-get">GET</span>
-          <span class="dl-path">/manifest.json</span>
-          <span class="dl-desc">PWA manifest</span>
-        </a>
-        <a class="dev-link" href="/serviceworker.js" target="_blank">
-          <span class="dl-method m-get">GET</span>
-          <span class="dl-path">/serviceworker.js</span>
-          <span class="dl-desc">PWA Service Worker</span>
-        </a>
-        <a class="dev-link" href="/i18n/setlang/" target="_blank">
-          <span class="dl-method m-post">POST</span>
-          <span class="dl-path">/i18n/setlang/</span>
-          <span class="dl-desc">Cambia lingua (IT/EN/FR/DE/ES/ZH/JA/AR)</span>
-        </a>
-      </div>
-      <div class="dev-info">
-        Stripe: caparra €10 per prenotazione (PaymentIntent). Telegram: bot prenotazioni via chat.<br>
-        i18n: 8 lingue configurate, file <code>.po</code> in <code>locale/</code>
-      </div>
-    </div>
-
-    <!-- ── ARCHITETTURA ──────────────────────────────────────────── -->
-    <div class="dev-section full" style="border-color: #30363d;">
-      <div class="dev-section-head" style="background: rgba(255,255,255,0.03); color: var(--muted);">
-        <span class="icon">🏗️</span> Architettura &amp; Note tecniche
-      </div>
-      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 0; border-top: 1px solid var(--border);">
-
-        <div style="padding: 1rem; border-right: 1px solid var(--border);">
-          <div style="font-size:0.75rem; color: var(--muted); font-weight:700; margin-bottom:0.5rem;">MODELLI</div>
-          <div style="font-size:0.8rem; line-height:1.8; font-family:monospace;">
-            Sala → Tavolo (M2O)<br>
-            Tavolo → TavoloUnione (M2M)<br>
+    <!-- ── ARCHITETTURA ──────────────────────────────────── -->
+    <div id="architettura" class="sec-sep"><div class="sec-sep-label">Architettura & Note tecniche</div><div class="sec-sep-line"></div></div>
+    <div class="dev-card full c-muted" style="margin-bottom:1rem">
+      <div class="card-head"><span>🏗️</span> Architettura &amp; Note tecniche</div>
+      <div class="arch-grid">
+        <div class="arch-col">
+          <div class="arch-title">Modelli</div>
+          <div class="mono">
+            Sala → Tavolo (FK)<br>
+            Tavolo &lt;→ TavoloUnione (M2M)<br>
             Tavolo → Prenotazione<br>
             Tavolo → Ordine → OrdineItem<br>
-            Categoria → Piatto
+            Categoria → Piatto<br>
+            ImpostazioniRistorante (singleton)
           </div>
         </div>
-
-        <div style="padding: 1rem; border-right: 1px solid var(--border);">
-          <div style="font-size:0.75rem; color: var(--muted); font-weight:700; margin-bottom:0.5rem;">STATI TAVOLO</div>
-          <div style="font-size:0.8rem; line-height:1.9;">
-            <span style="color:#27ae60">●</span> <code>L</code> Libero<br>
-            <span style="color:#f39c12">●</span> <code>P</code> Prenotato<br>
-            <span style="color:#e74c3c">●</span> <code>O</code> Occupato<br>
-            <span style="color:#3498db">●</span> <code>C</code> Conto richiesto
+        <div class="arch-col">
+          <div class="arch-title">Stati Tavolo</div>
+          <div class="mono">
+            <span class="s-dot" style="background:#3fb950"></span> <code>L</code> Libero<br>
+            <span class="s-dot" style="background:#f39c12"></span> <code>P</code> Prenotato<br>
+            <span class="s-dot" style="background:#e74c3c"></span> <code>O</code> Occupato<br>
+            <span class="s-dot" style="background:#3498db"></span> <code>C</code> Conto richiesto
           </div>
         </div>
-
-        <div style="padding: 1rem; border-right: 1px solid var(--border);">
-          <div style="font-size:0.75rem; color: var(--muted); font-weight:700; margin-bottom:0.5rem;">STATI ORDINE ITEM</div>
-          <div style="font-size:0.8rem; line-height:1.9;">
-            <span style="color:#f39c12">●</span> <code>A</code> In attesa<br>
-            <span style="color:#e74c3c">●</span> <code>C</code> In cucina<br>
-            <span style="color:#27ae60">●</span> <code>P</code> Pronto<br>
-            <span style="color:#3498db">●</span> <code>S</code> Servito
+        <div class="arch-col">
+          <div class="arch-title">Stati OrdineItem</div>
+          <div class="mono">
+            <span class="s-dot" style="background:#f39c12"></span> <code>A</code> In attesa<br>
+            <span class="s-dot" style="background:#e74c3c"></span> <code>C</code> In cucina<br>
+            <span class="s-dot" style="background:#3fb950"></span> <code>P</code> Pronto<br>
+            <span class="s-dot" style="background:#3498db"></span> <code>S</code> Servito
           </div>
         </div>
-
-        <div style="padding: 1rem;">
-          <div style="font-size:0.75rem; color: var(--muted); font-weight:700; margin-bottom:0.5rem;">COMANDI UTILI</div>
-          <div style="font-size:0.78rem; line-height:1.9; font-family:monospace;">
-            venv/bin/python manage.py demo_data<br>
-            venv/bin/python manage.py migrate<br>
-            venv/bin/python manage.py runserver<br>
-            venv/bin/python manage.py collectstatic
+        <div class="arch-col">
+          <div class="arch-title">Ruoli (Django Groups)</div>
+          <div class="mono">
+            cameriere → /sala/cameriere/<br>
+            cuoco → /sala/cucina/<br>
+            capo_area → dashboard + editor<br>
+            titolare → full access + admin<br>
+            superuser → /amministrazione/
           </div>
         </div>
-
+        <div class="arch-col">
+          <div class="arch-title">Comandi manage.py</div>
+          <div class="mono">
+            demo_data<br>
+            makemigrations ristorante<br>
+            migrate<br>
+            runserver<br>
+            collectstatic<br>
+            shell
+          </div>
+        </div>
+        <div class="arch-col">
+          <div class="arch-title">Stack</div>
+          <div class="mono">
+            Django 4.x + DRF<br>
+            SQLite (dev) / PG (prod)<br>
+            WhiteNoise (static)<br>
+            Stripe (caparre)<br>
+            Telegram Bot (polling)<br>
+            PWA (manifest + SW)
+          </div>
+        </div>
       </div>
     </div>
 
-  </div>
+  </main>
 </div>
 
+<!-- Toast -->
+<div id="toast" class="toast"></div>
+
+<script>
+/* ── NAV SIDEBAR ACTIVE ─────────────────────────────── */
+const sections = document.querySelectorAll('[id]');
+const sidebarLinks = document.querySelectorAll('.sidebar-link');
+window.addEventListener('scroll', () => {
+  let cur = '';
+  sections.forEach(s => { if (window.scrollY >= s.offsetTop - 80) cur = s.id; });
+  sidebarLinks.forEach(l => l.classList.toggle('active', l.getAttribute('href') === '#' + cur));
+}, { passive: true });
+
+/* ── TOAST ──────────────────────────────────────────── */
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+/* ── COPY PATH ──────────────────────────────────────── */
+function cp(btn, e, path) {
+  e.preventDefault(); e.stopPropagation();
+  navigator.clipboard.writeText(location.origin + path).then(() => showToast('✓ Copiato: ' + path));
+}
+
+/* ── MSG TABS ───────────────────────────────────────── */
+function switchTab(tab) {
+  document.querySelectorAll('.msg-tab').forEach((t, i) =>
+    t.classList.toggle('active', (tab === 'tg' && i === 0) || (tab === 'wa' && i === 1)));
+  document.getElementById('panel-tg').classList.toggle('active', tab === 'tg');
+  document.getElementById('panel-wa').classList.toggle('active', tab === 'wa');
+}
+
+/* ── LOG ────────────────────────────────────────────── */
+function log(id, html) {
+  const el = document.getElementById(id);
+  const placeholder = '<span class="log-info">— log messaggi —</span>';
+  if (el.innerHTML === placeholder) el.innerHTML = '';
+  el.innerHTML = html + (el.innerHTML ? '<br>' + el.innerHTML : '');
+  el.scrollTop = 0;
+}
+function clearLog(id) {
+  document.getElementById(id).innerHTML = '<span class="log-info">— log messaggi —</span>';
+}
+function ts() { return new Date().toLocaleTimeString('it-IT'); }
+
+/* ── TELEGRAM ───────────────────────────────────────── */
+async function tgVerifica() {
+  const chat_id = document.getElementById('tg-chat-id').value.trim();
+  if (!chat_id) { log('tg-log', `<span class="log-err">[${ts()}] Inserisci un Chat ID</span>`); return; }
+  log('tg-log', `<span class="log-info">[${ts()}] Verifica ${chat_id}…</span>`);
+  const r = await fetch('/dev/telegram/verifica/', { method: 'POST', body: JSON.stringify({chat_id}) });
+  const d = await r.json();
+  if (d.ok) log('tg-log', `<span class="log-ok">[${ts()}] ✅ Chat trovata: "${d.nome}" (tipo: ${d.tipo})</span>`);
+  else       log('tg-log', `<span class="log-err">[${ts()}] ❌ ${d.errore}</span>`);
+}
+
+async function tgInvia() {
+  const chat_id = document.getElementById('tg-chat-id').value.trim();
+  const testo   = document.getElementById('tg-testo').value.trim();
+  if (!chat_id || !testo) { log('tg-log', `<span class="log-err">[${ts()}] Inserisci chat_id e testo</span>`); return; }
+  log('tg-log', `<span class="log-info">[${ts()}] Invio…</span>`);
+  const r = await fetch('/dev/telegram/invia/', { method: 'POST', body: JSON.stringify({chat_id, testo}) });
+  const d = await r.json();
+  if (d.ok) { log('tg-log', `<span class="log-ok">[${ts()}] ✅ Inviato a ${chat_id}</span>`); document.getElementById('tg-testo').value = ''; }
+  else       log('tg-log', `<span class="log-err">[${ts()}] ❌ ${d.errore}</span>`);
+}
+
+async function tgLeggi() {
+  log('tg-log', `<span class="log-info">[${ts()}] Lettura messaggi…</span>`);
+  const r = await fetch('/dev/telegram/leggi/');
+  const d = await r.json();
+  if (d.errore) { log('tg-log', `<span class="log-err">[${ts()}] ❌ ${d.errore}</span>`); return; }
+  if (!d.messaggi.length) { log('tg-log', `<span class="log-info">[${ts()}] Nessun messaggio recente nel buffer</span>`); return; }
+  d.messaggi.slice().reverse().forEach(m => {
+    const ora = m.ora ? new Date(m.ora * 1000).toLocaleTimeString('it-IT') : '?';
+    log('tg-log', `<span class="log-in">[${ora}] 👤 ${m.da.trim() || '?'} (${m.chat_id}): ${m.testo}</span>`);
+  });
+}
+
+/* ── WHATSAPP ───────────────────────────────────────── */
+async function waInvia() {
+  const numero = document.getElementById('wa-numero').value.trim();
+  const testo  = document.getElementById('wa-testo').value.trim();
+  if (!numero || !testo) { log('wa-log', `<span class="log-err">[${ts()}] Inserisci numero e testo</span>`); return; }
+  log('wa-log', `<span class="log-info">[${ts()}] Invio a ${numero}…</span>`);
+  const r = await fetch('/dev/whatsapp/invia/', { method: 'POST', body: JSON.stringify({numero, testo}) });
+  const d = await r.json();
+  if (d.ok) { log('wa-log', `<span class="log-ok">[${ts()}] ✅ Inviato a ${numero}</span>`); document.getElementById('wa-testo').value = ''; }
+  else       log('wa-log', `<span class="log-err">[${ts()}] ❌ ${d.errore}</span>`);
+}
+</script>
 </body>
 </html>
