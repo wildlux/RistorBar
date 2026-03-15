@@ -1193,9 +1193,11 @@ def aggiungi_tavolo_editor(request, sala_id):
     """Aggiunge un nuovo tavolo alla sala dall'editor."""
     sala = get_object_or_404(Sala, pk=sala_id)
     data = json.loads(request.body)
-    numero = data.get('numero')
-    if Tavolo.objects.filter(sala=sala, numero=numero).exists():
-        return JsonResponse({'errore': f'Tavolo {numero} già esistente.'}, status=400)
+    numero = int(data.get('numero') or 1)
+    # Se il numero è già occupato (anche da tavoli inattivi), trova il primo libero
+    numeri_occupati = set(Tavolo.objects.filter(sala=sala).values_list('numero', flat=True))
+    while numero in numeri_occupati:
+        numero += 1
     tavolo = Tavolo(
         sala=sala,
         numero=numero,
