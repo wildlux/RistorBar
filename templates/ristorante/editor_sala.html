@@ -77,38 +77,33 @@
   <!-- ── Area principale ──────────────────────────────────── -->
   <div class="editor-body">
 
-    <!-- Pannello laterale sinistro: legenda + info selezione -->
+    <!-- Pannello laterale sinistro: info selezione + forme -->
     <aside class="editor-side">
-      <div class="side-section">
-        <h4>Legenda</h4>
-        <div class="legenda-item"><span class="dot" style="background:#27ae60"></span> Libero</div>
-        <div class="legenda-item"><span class="dot" style="background:#f39c12"></span> Prenotato</div>
-        <div class="legenda-item"><span class="dot" style="background:#e74c3c"></span> Occupato</div>
-        <div class="legenda-item"><span class="dot" style="background:#3498db"></span> Conto</div>
-        <div class="legenda-item"><span class="dot" style="background:#9b59b6; border:2px dashed #9b59b6; background:none"></span> Unione</div>
-      </div>
-      <div class="side-section" id="info-panel">
-        <h4>Selezione</h4>
-        <p id="info-text" class="text-muted">Clicca un tavolo per i dettagli</p>
 
-        <!-- D-pad spostamento fine (visibile solo con 1 tavolo selezionato) -->
-        <div id="dpad" style="display:none;margin-top:10px">
-          <div class="dpad-grid">
-            <div></div>
+      <!-- D-pad spostamento fine (visibile solo con 1 tavolo selezionato) -->
+      <div id="dpad" style="display:none" class="side-section">
+        <div class="dpad-wrap">
+          <div class="dpad-row">
             <button class="dpad-btn" onpointerdown="startRepeat(0,-1,this)" onpointerup="stopRepeat()" onpointerleave="stopRepeat()" title="Su (↑)">▲</button>
-            <div></div>
+          </div>
+          <div class="dpad-row">
             <button class="dpad-btn" onpointerdown="startRepeat(-1,0,this)" onpointerup="stopRepeat()" onpointerleave="stopRepeat()" title="Sinistra (←)">◄</button>
             <div class="dpad-center">✛</div>
             <button class="dpad-btn" onpointerdown="startRepeat(1,0,this)" onpointerup="stopRepeat()" onpointerleave="stopRepeat()" title="Destra (→)">►</button>
-            <div></div>
-            <button class="dpad-btn" onpointerdown="startRepeat(0,1,this)" onpointerup="stopRepeat()" onpointerleave="stopRepeat()" title="Giù (↓)">▼</button>
-            <div></div>
           </div>
-          <p class="dpad-hint">↑↓←→ oppure WASD &nbsp;·&nbsp; Shift = ×10</p>
+          <div class="dpad-row">
+            <button class="dpad-btn" onpointerdown="startRepeat(0,1,this)" onpointerup="stopRepeat()" onpointerleave="stopRepeat()" title="Giù (↓)">▼</button>
+          </div>
         </div>
+        <p class="dpad-hint">↑↓←→ oppure WASD &nbsp;·&nbsp; Shift = ×10</p>
+      </div>
+
+      <div class="side-section" id="info-panel">
+        <h4>Selezione</h4>
+        <p id="info-text" class="text-muted">Clicca un tavolo per i dettagli</p>
       </div>
       <div class="side-section">
-        <h4>Forme</h4>
+        <h4>Forme dei tavoli</h4>
         <p style="font-size:0.75rem;color:var(--muted);margin:-4px 0 8px">Trascina sul canvas</p>
         <div class="shape-legend">
           <div class="shape-btn" draggable="true" data-forma="R" title="Trascina per aggiungere tavolo rotondo">
@@ -182,6 +177,16 @@
       </svg>
     </div>
   </div>
+
+  <!-- ── Legenda in basso ────────────────────────────────── -->
+  <div class="editor-legend-bar">
+    <div class="legend-item-bar"><span class="dot" style="background:#27ae60"></span> Libero</div>
+    <div class="legend-item-bar"><span class="dot" style="background:#f39c12"></span> Prenotato</div>
+    <div class="legend-item-bar"><span class="dot" style="background:#e74c3c"></span> Occupato</div>
+    <div class="legend-item-bar"><span class="dot" style="background:#3498db"></span> Conto</div>
+    <div class="legend-item-bar"><span class="dot" style="background:none;border:2px dashed #9b59b6"></span> Unione</div>
+  </div>
+
 </div>
 
 <!-- ── Modal: Aggiungi tavolo ──────────────────────── -->
@@ -225,6 +230,20 @@
     <div class="modal-footer">
       <button onclick="chiudiModal('modal-modifica')" class="btn btn-outline">Annulla</button>
       <button onclick="confModifica()" class="btn btn-primary">Salva</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal: Unisci tavoli ───────────────────────── -->
+<div class="modal" id="modal-unisci" style="display:none">
+  <div class="modal-content" style="max-width:380px">
+    <h3>🔗 Unisci tavoli</h3>
+    <p style="font-size:0.85rem;color:var(--muted);margin:0.5rem 0 1rem">Seleziona almeno 2 tavoli da unire in un unico gruppo.</p>
+    <div id="unisci-lista" style="display:flex;flex-direction:column;gap:0.5rem;max-height:280px;overflow-y:auto;margin-bottom:1rem"></div>
+    <p id="unisci-avviso" style="font-size:0.8rem;color:var(--accent);display:none">⚠️ Seleziona almeno 2 tavoli.</p>
+    <div class="modal-footer">
+      <button onclick="chiudiModal('modal-unisci')" class="btn btn-outline">Annulla</button>
+      <button onclick="confUnisci()" class="btn btn-primary">🔗 Unisci</button>
     </div>
   </div>
 </div>
@@ -851,9 +870,40 @@ async function confModifica() {
 // ═══════════════════════════════════════════════════════
 //  UNISCI
 // ═══════════════════════════════════════════════════════
-async function unisciSel() {
-  if (selectedIds.size < 2) return;
-  const r = await post(`${URL_BASE}/unisci/`, {ids: [...selectedIds]});
+function unisciSel() {
+  // Popola la lista con tutti i tavoli attivi
+  const lista = document.getElementById('unisci-lista');
+  lista.innerHTML = '';
+  // Pre-seleziona i tavoli già selezionati sul canvas
+  const preselezionati = new Set(selectedIds);
+  tavoliData.forEach(t => {
+    const label = document.createElement('label');
+    label.style.cssText = 'display:flex;align-items:center;gap:0.6rem;padding:0.4rem 0.6rem;border-radius:6px;cursor:pointer;border:1px solid var(--border);';
+    const chk = document.createElement('input');
+    chk.type = 'checkbox';
+    chk.value = t.id;
+    chk.checked = preselezionati.has(t.id);
+    chk.style.accentColor = 'var(--primary)';
+    const forma = t.forma === 'R' ? '🔵' : t.forma === 'Q' ? '⬜' : '▬';
+    label.appendChild(chk);
+    label.insertAdjacentHTML('beforeend', `<span><strong>Tavolo ${t.numero}</strong> &nbsp;${forma}&nbsp; ${t.posti} posti</span>`);
+    label.addEventListener('mouseenter', () => { label.style.background='#f0f4ff'; });
+    label.addEventListener('mouseleave', () => { label.style.background=''; });
+    lista.appendChild(label);
+  });
+  document.getElementById('unisci-avviso').style.display = 'none';
+  document.getElementById('modal-unisci').style.display = 'flex';
+}
+
+async function confUnisci() {
+  const checkboxes = document.querySelectorAll('#unisci-lista input[type=checkbox]:checked');
+  const ids = [...checkboxes].map(c => parseInt(c.value));
+  if (ids.length < 2) {
+    document.getElementById('unisci-avviso').style.display = 'block';
+    return;
+  }
+  chiudiModal('modal-unisci');
+  const r = await post(`${URL_BASE}/unisci/`, {ids});
   if (r.ok) {
     unioniData.push({id:r.id, etichetta:r.etichetta, tavoli_ids:r.tavoli_ids, capacita_totale:r.capacita_totale});
     disegnaUnione(unioniData[unioniData.length-1]);
