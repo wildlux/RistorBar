@@ -49,13 +49,13 @@
       <div class="side-section">
         <h4>Forme <small style="color:var(--muted);font-weight:400">(clicca per aggiungere)</small></h4>
         <div class="shape-legend">
-          <div class="shape-btn" onclick="openAggiungi('R')" title="Aggiungi tavolo rotondo">
+          <div class="shape-btn" onclick="aggiungiDiretto('R')" title="Aggiungi tavolo rotondo">
             <svg width="40" height="40"><circle cx="20" cy="20" r="18" fill="none" stroke="#666" stroke-width="2"/></svg><span>Rotondo</span>
           </div>
-          <div class="shape-btn" onclick="openAggiungi('Q')" title="Aggiungi tavolo quadrato">
+          <div class="shape-btn" onclick="aggiungiDiretto('Q')" title="Aggiungi tavolo quadrato">
             <svg width="40" height="40"><rect x="2" y="2" width="36" height="36" rx="4" fill="none" stroke="#666" stroke-width="2"/></svg><span>Quadrato</span>
           </div>
-          <div class="shape-btn" onclick="openAggiungi('T')" title="Aggiungi tavolo rettangolare">
+          <div class="shape-btn" onclick="aggiungiDiretto('T')" title="Aggiungi tavolo rettangolare">
             <svg width="40" height="40"><rect x="2" y="10" width="36" height="20" rx="3" fill="none" stroke="#666" stroke-width="2"/></svg><span>Rettang.</span>
           </div>
         </div>
@@ -577,8 +577,27 @@ function chiudiModal(id) { document.getElementById(id).style.display = 'none'; }
 // ═══════════════════════════════════════════════════════
 //  AGGIUNGI TAVOLO
 // ═══════════════════════════════════════════════════════
+
+// Aggiunge direttamente (dalla sidebar) senza modal
+async function aggiungiDiretto(forma) {
+  const maxN = tavoliData.length ? Math.max(...tavoliData.map(t => t.numero)) : 0;
+  const num  = maxN + 1;
+  const col  = tavoliData.length % 6;
+  const row  = Math.floor(tavoliData.length / 6);
+  const x = 80 + col * 150;
+  const y = 80 + row * 150;
+  const r = await post(`${URL_BASE}/aggiungi/`, { numero: num, forma: forma, capacita: 4, x, y });
+  if (r.ok) {
+    const t = { id: r.id, numero: r.numero, forma: r.forma, capacita: r.capacita,
+                stato: 'L', pos_x: r.pos_x, pos_y: r.pos_y, etichetta: '' };
+    tavoliData.push(t);
+    disegnaTabella(t);
+    toast(`Tavolo ${r.numero} aggiunto ✅`);
+  } else toast(r.errore || 'Errore aggiunta', true);
+}
+
+// Apre modal (dalla toolbar) per impostazioni personalizzate
 function openAggiungi(forma) {
-  // Suggerisci numero successivo
   const maxN = tavoliData.length ? Math.max(...tavoliData.map(t=>t.numero)) : 0;
   document.getElementById('ag-numero').value = maxN + 1;
   if (forma) document.getElementById('ag-forma').value = forma;
@@ -590,12 +609,14 @@ async function confAggiungi() {
     numero: parseInt(document.getElementById('ag-numero').value),
     forma:  document.getElementById('ag-forma').value,
     capacita: parseInt(document.getElementById('ag-posti').value),
-    x: 100, y: 100,
+    x: 100 + (tavoliData.length % 6) * 150,
+    y: 100 + Math.floor(tavoliData.length / 6) * 150,
   };
   const r = await post(`${URL_BASE}/aggiungi/`, payload);
   if (r.ok) {
-    tavoliData.push({id:r.id, numero:r.numero, forma:r.forma, capacita:r.capacita,
-                     stato:'L', pos_x:r.pos_x, pos_y:r.pos_y});
+    const t = {id:r.id, numero:r.numero, forma:r.forma, capacita:r.capacita,
+               stato:'L', pos_x:r.pos_x, pos_y:r.pos_y, etichetta:''};
+    tavoliData.push(t);
     disegnaTabella(tavoliData[tavoliData.length-1]);
     chiudiModal('modal-aggiungi');
     toast('Tavolo aggiunto ✅');
