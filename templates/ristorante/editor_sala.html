@@ -223,8 +223,8 @@ const SVG_H     = {{ sala.svg_altezza }};
 const CSRF      = '{{ csrf_token }}';
 const URL_BASE  = `/sala/editor/${SALA_ID}`;
 
-let tavoliData  = {{ tavoli_json }};   // [{id,numero,forma,capacita,stato,pos_x,pos_y}, …]
-let unioniData  = {{ unioni_json }};   // [{id,etichetta,tavoli_ids,capacita_totale}, …]
+let tavoliData  = {{ tavoli_json|safe }};   // [{id,numero,forma,capacita,stato,pos_x,pos_y}, …]
+let unioniData  = {{ unioni_json|safe }};   // [{id,etichetta,tavoli_ids,capacita_totale}, …]
 
 // ═══════════════════════════════════════════════════════
 //  STATO EDITOR
