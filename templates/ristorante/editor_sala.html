@@ -14,6 +14,7 @@
     </div>
     <div class="tb-center">
       <button class="btn btn-sm" id="btn-select"    title="Seleziona (S)" onclick="setTool('select')">☝️ Seleziona</button>
+      <button class="btn btn-sm" id="btn-forma"     title="Cambia forma tavolo (F)" onclick="cambiaForma()" disabled>🔄 Forma</button>
       <button class="btn btn-sm" id="btn-add"       title="Aggiungi tavolo (A)" onclick="openAggiungi()">➕ Aggiungi</button>
       <button class="btn btn-sm" id="btn-edit"      title="Modifica selezionato (E)" onclick="openModifica()" disabled>✏️ Modifica</button>
       <button class="btn btn-sm" id="btn-unisci"    title="Unisci selezionati (U)" onclick="unisciSel()" disabled>🔗 Unisci</button>
@@ -481,6 +482,7 @@ function refreshSelection() {
 
   // Aggiorna pulsanti toolbar
   const nSel = selectedIds.size;
+  document.getElementById('btn-forma').disabled   = nSel !== 1;
   document.getElementById('btn-edit').disabled   = nSel !== 1;
   document.getElementById('btn-unisci').disabled  = nSel < 2;
   document.getElementById('btn-delete').disabled  = nSel === 0;
@@ -781,6 +783,27 @@ async function confAggiungi() {
 }
 
 // ═══════════════════════════════════════════════════════
+//  CAMBIA FORMA (ciclo R → Q → T → R)
+// ═══════════════════════════════════════════════════════
+async function cambiaForma() {
+  if (selectedIds.size !== 1) return;
+  const id = [...selectedIds][0];
+  const t  = tavoliData.find(t => t.id === id);
+  if (!t) return;
+  const ciclo = { R: 'Q', Q: 'T', T: 'R' };
+  const nuova = ciclo[t.forma] || 'Q';
+  const r = await post(`${URL_BASE}/tavolo/${id}/modifica/`, { forma: nuova });
+  if (r.ok) {
+    t.forma = r.forma;
+    document.getElementById(`t${id}`)?.remove();
+    disegnaTabella(t);
+    refreshSelection();
+    aggiornaPannello();
+    toast(`Forma: ${FORME[t.forma]}`);
+  } else toast(r.errore || 'Errore', true);
+}
+
+// ═══════════════════════════════════════════════════════
 //  MODIFICA TAVOLO
 // ═══════════════════════════════════════════════════════
 function openModifica() {
@@ -953,6 +976,7 @@ document.addEventListener('keydown', e => {
     if (e.key === 's' || e.key === 'S') { e.preventDefault(); moveSelected(0,  step); return; }
     if (e.key === 'a' || e.key === 'A') { e.preventDefault(); moveSelected(-step, 0); return; }
     if (e.key === 'd' || e.key === 'D') { e.preventDefault(); moveSelected( step, 0); return; }
+    if (e.key === 'f' || e.key === 'F') { cambiaForma(); return; }
   } else {
     // Shortcut normali (solo quando NON c'è un tavolo selezionato)
     if (e.key === 'a' || e.key === 'A') openAggiungi();
