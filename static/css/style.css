@@ -228,7 +228,13 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 }
 
 /* ── Editor sala ────────────────────────────────────────────── */
-.editor-wrap { display: flex; flex-direction: column; height: calc(100vh - 60px); overflow: hidden; }
+/* Annulla il padding del .container per far occupare all'editor tutta la viewport */
+.editor-wrap {
+    display: flex; flex-direction: column;
+    height: calc(100vh - 60px);
+    overflow: hidden;
+    margin: -1.5rem;   /* nega il padding del .container su tutti i lati */
+}
 
 .editor-toolbar {
     display: flex; align-items: center; justify-content: space-between;
