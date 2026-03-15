@@ -1,24 +1,15 @@
 #!/bin/bash
 # RistoBAR - Push to GitHub
 # Usage: ./push.sh ["commit message"]
+#
+# Le credenziali GitHub vengono gestite dal git credential manager di sistema.
+# Non serve nessun file .github_token.
 
 set -e
 
-# Leggi il token dal file locale
-TOKEN_FILE=".github_token"
-if [ ! -f "$TOKEN_FILE" ]; then
-    echo "Errore: file '$TOKEN_FILE' non trovato."
-    echo "Crea il file con il tuo token GitHub (sarà ignorato da git)"
-    echo "Esempio: echo 'ghp_xxxxxxxxxxxx' > .github_token"
-    exit 1
-fi
-
-# Legge solo la prima riga non vuota e non commentata
-TOKEN=$(grep -v '^\s*#' "$TOKEN_FILE" | grep -v '^\s*$' | head -1 | tr -d '[:space:]')
-
-# Configura remote con token (una tantum)
-git remote set-url origin "https://wildlux:${TOKEN}@github.com/wildlux/RistorBar.git" 2>/dev/null || \
-git remote add origin "https://wildlux:${TOKEN}@github.com/wildlux/RistorBar.git"
+# Assicura che il remote punti al repository corretto (senza token in chiaro nell'URL)
+git remote set-url origin "https://github.com/wildlux/RistorBar.git" 2>/dev/null || \
+git remote add origin "https://github.com/wildlux/RistorBar.git"
 
 # Messaggio di commit
 MSG="${1:-Aggiornamento RistoBAR}"
@@ -27,7 +18,7 @@ MSG="${1:-Aggiornamento RistoBAR}"
 COAUTHORS="Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
 Co-Authored-By: opencode (qwen3.5) <opencode[bot]@users.noreply.github.com>"
 
-# Push
+# Commit e push
 echo "📦 Commit: $MSG"
 git add -A
 git commit -m "$MSG
