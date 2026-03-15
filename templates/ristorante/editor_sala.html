@@ -46,6 +46,46 @@
         <h4>Selezione</h4>
         <p id="info-text" class="text-muted">Clicca un tavolo per i dettagli</p>
       </div>
+      <!-- Istruzioni -->
+      <div class="side-section side-help">
+        <h4 style="cursor:pointer;user-select:none" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">
+          ❓ Come si usa <small style="color:var(--muted);font-weight:400">▾</small>
+        </h4>
+        <div id="help-body">
+          <div class="help-device">
+            <div class="help-icon">🖥️💻</div>
+            <strong>Computer (mouse)</strong>
+            <ul>
+              <li>Trascina una forma qui sotto sul canvas per aggiungere un tavolo</li>
+              <li>Trascina un tavolo sul canvas per spostarlo — la posizione si salva automaticamente</li>
+              <li>Click su un tavolo per selezionarlo</li>
+              <li>Shift+click per selezionare più tavoli</li>
+              <li>Usa ✏️ per modificare numero/posti, 🗑️ per eliminare</li>
+              <li>🔗 Unisci seleziona 2+ tavoli e li unisce (matrimoni, gruppi)</li>
+            </ul>
+          </div>
+          <div class="help-device">
+            <div class="help-icon">📱🖥️</div>
+            <strong>Tablet / Smartphone (touch)</strong>
+            <ul>
+              <li>Tieni premuto su una forma e trascinala sul canvas</li>
+              <li>Tieni premuto su un tavolo esistente e trascinalo per spostarlo</li>
+              <li>Tocca brevemente un tavolo per selezionarlo</li>
+              <li>Usa la toolbar in alto per le altre azioni</li>
+            </ul>
+          </div>
+          <div class="help-device">
+            <div class="help-icon">💡</div>
+            <strong>Suggerimenti</strong>
+            <ul>
+              <li>La griglia aiuta ad allineare i tavoli — disattivala per posizione libera</li>
+              <li>🔍− / 🔍+ per rimpicciolire/ingrandire il canvas</li>
+              <li>💾 Salva layout salva tutte le posizioni (il drag le salva in automatico)</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
       <div class="side-section">
         <h4>Forme</h4>
         <p style="font-size:0.75rem;color:var(--muted);margin:-4px 0 8px">Trascina sul canvas</p>
@@ -484,7 +524,7 @@ function onTavoloMouseDown(e) {
   const t = tavoliData.find(t => t.id === id);
   if (!t) return;
   const sp = svgPoint(e);
-  dragging = { id, startX: sp.x - t.pos_x, startY: sp.y - t.pos_y };
+  dragging = { id, startX: sp.x - t.pos_x, startY: sp.y - t.pos_y, moved: false };
   
   if (e.type === 'touchstart') {
     document.addEventListener('touchmove', onTouchMove, { passive: false });
@@ -525,7 +565,7 @@ function moveTable(x, y) {
   if (g) g.setAttribute('transform', `translate(${nx},${ny})`);
 
   const t = tavoliData.find(t => t.id === dragging.id);
-  if (t) { t.pos_x = Math.round(nx); t.pos_y = Math.round(ny); }
+  if (t) { t.pos_x = Math.round(nx); t.pos_y = Math.round(ny); dragging.moved = true; }
 
   unioniData.forEach(u => {
     if (u.tavoli_ids.includes(dragging.id)) ridisegnaUnione(u.id);
@@ -541,6 +581,7 @@ function onTouchEnd() {
 }
 
 function endDrag() {
+  const wasMoved = dragging && dragging.moved;
   dragging = null;
   svg.setAttribute('cursor', 'default');
   document.querySelectorAll('.svg-tavolo.dragging').forEach(el => el.classList.remove('dragging'));
@@ -549,6 +590,13 @@ function endDrag() {
   document.removeEventListener('touchmove', onTouchMove);
   document.removeEventListener('touchend', onTouchEnd);
   aggiornaPannello();
+  if (wasMoved) salvaLayoutSilenzioso();
+}
+
+async function salvaLayoutSilenzioso() {
+  const payload = { tavoli: tavoliData.map(t => ({ id: t.id, x: t.pos_x, y: t.pos_y })) };
+  const r = await post(`${URL_BASE}/salva/`, payload);
+  if (!r.ok) toast('Errore salvataggio posizione', true);
 }
 
 function ridisegnaUnione(uid) {
