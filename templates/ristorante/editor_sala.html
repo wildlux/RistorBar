@@ -47,15 +47,16 @@
         <p id="info-text" class="text-muted">Clicca un tavolo per i dettagli</p>
       </div>
       <div class="side-section">
-        <h4>Forme <small style="color:var(--muted);font-weight:400">(clicca per aggiungere)</small></h4>
+        <h4>Forme</h4>
+        <p style="font-size:0.75rem;color:var(--muted);margin:-4px 0 8px">Trascina sul canvas</p>
         <div class="shape-legend">
-          <div class="shape-btn" onclick="aggiungiDiretto('R')" title="Aggiungi tavolo rotondo">
+          <div class="shape-btn" draggable="true" data-forma="R" title="Trascina per aggiungere tavolo rotondo">
             <svg width="40" height="40"><circle cx="20" cy="20" r="18" fill="none" stroke="#666" stroke-width="2"/></svg><span>Rotondo</span>
           </div>
-          <div class="shape-btn" onclick="aggiungiDiretto('Q')" title="Aggiungi tavolo quadrato">
+          <div class="shape-btn" draggable="true" data-forma="Q" title="Trascina per aggiungere tavolo quadrato">
             <svg width="40" height="40"><rect x="2" y="2" width="36" height="36" rx="4" fill="none" stroke="#666" stroke-width="2"/></svg><span>Quadrato</span>
           </div>
-          <div class="shape-btn" onclick="aggiungiDiretto('T')" title="Aggiungi tavolo rettangolare">
+          <div class="shape-btn" draggable="true" data-forma="T" title="Trascina per aggiungere tavolo rettangolare">
             <svg width="40" height="40"><rect x="2" y="10" width="36" height="20" rx="3" fill="none" stroke="#666" stroke-width="2"/></svg><span>Rettang.</span>
           </div>
         </div>
@@ -575,18 +576,15 @@ function setTool(t) { currentTool = t; }
 function chiudiModal(id) { document.getElementById(id).style.display = 'none'; }
 
 // ═══════════════════════════════════════════════════════
-//  AGGIUNGI TAVOLO
+//  DRAG FROM SIDEBAR → CANVAS
 // ═══════════════════════════════════════════════════════
 
-// Aggiunge direttamente (dalla sidebar) senza modal
-async function aggiungiDiretto(forma) {
+const canvasWrap = document.getElementById('canvas-wrap');
+
+// Helper condiviso: crea tavolo sul server e disegnalo
+async function creaTabelloIn(forma, x, y) {
   const maxN = tavoliData.length ? Math.max(...tavoliData.map(t => t.numero)) : 0;
-  const num  = maxN + 1;
-  const col  = tavoliData.length % 6;
-  const row  = Math.floor(tavoliData.length / 6);
-  const x = 80 + col * 150;
-  const y = 80 + row * 150;
-  const r = await post(`${URL_BASE}/aggiungi/`, { numero: num, forma: forma, capacita: 4, x, y });
+  const r = await post(`${URL_BASE}/aggiungi/`, { numero: maxN + 1, forma, capacita: 4, x, y });
   if (r.ok) {
     const t = { id: r.id, numero: r.numero, forma: r.forma, capacita: r.capacita,
                 stato: 'L', pos_x: r.pos_x, pos_y: r.pos_y, etichetta: '' };
@@ -596,7 +594,100 @@ async function aggiungiDiretto(forma) {
   } else toast(r.errore || 'Errore aggiunta', true);
 }
 
-// Apre modal (dalla toolbar) per impostazioni personalizzate
+// Converte coordinate client → coordinate SVG e applica snap
+function clientToSvg(clientX, clientY) {
+  const rect = svg.getBoundingClientRect();
+  let x = (clientX - rect.left) * (SVG_W / rect.width);
+  let y = (clientY - rect.top)  * (SVG_H / rect.height);
+  if (document.getElementById('snap-grid').checked) {
+    x = Math.round(x / GRID) * GRID;
+    y = Math.round(y / GRID) * GRID;
+  }
+  x = Math.max(0, Math.min(SVG_W - 130, Math.round(x)));
+  y = Math.max(0, Math.min(SVG_H - 110, Math.round(y)));
+  return { x, y };
+}
+
+// ── Mouse drag (HTML5 Drag API) ──────────────────────
+document.querySelectorAll('.shape-btn[data-forma]').forEach(btn => {
+  btn.addEventListener('dragstart', e => {
+    e.dataTransfer.effectAllowed = 'copy';
+    e.dataTransfer.setData('text/plain', btn.dataset.forma);
+    btn.classList.add('dragging-from');
+  });
+  btn.addEventListener('dragend', () => btn.classList.remove('dragging-from'));
+});
+
+canvasWrap.addEventListener('dragover', e => {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'copy';
+  canvasWrap.classList.add('drop-target');
+});
+canvasWrap.addEventListener('dragleave', () => canvasWrap.classList.remove('drop-target'));
+canvasWrap.addEventListener('drop', async e => {
+  e.preventDefault();
+  canvasWrap.classList.remove('drop-target');
+  const forma = e.dataTransfer.getData('text/plain');
+  if (!['R','Q','T'].includes(forma)) return;
+  const { x, y } = clientToSvg(e.clientX, e.clientY);
+  await creaTabelloIn(forma, x, y);
+});
+
+// ── Touch drag (tablet) ───────────────────────────────
+let _touchForma = null;
+let _ghost = null;
+
+document.querySelectorAll('.shape-btn[data-forma]').forEach(btn => {
+  btn.addEventListener('touchstart', e => {
+    _touchForma = btn.dataset.forma;
+    _ghost = document.createElement('div');
+    _ghost.innerHTML = btn.querySelector('svg').outerHTML;
+    _ghost.style.cssText = [
+      'position:fixed;z-index:9999;pointer-events:none;',
+      'opacity:0.85;background:#fff;border:2px dashed var(--primary,#e74c3c);',
+      'border-radius:10px;padding:6px;width:54px;height:54px;',
+      'display:flex;align-items:center;justify-content:center;',
+      'box-shadow:0 4px 16px rgba(0,0,0,0.25);',
+    ].join('');
+    document.body.appendChild(_ghost);
+    const t = e.touches[0];
+    _ghost.style.left = (t.clientX - 27) + 'px';
+    _ghost.style.top  = (t.clientY - 27) + 'px';
+    if (e.cancelable) e.preventDefault();
+  }, { passive: false });
+
+  btn.addEventListener('touchmove', e => {
+    if (!_ghost) return;
+    const t = e.touches[0];
+    _ghost.style.left = (t.clientX - 27) + 'px';
+    _ghost.style.top  = (t.clientY - 27) + 'px';
+    // Evidenzia il canvas se il dito è sopra
+    const svgRect = svg.getBoundingClientRect();
+    const sopra = t.clientX >= svgRect.left && t.clientX <= svgRect.right &&
+                  t.clientY >= svgRect.top  && t.clientY <= svgRect.bottom;
+    canvasWrap.classList.toggle('drop-target', sopra);
+    if (e.cancelable) e.preventDefault();
+  }, { passive: false });
+
+  btn.addEventListener('touchend', async e => {
+    canvasWrap.classList.remove('drop-target');
+    if (_ghost) { _ghost.remove(); _ghost = null; }
+    const forma = _touchForma; _touchForma = null;
+    if (!forma) return;
+    const touch = e.changedTouches[0];
+    const svgRect = svg.getBoundingClientRect();
+    if (touch.clientX < svgRect.left || touch.clientX > svgRect.right ||
+        touch.clientY < svgRect.top  || touch.clientY > svgRect.bottom) return;
+    const { x, y } = clientToSvg(touch.clientX, touch.clientY);
+    await creaTabelloIn(forma, x, y);
+  });
+});
+
+// ═══════════════════════════════════════════════════════
+//  AGGIUNGI TAVOLO (modal dalla toolbar)
+// ═══════════════════════════════════════════════════════
+
+// Apre modal per impostazioni personalizzate
 function openAggiungi(forma) {
   const maxN = tavoliData.length ? Math.max(...tavoliData.map(t=>t.numero)) : 0;
   document.getElementById('ag-numero').value = maxN + 1;
@@ -605,19 +696,19 @@ function openAggiungi(forma) {
 }
 
 async function confAggiungi() {
-  const payload = {
-    numero: parseInt(document.getElementById('ag-numero').value),
-    forma:  document.getElementById('ag-forma').value,
-    capacita: parseInt(document.getElementById('ag-posti').value),
-    x: 100 + (tavoliData.length % 6) * 150,
-    y: 100 + Math.floor(tavoliData.length / 6) * 150,
-  };
-  const r = await post(`${URL_BASE}/aggiungi/`, payload);
+  const forma    = document.getElementById('ag-forma').value;
+  const numero   = parseInt(document.getElementById('ag-numero').value);
+  const capacita = parseInt(document.getElementById('ag-posti').value);
+  const col = tavoliData.length % 6;
+  const row = Math.floor(tavoliData.length / 6);
+  const x = Math.min(80 + col * 150, SVG_W - 130);
+  const y = Math.min(80 + row * 150, SVG_H - 110);
+  const r = await post(`${URL_BASE}/aggiungi/`, { numero, forma, capacita, x, y });
   if (r.ok) {
-    const t = {id:r.id, numero:r.numero, forma:r.forma, capacita:r.capacita,
-               stato:'L', pos_x:r.pos_x, pos_y:r.pos_y, etichetta:''};
+    const t = { id:r.id, numero:r.numero, forma:r.forma, capacita:r.capacita,
+                stato:'L', pos_x:r.pos_x, pos_y:r.pos_y, etichetta:'' };
     tavoliData.push(t);
-    disegnaTabella(tavoliData[tavoliData.length-1]);
+    disegnaTabella(t);
     chiudiModal('modal-aggiungi');
     toast('Tavolo aggiunto ✅');
   } else toast(r.errore || 'Errore', true);

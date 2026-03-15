@@ -280,9 +280,11 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 .svg-tavolo { transition: filter 0.15s; }
 .svg-tavolo:hover { opacity: 0.9; }
 .svg-tavolo.dragging { filter: brightness(1.15); }
-.shape-btn { display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:8px; cursor:pointer; transition:background 0.15s; }
+.shape-btn { display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:8px; cursor:grab; transition:background 0.15s; user-select:none; }
 .shape-btn:hover { background:var(--hover,#f0f0f0); }
 .shape-btn:hover svg circle, .shape-btn:hover svg rect { stroke: var(--primary); }
+.shape-btn.dragging-from { opacity:0.4; }
+.editor-canvas-wrap.drop-target { outline: 3px dashed var(--primary,#e74c3c); outline-offset:-3px; background:#fde9e6; }
 
 /* Toast */
 .toast {
