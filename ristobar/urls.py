@@ -49,6 +49,7 @@ urlpatterns = [
 
     # ── PWA ────────────────────────────────────────────────────
     path('manifest.json', manifest_json, name='manifest_json'),
+    path('favicon.ico', lambda r: redirect('/static/img/icon-192.png', permanent=True)),
     path('serviceworker.js', lambda r: __import__('django.http', fromlist=['FileResponse']).FileResponse(
         open(settings.BASE_DIR / 'static' / 'js' / 'serviceworker.js', 'rb'),
         content_type='application/javascript'
