@@ -560,7 +560,7 @@
         </div>
         <div>
           <label style="font-size:0.75rem;font-weight:700;color:var(--muted);display:block;margin-bottom:0.3rem">Città</label>
-          <input name="citta" value="{{ sala.citta }}" placeholder="es. Milano"
+          <input name="citta" value="{{ sala.citta }}" placeholder="es. Milano" data-comuni="citta"
             style="width:100%;padding:0.5rem 0.75rem;border:1px solid var(--border);border-radius:8px;font-size:0.9rem">
         </div>
         <div>
@@ -737,5 +737,6 @@ document.querySelectorAll('.modal-bg').forEach(bg => {
 /* ── AUTO-REFRESH ogni 30s ──────────────────────────────── */
 setTimeout(() => location.reload(), 30000);
 </script>
+<script src="/static/js/comuni_autocomplete.js"></script>
 </body>
 </html>

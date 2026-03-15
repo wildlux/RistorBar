@@ -5,7 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#1a1a2e">
-  <title>La Trattoria — Ristorante</title>
+  <title>{{ impostazioni.nome|default:'RistoBAR' }} — Ristorante</title>
   <link rel="manifest" href="/manifest.json">
   <link rel="stylesheet" href="{% static 'css/style.css' %}">
   <link rel="stylesheet" href="{% static 'css/vetrina.css' %}">
@@ -15,7 +15,7 @@
 <!-- ── HERO ──────────────────────────────────────────── -->
 <header class="hero">
   <nav class="hero-nav">
-    <div class="hero-brand">🍽️ La Trattoria</div>
+    <div class="hero-brand">🍽️ {{ impostazioni.nome|default:'RistoBAR' }}</div>
     <div class="hero-nav-links">
       <a href="#menu">Menu</a>
       <a href="#info">Informazioni</a>
@@ -24,7 +24,7 @@
   </nav>
   <div class="hero-content">
     <h1>Un'esperienza<br><span>indimenticabile</span></h1>
-    <p>Cucina italiana autentica nel cuore della città.<br>Ingredienti freschi, ricette della tradizione.</p>
+    <p>{{ impostazioni.slogan|default:'Cucina italiana autentica nel cuore della città.' }}</p>
     <div class="hero-cta">
       <a href="#prenota" class="btn-cta-primary">📅 Prenota un tavolo</a>
       <a href="#menu"    class="btn-cta-outline">Scopri il menu ↓</a>
@@ -97,23 +97,28 @@
   <div class="info-grid">
     <div class="info-card">
       <h3>📍 Dove siamo</h3>
-      <p>Via Roma 42<br>00100 — Roma (RM)<br>
-        <a href="https://maps.google.com" target="_blank">Apri su Maps →</a>
+      <p>
+        {% if impostazioni.indirizzo %}{{ impostazioni.indirizzo }}<br>{% endif %}
+        {% if impostazioni.cap or impostazioni.citta %}{{ impostazioni.cap }} — {{ impostazioni.citta }}{% if impostazioni.provincia %} ({{ impostazioni.provincia }}){% endif %}<br>{% endif %}
+        {% with contatti_maps=impostazioni.contatti.all %}
+          {% for c in contatti_maps %}{% if c.tipo == 'GMAPS' %}<a href="{{ c.valore }}" target="_blank">Apri su Maps →</a>{% endif %}{% endfor %}
+        {% endwith %}
       </p>
     </div>
     <div class="info-card">
       <h3>🕐 Orari</h3>
-      <table class="orari-table">
-        <tr><td>Lun–Ven</td><td>12:00–15:00 / 19:00–23:00</td></tr>
-        <tr><td>Sabato</td><td>12:00–15:30 / 19:00–23:30</td></tr>
-        <tr><td>Domenica</td><td>12:00–16:00</td></tr>
-      </table>
+      {% if impostazioni.orari %}
+        <p style="white-space: pre-line;">{{ impostazioni.orari }}</p>
+      {% else %}
+        <p>Contattaci per gli orari aggiornati.</p>
+      {% endif %}
     </div>
     <div class="info-card">
       <h3>📞 Contatti</h3>
-      <p>Tel: <a href="tel:+390612345678">06 1234 5678</a><br>
-         Email: <a href="mailto:info@latrattoria.it">info@latrattoria.it</a><br>
-         <a href="https://t.me/LaTrattoriaBot" target="_blank">💬 Prenota su Telegram</a>
+      <p>
+        {% if impostazioni.telefono %}Tel: <a href="tel:{{ impostazioni.telefono }}">{{ impostazioni.telefono }}</a><br>{% endif %}
+        {% if impostazioni.email %}Email: <a href="mailto:{{ impostazioni.email }}">{{ impostazioni.email }}</a><br>{% endif %}
+        {% if impostazioni.telegram_chat_id %}💬 Prenota su Telegram{% endif %}
       </p>
     </div>
   </div>
@@ -136,8 +141,8 @@
         Cerca disponibilità →
       </button>
     </form>
-    <p class="prenota-note">Oppure contattaci su
-      <a href="https://t.me/LaTrattoriaBot">Telegram</a> o al telefono.
+    <p class="prenota-note">Oppure contattaci
+      {% if impostazioni.telegram_nome_bot %}su <a href="https://t.me/{{ impostazioni.telegram_nome_bot|cut:'@' }}">Telegram</a> o {% endif %}al telefono.
     </p>
   </div>
 </section>
@@ -238,14 +243,14 @@
   {% endif %}
 
   <div class="footer-inner">
-    <div class="footer-brand">🍽️ La Trattoria</div>
+    <div class="footer-brand">🍽️ {{ impostazioni.nome|default:'RistoBAR' }}</div>
     <div class="footer-links">
       <a href="#menu">Menu</a>
       <a href="#info">Info</a>
       {% if impostazioni.mostra_lavora_con_noi %}<a href="#lavora">Lavora con noi</a>{% endif %}
       <a href="/login/">Area riservata</a>
     </div>
-    <div class="footer-copy">© 2026 La Trattoria — Powered by RistoBAR</div>
+    <div class="footer-copy">© {% now "Y" %} {{ impostazioni.nome|default:'RistoBAR' }}</div>
   </div>
 </footer>
 

@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gestione ePrint — RistoBAR</title>
+  <title>Gestione ePrint — {{ impostazioni.nome|default:'RistoBAR' }}</title>
   <link rel="stylesheet" href="{% static 'css/style.css' %}">
   <link rel="stylesheet" href="{% static 'css/sala_staff.css' %}">
   <style>
@@ -55,7 +55,7 @@
 
 <nav class="staff-nav">
   <div class="staff-brand">
-    <a href="/sala/capo/" class="back-link">←</a>
+    <a href="/dashboard/" class="back-link">←</a>
     🖨️ Gestione ePrint
   </div>
   <div class="staff-nav-right">
@@ -128,7 +128,7 @@
 
     <div class="ep-save-bar">
       <button type="submit" class="btn btn-primary">💾 Salva configurazione ePrint</button>
-      <a href="/sala/capo/" class="btn btn-secondary">Annulla</a>
+      <a href="/dashboard/" class="btn btn-secondary">Annulla</a>
       <span id="save-hint" style="font-size:0.8rem;color:#888">Le modifiche saranno attive immediatamente dopo il salvataggio.</span>
     </div>
   </form>

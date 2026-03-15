@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load i18n static %}
 
-{% block title %}Statistiche — RistoBAR{% endblock %}
+{% block title %}Statistiche — {{ impostazioni.nome|default:'RistoBAR' }}{% endblock %}
 
 {% block content %}
 <style>

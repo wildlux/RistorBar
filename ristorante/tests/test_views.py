@@ -60,7 +60,7 @@ class HomepageViewTest(TestCase):
         self.assertEqual(response.status_code, 200)
 
     def test_menu_view_loads(self):
-        response = self.client.get(f'/menu/{self.sala.id}/1/')
+        response = self.client.get(f'/menu/{self.tavolo.id}/')
         self.assertEqual(response.status_code, 200)
 
 

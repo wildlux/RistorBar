@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Lista Spesa — RistoBAR</title>
+  <title>Lista Spesa — {{ impostazioni.nome|default:'RistoBAR' }}</title>
   <link rel="stylesheet" href="{% static 'css/style.css' %}">
   <link rel="stylesheet" href="{% static 'css/sala_staff.css' %}">
   <style>
@@ -109,7 +109,7 @@
 
 <!-- Intestazione solo stampa -->
 <div class="print-header" style="display:none; padding: 0 1rem;">
-  <h2 style="margin:0">🛒 Lista Spesa — RistoBAR</h2>
+  <h2 style="margin:0">🛒 Lista Spesa — {{ impostazioni.nome|default:'RistoBAR' }}</h2>
   <p style="margin:0.2rem 0 0; color:#666; font-size:0.9rem">
     Periodo: {{ data_da|date:"d/m/Y" }} → {{ data_a|date:"d/m/Y" }} &nbsp;|&nbsp;
     Stampato il {% now "d/m/Y H:i" %}

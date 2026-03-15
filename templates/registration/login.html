@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% trans "Accedi" %} - RistoBAR</title>
+    <title>{% trans "Accedi" %} - {{ impostazioni.nome|default:'RistoBAR' }}</title>
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
     <style>
         body { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: var(--bg); }
@@ -20,7 +20,7 @@
 <body>
     <div class="login-box">
         <div class="login-logo">🍽️</div>
-        <h1>RistoBAR</h1>
+        <h1>{{ impostazioni.nome|default:'RistoBAR' }}</h1>
         <p>{% trans "Accedi per gestire il tuo ristorante" %}</p>
 
         {% if form.errors %}

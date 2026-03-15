@@ -17,7 +17,7 @@
 </style>
 </head>
 <body>
-<h2>🍽️ RistoBAR</h2>
+<h2>🍽️ {{ impostazioni.nome|default:'RistoBAR' }}</h2>
 <p class="sub">Comanda — Tavolo {{ tavolo.numero }} ({{ tavolo.sala.nome }})<br>
 Ordine #{{ ordine.pk }} &nbsp;|&nbsp; {{ ordine.creato_il|date:"d/m/Y H:i" }}</p>
 <hr>
@@ -40,6 +40,6 @@ Ordine #{{ ordine.pk }} &nbsp;|&nbsp; {{ ordine.creato_il|date:"d/m/Y H:i" }}</p
 </div>
 {% endif %}
 <div class="totale">TOTALE: €{{ ordine.totale }}</div>
-<p class="footer">Stampato da RistoBAR via ePrint<br>{% now "d/m/Y H:i:s" %}</p>
+<p class="footer">Stampato da {{ impostazioni.nome|default:'RistoBAR' }} via ePrint<br>{% now "d/m/Y H:i:s" %}</p>
 </body>
 </html>

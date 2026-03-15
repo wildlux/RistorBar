@@ -70,6 +70,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'django.template.context_processors.i18n',
+                'ristorante.context_processors.impostazioni',
             ],
         },
     },
@@ -145,12 +146,6 @@ STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET', '')
 # --- Telegram Bot ---
 TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN', '')
 
-# --- PWA ---
-PWA_APP_NAME = 'RistoBAR'
-PWA_APP_DESCRIPTION = 'Gestione intelligente del tuo ristorante'
-PWA_APP_THEME_COLOR = '#2c3e50'
-PWA_APP_BACKGROUND_COLOR = '#ffffff'
-PWA_APP_DISPLAY = 'standalone'
 PWA_APP_SCOPE = '/'
 PWA_APP_ORIENTATION = 'any'
 PWA_APP_START_URL = '/'

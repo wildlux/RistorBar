@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>RistoBAR — Developer Panel</title>
+  <title>{{ impostazioni.nome|default:'RistoBAR' }} — Developer Panel</title>
   <style>
     :root {
       --bg: #0d1117;
@@ -316,7 +316,7 @@
 <header class="topbar">
   <div class="topbar-brand">
     <span style="font-size:1.4rem">🍽️</span>
-    <h1>RistoBAR</h1>
+    <h1>{{ impostazioni.nome|default:'RistoBAR' }}</h1>
     <span class="badge-dev">DEV</span>
     <span class="badge-ver">v2.0</span>
   </div>
@@ -432,13 +432,13 @@
             <span class="cred-user">titolare</span>
             <span class="cred-pass">titolare123</span>
             <span class="cred-role" style="color:var(--orange)">titolare — tutto</span>
-            <a href="/login/?next=/sala/capo/" target="_blank" class="cred-login">Login →</a>
+            <a href="/login/?next=/dashboard/" target="_blank" class="cred-login">Login →</a>
           </div>
           <div class="cred-row">
             <span class="cred-user">capo_area</span>
             <span class="cred-pass">capo123</span>
             <span class="cred-role" style="color:var(--orange)">capo_area — tutto</span>
-            <a href="/login/?next=/sala/capo/" target="_blank" class="cred-login">Login →</a>
+            <a href="/login/?next=/dashboard/" target="_blank" class="cred-login">Login →</a>
           </div>
           <div class="cred-row">
             <span class="cred-user">cassa1</span>
@@ -473,7 +473,7 @@
           <a href="/sala/cucina/" target="_blank" class="qa-btn c-orange">
             <span class="qa-icon">👨‍🍳</span>KDS cucina
           </a>
-          <a href="/sala/capo/" target="_blank" class="qa-btn c-purple">
+          <a href="/dashboard/" target="_blank" class="qa-btn c-purple">
             <span class="qa-icon">📊</span>Dashboard capo
           </a>
           {% if sala1 %}
@@ -487,22 +487,34 @@
           <a href="/api/" target="_blank" class="qa-btn c-orange">
             <span class="qa-icon">⚡</span>Browsable API
           </a>
-          <a href="/sala/capo/impostazioni/" target="_blank" class="qa-btn">
+          <a href="/dashboard/impostazioni/" target="_blank" class="qa-btn">
             <span class="qa-icon">⚙️</span>Impostazioni
           </a>
           {% if sala1 and tavolo1 %}
-          <a href="/menu/{{ sala1.id }}/{{ tavolo1.numero }}/" target="_blank" class="qa-btn c-blue">
+          <a href="/menu/{{ tavolo1.id }}/" target="_blank" class="qa-btn c-blue">
             <span class="qa-icon">📱</span>Menu QR tavolo
           </a>
           {% endif %}
-          <a href="/sala/capo/chiusura/" target="_blank" class="qa-btn">
+          <a href="/dashboard/chiusura/" target="_blank" class="qa-btn">
             <span class="qa-icon">🌙</span>Chiusura giornaliera
           </a>
           <a href="/sala/dispositivi/" target="_blank" class="qa-btn c-teal">
             <span class="qa-icon">📟</span>Display e-ink
           </a>
-          <a href="/sala/capo/lista-spesa/" target="_blank" class="qa-btn c-green">
+          <a href="/dashboard/lista-spesa/" target="_blank" class="qa-btn c-green">
             <span class="qa-icon">📋</span>Lista spesa
+          </a>
+          <a href="/dashboard/statistiche/" target="_blank" class="qa-btn c-purple">
+            <span class="qa-icon">📊</span>Statistiche
+          </a>
+          <a href="/dashboard/magazzino/" target="_blank" class="qa-btn c-orange">
+            <span class="qa-icon">📦</span>Magazzino
+          </a>
+          <a href="/chef/" target="_blank" class="qa-btn c-teal">
+            <span class="qa-icon">🤖</span>Chef AI
+          </a>
+          <a href="/sala/fatture/" target="_blank" class="qa-btn">
+            <span class="qa-icon">🧾</span>Documenti fiscali
           </a>
         </div>
       </div>
@@ -567,11 +579,16 @@
             <button class="copy-btn" onclick="cp(this,event,'/homepage')">⎘</button>
           </a>
           {% if sala1 and tavolo1 %}
-          <a class="dev-link" href="/menu/{{ sala1.id }}/{{ tavolo1.numero }}/" target="_blank">
+          <a class="dev-link" href="/menu/{{ tavolo1.id }}/" target="_blank">
             <span class="dl-method m-get">GET</span>
-            <span class="dl-path">/menu/{{ sala1.id }}/{{ tavolo1.numero }}/</span>
+            <span class="dl-path">/menu/{{ tavolo1.id }}/</span>
             <span class="dl-desc">Menu QR tavolo {{ tavolo1.numero }}</span>
-            <button class="copy-btn" onclick="cp(this,event,'/menu/{{ sala1.id }}/{{ tavolo1.numero }}/')">⎘</button>
+            <button class="copy-btn" onclick="cp(this,event,'/menu/{{ tavolo1.id }}/')">⎘</button>
+          </a>
+          <a class="dev-link" href="/eink/{{ tavolo1.id }}/" target="_blank">
+            <span class="dl-method m-get">GET</span>
+            <span class="dl-path">/eink/{{ tavolo1.id }}/</span>
+            <span class="dl-desc">Menu e-ink (ESP32/STM32)</span>
           </a>
           <a class="dev-link" href="/prenota/{{ sala1.id }}/{{ tavolo1.numero }}/" target="_blank">
             <span class="dl-method m-get">GET</span>
@@ -579,13 +596,23 @@
             <span class="dl-desc">Form prenotazione</span>
             <button class="copy-btn" onclick="cp(this,event,'/prenota/{{ sala1.id }}/{{ tavolo1.numero }}/')">⎘</button>
           </a>
+          <a class="dev-link" href="/questionario/{{ tavolo1.id }}/" target="_blank">
+            <span class="dl-method m-get">GET</span>
+            <span class="dl-path">/questionario/{{ tavolo1.id }}/</span>
+            <span class="dl-desc">Questionario soddisfazione</span>
+          </a>
           {% else %}
           <div class="dev-link dim">
             <span class="dl-method m-get">GET</span>
-            <span class="dl-path">/menu/{sala}/{tavolo}/</span>
+            <span class="dl-path">/menu/{tavolo_id}/</span>
             <span class="dl-desc">Nessun tavolo nel DB</span>
           </div>
           {% endif %}
+          <a class="dev-link" href="/chef/" target="_blank">
+            <span class="dl-method m-get">GET</span>
+            <span class="dl-path">/chef/</span>
+            <span class="dl-desc">Chef AI chat</span>
+          </a>
           {% if prenotazione1 %}
           <a class="dev-link" href="/prenota/conferma/{{ prenotazione1.id }}/" target="_blank">
             <span class="dl-method m-get">GET</span>
@@ -672,39 +699,64 @@
       <div class="dev-card c-purple" id="url-capo">
         <div class="card-head"><span>📊</span> Capo Area / Titolare <span class="ch-badge">capo_area</span></div>
         <div class="card-links">
-          <a class="dev-link" href="/sala/capo/" target="_blank">
+          <a class="dev-link" href="/dashboard/" target="_blank">
             <span class="dl-method m-get">GET</span>
-            <span class="dl-path">/sala/capo/</span>
+            <span class="dl-path">/dashboard/</span>
             <span class="dl-desc">Dashboard completa</span>
             <span class="dl-role">capo_area</span>
-            <button class="copy-btn" onclick="cp(this,event,'/sala/capo/')">⎘</button>
+            <button class="copy-btn" onclick="cp(this,event,'/dashboard/')">⎘</button>
           </a>
           {% if sala1 %}
-          <a class="dev-link" href="/sala/capo/sala/{{ sala1.id }}/" target="_blank">
+          <a class="dev-link" href="/pianta/{{ sala1.id }}/" target="_blank">
             <span class="dl-method m-get">GET</span>
-            <span class="dl-path">/sala/capo/sala/{{ sala1.id }}/</span>
+            <span class="dl-path">/pianta/{{ sala1.id }}/</span>
             <span class="dl-desc">Mappa sala — {{ sala1.nome }}</span>
           </a>
           {% endif %}
-          <a class="dev-link" href="/sala/capo/impostazioni/" target="_blank">
+          <a class="dev-link" href="/dashboard/impostazioni/" target="_blank">
             <span class="dl-method m-any">GET/POST</span>
-            <span class="dl-path">/sala/capo/impostazioni/</span>
+            <span class="dl-path">/dashboard/impostazioni/</span>
             <span class="dl-desc">Impostazioni ristorante</span>
           </a>
-          <a class="dev-link" href="/sala/capo/chiusura/" target="_blank">
+          <a class="dev-link" href="/dashboard/statistiche/" target="_blank">
             <span class="dl-method m-get">GET</span>
-            <span class="dl-path">/sala/capo/chiusura/</span>
+            <span class="dl-path">/dashboard/statistiche/</span>
+            <span class="dl-desc">Statistiche e report</span>
+          </a>
+          <a class="dev-link" href="/dashboard/magazzino/" target="_blank">
+            <span class="dl-method m-get">GET</span>
+            <span class="dl-path">/dashboard/magazzino/</span>
+            <span class="dl-desc">Magazzino e scadenze</span>
+          </a>
+          <a class="dev-link" href="/dashboard/contatti/" target="_blank">
+            <span class="dl-method m-get">GET</span>
+            <span class="dl-path">/dashboard/contatti/</span>
+            <span class="dl-desc">Rubrica contatti</span>
+          </a>
+          <a class="dev-link" href="/dashboard/chiusura/" target="_blank">
+            <span class="dl-method m-get">GET</span>
+            <span class="dl-path">/dashboard/chiusura/</span>
             <span class="dl-desc">Chiusura giornaliera</span>
           </a>
-          <a class="dev-link" href="/sala/capo/lista-spesa/" target="_blank">
+          <a class="dev-link" href="/dashboard/lista-spesa/" target="_blank">
             <span class="dl-method m-get">GET</span>
-            <span class="dl-path">/sala/capo/lista-spesa/</span>
+            <span class="dl-path">/dashboard/lista-spesa/</span>
             <span class="dl-desc">Liste spesa generate</span>
+          </a>
+          <a class="dev-link" href="/dashboard/eprint/" target="_blank">
+            <span class="dl-method m-get">GET</span>
+            <span class="dl-path">/dashboard/eprint/</span>
+            <span class="dl-desc">Gestione ePrint</span>
+          </a>
+          <a class="dev-link" href="/sala/fatture/" target="_blank">
+            <span class="dl-method m-get">GET</span>
+            <span class="dl-path">/sala/fatture/</span>
+            <span class="dl-desc">Elenco documenti fiscali</span>
           </a>
           <a class="dev-link" href="/sala/dispositivi/" target="_blank">
             <span class="dl-method m-get">GET</span>
             <span class="dl-path">/sala/dispositivi/</span>
-            <span class="dl-desc">Centro controllo display</span>
+            <span class="dl-desc">Centro controllo display e-ink</span>
           </a>
         </div>
       </div>
@@ -860,6 +912,11 @@
             <span class="dl-path">/webhooks/telegram/</span>
             <span class="dl-desc">Telegram (CSRF exempt)</span>
           </div>
+          <div class="dev-link dim">
+            <span class="dl-method m-post">POST</span>
+            <span class="dl-path">/webhooks/whatsapp/</span>
+            <span class="dl-desc">WhatsApp Business (CSRF exempt)</span>
+          </div>
           <a class="dev-link" href="/manifest.json" target="_blank">
             <span class="dl-method m-get">GET</span>
             <span class="dl-path">/manifest.json</span>
@@ -914,7 +971,7 @@
           💡 <strong>Come ottenere il Chat ID:</strong>
           scrivi <code>/start</code> al bot su Telegram → clicca <strong>Leggi 📥</strong> → appare il tuo ID.
           Per un <strong>gruppo</strong>: aggiungi il bot al gruppo, scrivi un messaggio, poi clicca Leggi.
-          &nbsp;<a href="/sala/capo/impostazioni/" style="color:var(--accent)">Salva il Chat ID nelle Impostazioni ↗</a>
+          &nbsp;<a href="/dashboard/impostazioni/" style="color:var(--accent)">Salva il Chat ID nelle Impostazioni ↗</a>
         </div>
         <div class="msg-row">
           <input id="tg-chat-id" class="msg-input" placeholder="Chat ID (es. -100123456789 o @username)" style="max-width:230px" value="{{ tg_chat_id_saved }}">
@@ -931,7 +988,7 @@
       <div id="panel-wa" class="msg-panel">
         {% if not wa_ok %}
         <div style="color:var(--yellow);font-size:0.8rem;margin-bottom:0.75rem;padding:0.5rem 0.75rem;background:rgba(227,179,65,0.07);border-radius:6px;border-left:3px solid var(--yellow)">
-          ⚠️ WhatsApp non configurato — vai in <a href="/sala/capo/impostazioni/" style="color:var(--accent)">Impostazioni → tab Messaggistica</a> e abilita WhatsApp Business
+          ⚠️ WhatsApp non configurato — vai in <a href="/dashboard/impostazioni/" style="color:var(--accent)">Impostazioni → tab Messaggistica</a> e abilita WhatsApp Business
         </div>
         {% endif %}
         <div class="msg-row">

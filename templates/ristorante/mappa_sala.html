@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load i18n %}
 
-{% block title %}{% trans "Mappa" %} {{ sala.nome }} - RistoBAR{% endblock %}
+{% block title %}{% trans "Mappa" %} {{ sala.nome }} - {{ impostazioni.nome|default:'RistoBAR' }}{% endblock %}
 
 {% block content %}
 <div class="mappa-container">

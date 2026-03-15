@@ -778,12 +778,12 @@ class MenuTavoloTest(TestCase):
 
     def test_menu_200(self):
         r = self.client.get(
-            reverse('menu_tavolo', args=[self.sala.pk, self.tavolo.numero])
+            reverse('menu_tavolo', args=[self.tavolo.pk])
         )
         self.assertEqual(r.status_code, 200)
 
     def test_menu_contiene_piatto(self):
         r = self.client.get(
-            reverse('menu_tavolo', args=[self.sala.pk, self.tavolo.numero])
+            reverse('menu_tavolo', args=[self.tavolo.pk])
         )
         self.assertIn(b'Spaghetti', r.content)

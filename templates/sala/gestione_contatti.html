@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Rubrica Contatti — RistoBAR</title>
+  <title>Rubrica Contatti — {{ impostazioni.nome|default:'RistoBAR' }}</title>
   <link rel="stylesheet" href="{% static 'css/style.css' %}">
   <link rel="stylesheet" href="{% static 'css/sala_staff.css' %}">
   <style>
@@ -103,11 +103,11 @@
 
 <nav class="staff-nav">
   <div class="staff-brand">
-    <a href="/sala/capo/" class="back-link">←</a>
+    <a href="/dashboard/" class="back-link">←</a>
     📇 Rubrica Contatti
   </div>
   <div class="staff-nav-right">
-    <a href="/sala/capo/impostazioni/" class="btn-staff-logout" style="color:rgba(255,255,255,0.7)">⚙️ Impostazioni</a>
+    <a href="/dashboard/impostazioni/" class="btn-staff-logout" style="color:rgba(255,255,255,0.7)">⚙️ Impostazioni</a>
     <a href="/logout/" class="btn-staff-logout">Esci</a>
   </div>
 </nav>

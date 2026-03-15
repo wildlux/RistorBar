@@ -15,7 +15,7 @@
 </style>
 </head>
 <body>
-<h1>🛒 Lista Spesa — RistoBAR</h1>
+<h1>🛒 Lista Spesa — {{ impostazioni.nome|default:'RistoBAR' }}</h1>
 <p class="periodo">Periodo: {{ data_da|date:"d/m/Y" }} → {{ data_a|date:"d/m/Y" }} &nbsp;|&nbsp; Totale voci: {{ totale_voci }}</p>
 
 {% for cat_nome, cat_data in categorie_spesa.items %}
@@ -36,6 +36,6 @@
 <p>Nessun ordine nel periodo.</p>
 {% endfor %}
 
-<p class="footer">Generato da RistoBAR &mdash; {% now "d/m/Y H:i" %}</p>
+<p class="footer">Generato da {{ impostazioni.nome|default:'RistoBAR' }} &mdash; {% now "d/m/Y H:i" %}</p>
 </body>
 </html>

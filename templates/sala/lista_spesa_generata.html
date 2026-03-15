@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load i18n static %}
 
-{% block title %}{% trans "Lista Spesa" %} - RistoBAR{% endblock %}
+{% block title %}{% trans "Lista Spesa" %} - {{ impostazioni.nome|default:'RistoBAR' }}{% endblock %}
 
 {% block content %}
 <style>

@@ -100,7 +100,7 @@ class SecurityCSRFTest(TestCase):
         protected_urls = [
             '/sala/cameriere/',
             '/sala/cucina/',
-            '/sala/capo/',
+            '/dashboard/',
         ]
         
         for url in protected_urls:
@@ -142,7 +142,7 @@ class SecurityAuthenticationTest(TestCase):
     
     def test_login_required_dashboard(self):
         """Dashboard richiede login"""
-        response = self.client.get('/sala/capo/')
+        response = self.client.get('/dashboard/')
         self.assertEqual(response.status_code, 302)
     
     def test_login_required_editor(self):

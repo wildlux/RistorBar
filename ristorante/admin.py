@@ -1,6 +1,48 @@
 from django.contrib import admin
 from django.contrib.admin import AdminSite
+from django import forms
 from .models import Sala, Tavolo, Categoria, Piatto, Prenotazione, Ordine, OrdineItem, Fattura, ImpostazioniRistorante, Sede, Contatto
+
+
+# ─── Widget autocomplete comuni ───────────────────────────────────────────────
+
+class CittaInput(forms.TextInput):
+    def __init__(self, link_provincia=None, **kwargs):
+        attrs = {'data-comuni': 'citta'}
+        if link_provincia:
+            attrs['data-comuni-link'] = link_provincia
+        kwargs.setdefault('attrs', {}).update(attrs)
+        super().__init__(**kwargs)
+
+
+class ProvinciaInput(forms.TextInput):
+    def __init__(self, **kwargs):
+        kwargs.setdefault('attrs', {}).update({'data-comuni': 'provincia', 'maxlength': '2'})
+        super().__init__(**kwargs)
+
+
+# ─── Form con widget per ImpostazioniRistorante ───────────────────────────────
+
+class ImpostazioniForm(forms.ModelForm):
+    class Meta:
+        model = ImpostazioniRistorante
+        fields = '__all__'
+        widgets = {
+            'citta':     CittaInput(link_provincia='#id_provincia'),
+            'provincia': ProvinciaInput(),
+        }
+
+
+# ─── Form con widget per Sede ─────────────────────────────────────────────────
+
+class SedeForm(forms.ModelForm):
+    class Meta:
+        model = Sede
+        fields = '__all__'
+        widgets = {
+            'citta':     CittaInput(),
+            'provincia': ProvinciaInput(),
+        }
 
 
 # ─── Admin site personalizzato con sezioni ────────────────────────────────────
@@ -16,9 +58,18 @@ SEZIONI = [
 
 
 class RistobarAdminSite(AdminSite):
-    site_header = "RistoBAR — Amministrazione"
-    site_title = "RistoBAR"
     index_title = "Pannello di controllo"
+
+    @property
+    def site_header(self):
+        imp = ImpostazioniRistorante.get()
+        nome = imp.nome if imp else 'RistoBAR'
+        return f"{nome} — Amministrazione"
+
+    @property
+    def site_title(self):
+        imp = ImpostazioniRistorante.get()
+        return imp.nome if imp else 'RistoBAR'
 
     def get_app_list(self, request, app_label=None):
         original = super().get_app_list(request, app_label)
@@ -101,6 +152,7 @@ class OrdineAdmin(admin.ModelAdmin):
 
 class SedeInline(admin.TabularInline):
     model = Sede
+    form = SedeForm
     extra = 1
     fields = ['tipo', 'nome', 'indirizzo', 'cap', 'citta', 'provincia', 'telefono', 'principale', 'attiva']
 
@@ -124,17 +176,25 @@ class ContattoSedeInline(admin.TabularInline):
 
 
 class ImpostazioniAdmin(admin.ModelAdmin):
+    form = ImpostazioniForm
     inlines = [SedeInline, ContattoRistoranteInline]
+
+    class Media:
+        js = ('js/comuni_autocomplete.js',)
 
     def has_add_permission(self, request):
         return not ImpostazioniRistorante.objects.exists()
 
 
 class SedeAdmin(admin.ModelAdmin):
+    form = SedeForm
     list_display = ['nome', 'tipo', 'indirizzo', 'citta', 'principale', 'attiva']
     list_editable = ['principale', 'attiva']
     list_filter = ['tipo', 'attiva']
     inlines = [ContattoSedeInline]
+
+    class Media:
+        js = ('js/comuni_autocomplete.js',)
 
 
 class ContattoAdmin(admin.ModelAdmin):

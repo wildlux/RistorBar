@@ -140,7 +140,10 @@ def handle_message(token, chat_id, text):
 
     # ── Grazie ───────────────────────────────────────────────────────
     elif any(k in tl for k in ['grazie', 'thank', 'perfetto', 'ottimo', '🙏', '👍']):
-        risposta = "Prego! 😊 A presto da *La Trattoria* 🍽️"
+        from .models import ImpostazioniRistorante
+        imp = ImpostazioniRistorante.get()
+        nome = imp.nome if imp else 'noi'
+        risposta = f"Prego! 😊 A presto da *{nome}* 🍽️"
 
     else:
         risposta = (

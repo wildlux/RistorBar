@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load i18n static %}
 
-{% block title %}{% trans "Magazzino e Scadenze" %} - RistoBAR{% endblock %}
+{% block title %}{% trans "Magazzino e Scadenze" %} - {{ impostazioni.nome|default:'RistoBAR' }}{% endblock %}
 
 {% block content %}
 <style>
@@ -351,7 +351,7 @@ function startScanner() {
 document.getElementById('barcode-input').addEventListener('change', function() {
     const barcode = this.value;
     if (barcode.length > 3) {
-        fetch('/sala/capo/magazzino/cerca/?barcode=' + encodeURIComponent(barcode))
+        fetch('/dashboard/magazzino/cerca/?barcode=' + encodeURIComponent(barcode))
             .then(r => r.json())
             .then(data => {
                 if (data.ok) {
@@ -383,7 +383,7 @@ document.getElementById('aggiungi-form').addEventListener('submit', function(e) 
 });
 
 function apriProdotto(id) {
-    fetch('/sala/capo/magazzino/' + id + '/apri/', {
+    fetch('/dashboard/magazzino/' + id + '/apri/', {
         method: 'POST',
         headers: {'X-CSRFToken': '{{ csrf_token }}'}
     })
@@ -395,7 +395,7 @@ function apriProdotto(id) {
 
 function eliminaProdotto(id) {
     if (confirm('Sei sicuro di voler eliminare questo prodotto?')) {
-        fetch('/sala/capo/magazzino/' + id + '/elimina/', {
+        fetch('/dashboard/magazzino/' + id + '/elimina/', {
             method: 'POST',
             headers: {'X-CSRFToken': '{{ csrf_token }}'}
         })

@@ -148,7 +148,7 @@ RistoBAR/
    Tavolo.conto() → Stripe Payment → Ordine.stato = 'PAGATO' → Storico.save()
 
 4. Chiusura Giornaliera:
-   /sala/capo/chiusura/ → CiboRimasto.create() → ListaSpesaGenerata.create()
+   /dashboard/chiusura/ → CiboRimasto.create() → ListaSpesaGenerata.create()
 
 5. AI Chef:
    /chef/chat → Ollama (llama3.2:3b) → Risposta multilingua
@@ -340,11 +340,11 @@ ollama pull llama3.2:3b
 | Prenota | `/prenota/<sala_id>/<tavolo>/` |
 | Chat Chef AI | `/chef/` |
 | Questionario | `/questionario/` |
-| Dashboard | `/sala/capo/` |
-| Magazzino | `/sala/capo/magazzino/` |
-| Chiusura | `/sala/capo/chiusura/` |
-| Lista Spesa | `/sala/capo/lista-spesa/` |
-| Statistiche | `/sala/capo/statistiche/` |
+| Dashboard | `/dashboard/` |
+| Magazzino | `/dashboard/magazzino/` |
+| Chiusura | `/dashboard/chiusura/` |
+| Lista Spesa | `/dashboard/lista-spesa/` |
+| Statistiche | `/dashboard/statistiche/` |
 
 ---
 

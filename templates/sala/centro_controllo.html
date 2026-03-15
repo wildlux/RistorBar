@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load i18n static %}
 
-{% block title %}{% trans "Centro di Controllo" %} - RistoBAR{% endblock %}
+{% block title %}{% trans "Centro di Controllo" %} - {{ impostazioni.nome|default:'RistoBAR' }}{% endblock %}
 
 {% block content %}
 <div class="cc-wrap">
@@ -90,7 +90,7 @@
                     {% endif %}
                 </div>
                 <div class="disp-actions">
-                    <a href="{% url 'dispositivo_dettaglio disp.id %}" class="btn btn-sm">{% trans "Dettagli" %}</a>
+                    <a href="{% url 'dispositivo_dettaglio' disp.id %}" class="btn btn-sm">{% trans "Dettagli" %}</a>
                 </div>
             </div>
             {% endfor %}

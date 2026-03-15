@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Impostazioni Ristorante — RistoBAR</title>
+  <title>Impostazioni Ristorante — {{ impostazioni.nome|default:'RistoBAR' }}</title>
   <link rel="stylesheet" href="{% static 'css/style.css' %}">
   <link rel="stylesheet" href="{% static 'css/sala_staff.css' %}">
   <style>
@@ -66,7 +66,7 @@
 
 <nav class="staff-nav">
   <div class="staff-brand">
-    <a href="/sala/capo/" class="back-link">←</a>
+    <a href="/dashboard/" class="back-link">←</a>
     ⚙️ Impostazioni Ristorante
   </div>
 </nav>
@@ -139,11 +139,11 @@
           </div>
           <div>
             <label class="ir-label">Città</label>
-            <input class="ir-input" type="text" name="citta" value="{{ imp.citta }}">
+            <input class="ir-input" type="text" name="citta" value="{{ imp.citta }}" data-comuni="citta" data-comuni-link="#id-provincia-imp">
           </div>
           <div>
             <label class="ir-label">Provincia (sigla)</label>
-            <input class="ir-input" type="text" name="provincia" value="{{ imp.provincia }}" maxlength="5" placeholder="MI">
+            <input class="ir-input" type="text" name="provincia" id="id-provincia-imp" value="{{ imp.provincia }}" maxlength="2" placeholder="MI" data-comuni="provincia">
           </div>
         </div>
       </div>
@@ -454,7 +454,7 @@
     <div id="tab-abbonamento" class="ir-section">
 
       <div class="ir-card" style="border-color:#f39c12">
-        <h3>💳 Abbonamento RistoBAR</h3>
+        <h3>💳 Abbonamento {{ impostazioni.nome|default:'RistoBAR' }}</h3>
         <div class="ir-grid">
           <div class="ir-full">
             <label class="ir-label">
@@ -756,6 +756,6 @@ async function waTest() {
   else       logMsg('wa-log','err',`❌ ${d.errore}`);
 }
 </script>
-
+<script src="/static/js/comuni_autocomplete.js"></script>
 </body>
 </html>

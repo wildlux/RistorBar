@@ -45,7 +45,7 @@ Single Django project (`ristobar/`) with one app (`ristorante/`). No separate fr
 | `/sala/` | Dispatch → redirects by role | `@login_required` |
 | `/sala/cameriere/` | Camerieri | Group: `cameriere` |
 | `/sala/cucina/` | Cuochi (KDS) | Group: `cuoco` |
-| `/sala/capo/` | Dashboard completa | Group: `capo_area` / `titolare` |
+| `/dashboard/` | Dashboard completa | Group: `capo_area` / `titolare` |
 | `/sala/editor/<id>/` | Planimetria SVG | Group: `capo_area` / `titolare` |
 | `/amministrazione/` | Django admin | `is_staff` |
 | `/api/` | REST API | DRF auth |

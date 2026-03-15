@@ -180,6 +180,7 @@ class Command(BaseCommand):
                 'cf':        '12345678901',
                 'regime_fiscale': 'RF01',
                 'note_scontrino': 'Grazie per aver scelto La Trattoria! 🙏\nVia Roma 42 — Roma · 06 1234 5678',
+                'orari': 'Lun–Ven: 12:00–15:00 / 19:00–23:00\nSabato: 12:00–15:30 / 19:00–23:30\nDomenica: 12:00–16:00',
             }
         )
 
@@ -262,18 +263,18 @@ class Command(BaseCommand):
             f'   Sale: {Sala.objects.count()} | Tavoli: {Tavolo.objects.count()} | Piatti: {Piatto.objects.count()}\n'
             f'\n   URL pubblici (clienti):\n'
             f'   → Vetrina:         http://127.0.0.1:8000/homepage\n'
-            f'   → Menu via QR:     http://127.0.0.1:8000/menu/1/1/\n'
+            f'   → Menu via QR:     http://127.0.0.1:8000/menu/1/\n'
             f'   → Prenotazione:    http://127.0.0.1:8000/prenota/1/1/\n'
             f'\n   URL staff (login richiesto):\n'
             f'   → Login:           http://127.0.0.1:8000/login/\n'
             f'   → Dispatch ruolo:  http://127.0.0.1:8000/sala/\n'
             f'   → Cameriere:       http://127.0.0.1:8000/sala/cameriere/\n'
             f'   → Cucina (KDS):    http://127.0.0.1:8000/sala/cucina/\n'
-            f'   → Dashboard capo:  http://127.0.0.1:8000/sala/capo/\n'
+            f'   → Dashboard capo:  http://127.0.0.1:8000/dashboard/\n'
             f'\n   Credenziali demo:\n'
             f'   admin       admin123    → /amministrazione/  (superuser)\n'
-            f'   titolare    titolare123 → /sala/capo/        (dashboard completa + admin)\n'
-            f'   capo_area   capo123     → /sala/capo/        (dashboard + editor)\n'
+            f'   titolare    titolare123 → /dashboard/        (dashboard completa + admin)\n'
+            f'   capo_area   capo123     → /dashboard/        (dashboard + editor)\n'
             f'   cameriere1  cam123      → /sala/cameriere/   (tavoli + comande)\n'
             f'   cuoco1      cuoco123    → /sala/cucina/      (KDS schermo cucina)\n'
             f'\n   Admin Django: http://127.0.0.1:8000/amministrazione/\n'

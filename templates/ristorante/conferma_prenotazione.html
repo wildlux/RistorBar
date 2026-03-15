@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load i18n %}
 
-{% block title %}{% trans "Prenotazione Confermata" %} - RistoBAR{% endblock %}
+{% block title %}{% trans "Prenotazione Confermata" %} - {{ impostazioni.nome|default:'RistoBAR' }}{% endblock %}
 
 {% block content %}
 <div class="conferma-container">

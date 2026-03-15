@@ -95,6 +95,8 @@ class Tavolo(models.Model):
                                      help_text=_('Indirizzo email HP ePrint della stampante associata a questo tavolo'))
     nota = models.TextField(_('Nota display'), blank=True, default='',
                            help_text=_('Nota visibile sul display e-ink (commenti dello chef, suggerimenti, ecc.)'))
+    etichetta = models.CharField(_('Etichetta evento'), max_length=100, blank=True, default='',
+                                 help_text=_('Nome visualizzato nell\'editor per eventi/matrimoni (es. "Famiglia Rossi")'))
 
     class Meta:
         verbose_name = _('Tavolo')

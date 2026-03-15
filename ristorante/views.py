@@ -381,25 +381,24 @@ def sposta_tavolo(request, tavolo_id):
 
 # ─── Menu cliente (via QR) ───────────────────────────────────────────────────
 
-def menu_tavolo(request, sala_id, numero_tavolo):
-    sala = get_object_or_404(Sala, pk=sala_id)
-    tavolo = get_object_or_404(Tavolo, sala=sala, numero=numero_tavolo, attivo=True)
+def menu_tavolo(request, tavolo_id):
+    tavolo = get_object_or_404(Tavolo, pk=tavolo_id, attivo=True)
     categorie = Categoria.objects.prefetch_related('piatti').all()
     return render(request, 'ristorante/menu_tavolo.html', {
-        'sala': sala,
+        'sala': tavolo.sala,
         'tavolo': tavolo,
         'categorie': categorie,
     })
 
 
-def menu_eink(request, sala_id, numero_tavolo):
+def menu_eink(request, tavolo_id):
     """
     Pagina menu ultra-minimale per display e-ink (ESP32, STM32).
     Niente CSS pesante, niente immagini, solo testo e struttura.
     Ottimizzata per schermi piccoli in bianco/nero con poca memoria.
     """
-    sala = get_object_or_404(Sala, pk=sala_id)
-    tavolo = get_object_or_404(Tavolo, sala=sala, numero=numero_tavolo, attivo=True)
+    tavolo = get_object_or_404(Tavolo, pk=tavolo_id, attivo=True)
+    sala = tavolo.sala
     categorie = Categoria.objects.prefetch_related(
         models.Prefetch('piatti', queryset=Piatto.objects.filter(disponibile=True))
     ).all()
@@ -549,31 +548,38 @@ def stripe_webhook(request):
 
 # ─── Webhook Telegram ─────────────────────────────────────────────────────────
 
-TELEGRAM_COMANDI = {
-    '/start': 'Benvenuto! Sono il bot di RistoBAR. Usa /aiuto per vedere tutti i comandi.',
-    '/aiuto': (
-        "*Comandi disponibili:*\n\n"
-        "📋 *Clienti:*\n"
-        "/menu - Visualizza il menu del giorno\n"
-        "/prenota - Prenota un tavolo\n"
-        "/prenotazioni - Le tue prenotazioni\n\n"
-        "👨‍🍳 *Staff:*\n"
-        "/ordini - Visualizza ordini attivi\n"
-        "/cucina - Visualizza ordini in cucina\n"
-    ),
-    '/menu': lambda: genera_menu_telegram(),
-    '/prenota': (
-        "Per prenotare un tavolo clicca sul pulsante qui sotto oppure vai su:\n"
-        "[Prenota tavolo](https://ristobar.it/prenota/1/1)\n\n"
-        "Oppure invia i dettagli:\n"
-        "• Nome\n"
-        "• Numero persone\n"
-        "• Data e ora\n"
-        "• Numero tavolo (opzionale)"
-    ),
-    '/ordini': lambda: genera_ordini_telegram(),
-    '/cucina': lambda: genera_ordini_cucina_telegram(),
-}
+def _telegram_comandi():
+    imp = ImpostazioniRistorante.get()
+    nome = imp.nome if imp else 'RistoBAR'
+    sito = imp.sito if imp else ''
+    prenota_url = f"{sito}/prenota/" if sito else "/prenota/"
+    return {
+        '/start': f'Benvenuto! Sono il bot di *{nome}*. Usa /aiuto per vedere tutti i comandi.',
+        '/aiuto': (
+            "*Comandi disponibili:*\n\n"
+            "📋 *Clienti:*\n"
+            "/menu - Visualizza il menu del giorno\n"
+            "/prenota - Prenota un tavolo\n"
+            "/prenotazioni - Le tue prenotazioni\n\n"
+            "👨‍🍳 *Staff:*\n"
+            "/ordini - Visualizza ordini attivi\n"
+            "/cucina - Visualizza ordini in cucina\n"
+        ),
+        '/menu': lambda: genera_menu_telegram(),
+        '/prenota': (
+            f"Per prenotare un tavolo da *{nome}* clicca sul link oppure vai su:\n"
+            f"[Prenota tavolo]({prenota_url})\n\n"
+            "Oppure invia i dettagli:\n"
+            "• Nome\n"
+            "• Numero persone\n"
+            "• Data e ora\n"
+            "• Numero tavolo (opzionale)"
+        ),
+        '/ordini': lambda: genera_ordini_telegram(),
+        '/cucina': lambda: genera_ordini_cucina_telegram(),
+    }
+
+TELEGRAM_COMANDI = _telegram_comandi  # callable — valutato ad ogni richiesta
 
 
 @csrf_exempt
@@ -627,18 +633,19 @@ def gestisci_messaggio_telegram(chat_id, testo):
         testo = testo.split('@')[0]
     testo_lower = testo.lower().strip()
     
-    if testo_lower in TELEGRAM_COMANDI:
-        cmd = TELEGRAM_COMANDI[testo_lower]
+    comandi = TELEGRAM_COMANDI()
+    if testo_lower in comandi:
+        cmd = comandi[testo_lower]
         if callable(cmd):
             return cmd()
         return cmd
-    
-    for cmd in TELEGRAM_COMANDI:
+
+    for cmd in comandi:
         if cmd in testo_lower:
-            return TELEGRAM_COMANDI[cmd]
-    
+            return comandi[cmd]
+
     if 'prenota' in testo_lower:
-        return TELEGRAM_COMANDI['/prenota']
+        return comandi['/prenota']
     
     return "Usa /aiuto per vedere i comandi disponibili."
 
@@ -1102,7 +1109,7 @@ def editor_sala(request, sala_id):
     """Editor visivo della planimetria: drag, unione, aggiunta/modifica tavoli."""
     sala = get_object_or_404(Sala, pk=sala_id)
     tavoli = list(sala.tavoli.filter(attivo=True).values(
-        'id', 'numero', 'forma', 'capacita', 'stato', 'pos_x', 'pos_y'
+        'id', 'numero', 'forma', 'capacita', 'stato', 'pos_x', 'pos_y', 'etichetta'
     ))
     # Carica SVG sfondo se presente
     svg_content = ''
@@ -1225,8 +1232,11 @@ def modifica_tavolo_editor(request, sala_id, tavolo_id):
         tavolo.forma = data['forma']
     if 'capacita' in data:
         tavolo.capacita = int(data['capacita'])
+    if 'etichetta' in data:
+        tavolo.etichetta = data['etichetta']
     tavolo.save()
-    return JsonResponse({'ok': True, 'numero': tavolo.numero, 'forma': tavolo.forma, 'capacita': tavolo.capacita})
+    return JsonResponse({'ok': True, 'numero': tavolo.numero, 'forma': tavolo.forma,
+                         'capacita': tavolo.capacita, 'etichetta': tavolo.etichetta})
 
 
 @login_required
@@ -1403,7 +1413,7 @@ def invia_lista_spesa_email(request):
 
     try:
         send_mail(
-            subject=f'📋 Lista Spesa RistoBAR — {data_da.strftime("%d/%m")} / {data_a.strftime("%d/%m")}',
+            subject=f'📋 Lista Spesa {ImpostazioniRistorante.get().nome} — {data_da.strftime("%d/%m")} / {data_a.strftime("%d/%m")}',
             message=corpo_txt,
             from_email=settings.DEFAULT_FROM_EMAIL,
             recipient_list=[destinatario],

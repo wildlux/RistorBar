@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load i18n static %}
 
-{% block title %}{% trans "Chiusura Giornaliera" %} - RistoBAR{% endblock %}
+{% block title %}{% trans "Chiusura Giornaliera" %} - {{ impostazioni.nome|default:'RistoBAR' }}{% endblock %}
 
 {% block content %}
 <style>

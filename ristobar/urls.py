@@ -4,15 +4,18 @@ from ristorante.admin import admin_site
 from django.conf import settings
 from django.conf.urls.static import static
 from django.http import JsonResponse
+from ristorante.models import ImpostazioniRistorante
 from django.shortcuts import redirect
 from rest_framework.routers import DefaultRouter
 from ristorante import views
 
 
 def manifest_json(request):
+    imp = ImpostazioniRistorante.get()
+    nome = imp.nome if imp else 'RistoBAR'
     return JsonResponse({
-        "name": "RistoBAR",
-        "short_name": "RistoBAR",
+        "name": nome,
+        "short_name": nome,
         "description": "Gestione intelligente del tuo ristorante",
         "start_url": "/homepage",
         "display": "standalone",
@@ -58,8 +61,8 @@ urlpatterns = [
     #  AREA PUBBLICA — clienti
     # ══════════════════════════════════════════════════════════
     path('homepage',                               views.vetrina,                name='homepage'),
-    path('menu/<int:sala_id>/<int:numero_tavolo>/', views.menu_tavolo,           name='menu_tavolo'),
-    path('eink/<int:sala_id>/<int:numero_tavolo>/', views.menu_eink,            name='menu_eink'),
+    path('menu/<int:tavolo_id>/', views.menu_tavolo, name='menu_tavolo'),
+    path('eink/<int:tavolo_id>/', views.menu_eink,  name='menu_eink'),
     path('prenota/<int:sala_id>/<int:numero_tavolo>/', views.prenota,            name='prenota'),
     path('prenota/conferma/<int:prenotazione_id>/', views.conferma_prenotazione, name='conferma_prenotazione'),
     path('prenota/caparra/<int:prenotazione_id>/',  views.pagamento_caparra,     name='pagamento_caparra'),
@@ -88,7 +91,7 @@ urlpatterns = [
     path('sala/cucina/item/<int:item_id>/stato/', views.aggiorna_item_kds, name='aggiorna_item_kds'),
 
     # Capo area / Titolare — dashboard completa
-    path('sala/capo/',               views.dashboard,        name='dashboard'),
+    path('dashboard/',               views.dashboard,        name='dashboard'),
     path('pianta/<int:sala_id>/', views.pianta_locale, name='pianta_locale'),
     
     # Centro di controllo dispositivi hardware
@@ -117,32 +120,32 @@ urlpatterns = [
     path('sala/cucina/lista-spesa/email/',  views.invia_lista_spesa_email,  name='invia_lista_spesa_email'),
 
     # ePrint — gestione (capo area) + stampa ordine
-    path('sala/capo/eprint/',                      views.gestione_eprint,        name='gestione_eprint'),
+    path('dashboard/eprint/',                      views.gestione_eprint,        name='gestione_eprint'),
     path('sala/ordine/<int:ordine_id>/eprint/',    views.eprint_ordine,          name='eprint_ordine'),
 
     # Contatti ristorante + sedi
-    path('sala/capo/contatti/', views.gestione_contatti, name='gestione_contatti'),
+    path('dashboard/contatti/', views.gestione_contatti, name='gestione_contatti'),
 
     # Statistiche e Report
-    path('sala/capo/statistiche/', views.statistiche_view, name='statistiche'),
-    path('sala/capo/statistiche/genera/', views.genera_report, name='genera_report'),
-    path('sala/capo/promemoria/', views.promemoria_view, name='promemoria'),
+    path('dashboard/statistiche/', views.statistiche_view, name='statistiche'),
+    path('dashboard/statistiche/genera/', views.genera_report, name='genera_report'),
+    path('dashboard/promemoria/', views.promemoria_view, name='promemoria'),
 
     # Magazzino e scadenze
-    path('sala/capo/magazzino/', views.magazzino_view, name='magazzino'),
-    path('sala/capo/magazzino/aggiungi/', views.magazzino_aggiungi, name='magazzino_aggiungi'),
-    path('sala/capo/magazzino/cerca/', views.magazzino_cerca_barcode, name='magazzino_cerca_barcode'),
-    path('sala/capo/magazzino/<int:prodotto_id>/apri/', views.magazzino_apri, name='magazzino_apri'),
-    path('sala/capo/magazzino/<int:prodotto_id>/elimina/', views.magazzino_elimina, name='magazzino_elimina'),
+    path('dashboard/magazzino/', views.magazzino_view, name='magazzino'),
+    path('dashboard/magazzino/aggiungi/', views.magazzino_aggiungi, name='magazzino_aggiungi'),
+    path('dashboard/magazzino/cerca/', views.magazzino_cerca_barcode, name='magazzino_cerca_barcode'),
+    path('dashboard/magazzino/<int:prodotto_id>/apri/', views.magazzino_apri, name='magazzino_apri'),
+    path('dashboard/magazzino/<int:prodotto_id>/elimina/', views.magazzino_elimina, name='magazzino_elimina'),
 
     # Chiusura giornaliera e Lista spesa
-    path('sala/capo/chiusura/', views.chiusura_giornaliera, name='chiusura_giornaliera'),
-    path('sala/capo/lista-spesa/genera/', views.genera_lista_spesa, name='genera_lista_spesa'),
-    path('sala/capo/lista-spesa/', views.lista_spesa_view, name='lista_spesa'),
-    path('sala/capo/lista-spesa/<int:lista_id>/', views.lista_spesa_dettaglio, name='lista_spesa_dettaglio'),
+    path('dashboard/chiusura/', views.chiusura_giornaliera, name='chiusura_giornaliera'),
+    path('dashboard/lista-spesa/genera/', views.genera_lista_spesa, name='genera_lista_spesa'),
+    path('dashboard/lista-spesa/', views.lista_spesa_view, name='lista_spesa'),
+    path('dashboard/lista-spesa/<int:lista_id>/', views.lista_spesa_dettaglio, name='lista_spesa_dettaglio'),
 
     # Documenti fiscali — scontrino / fattura / ricevuta
-    path('sala/capo/impostazioni/',                views.impostazioni_ristorante, name='impostazioni_ristorante'),
+    path('dashboard/impostazioni/',                views.impostazioni_ristorante, name='impostazioni_ristorante'),
     path('sala/ordine/<int:ordine_id>/scontrino/', views.scontrino_view,          name='scontrino'),
     path('sala/ordine/<int:ordine_id>/fattura/',   views.fattura_nuova,           name='fattura_nuova'),
     path('sala/fattura/<int:fattura_id>/',         views.fattura_print,           name='fattura_print'),
